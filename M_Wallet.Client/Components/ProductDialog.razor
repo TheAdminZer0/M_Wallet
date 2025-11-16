@@ -1,0 +1,115 @@
+@using M_Wallet.Shared
+@inject ISnackbar Snackbar
+
+<MudDialog>
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            @(IsEditMode ? "Edit Product" : "Add New Product")
+        </MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudTextField @bind-Value="Product.Name" 
+                      Label="Product Name" 
+                      Required="true" 
+                      RequiredError="Name is required"
+                      Variant="Variant.Outlined"
+                      Class="mb-3" />
+
+        <MudTextField @bind-Value="Product.Description" 
+                      Label="Description" 
+                      Lines="3"
+                      Variant="Variant.Outlined"
+                      Class="mb-3" />
+
+        <MudNumericField @bind-Value="Product.CostPrice" 
+                         Label="Cost Price (What you paid)" 
+                         Format="F2"
+                         Min="0m"
+                         Adornment="Adornment.Start" 
+                         AdornmentText="LYD"
+                         Variant="Variant.Outlined"
+                         Class="mb-3" />
+
+        <MudNumericField @bind-Value="Product.Price" 
+                         Label="Selling Price" 
+                         Format="F2"
+                         Min="0m"
+                         Adornment="Adornment.Start" 
+                         AdornmentText="LYD"
+                         Variant="Variant.Outlined"
+                         Class="mb-3" />
+
+        @if (Product.CostPrice > 0 && Product.Price > 0)
+        {
+            var profit = Product.Price - Product.CostPrice;
+            var profitMargin = (profit / Product.Price) * 100;
+            <MudAlert Severity="@(profit > 0 ? Severity.Success : Severity.Warning)" Dense="true" Class="mb-3">
+                Profit: LYD @profit.ToString("F2") (@profitMargin.ToString("F1")% margin)
+            </MudAlert>
+        }
+
+        <MudNumericField @bind-Value="Product.StockQuantity" 
+                         Label="Stock Quantity" 
+                         Min="0"
+                         Variant="Variant.Outlined"
+                         Class="mb-3" />
+
+        <MudTextField @bind-Value="Product.ImageUrl" 
+                      Label="Image URL (Optional)" 
+                      Variant="Variant.Outlined"
+                      Class="mb-3" />
+    </DialogContent>
+    
+    <DialogActions>
+        <MudButton OnClick="@(() => OnCancel.InvokeAsync())">Cancel</MudButton>
+        <MudButton Color="Color.Primary" 
+                   Variant="Variant.Filled" 
+                   OnClick="Submit">
+            @(IsEditMode ? "Update" : "Add")
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [Parameter] 
+    public Product Product { get; set; } = new();
+
+    [Parameter]
+    public bool IsEditMode { get; set; } = false;
+
+    [Parameter]
+    public EventCallback OnCancel { get; set; }
+
+    [Parameter]
+    public EventCallback<Product> OnSubmit { get; set; }
+
+    private async Task Submit()
+    {
+        // Basic validation
+        if (string.IsNullOrWhiteSpace(Product.Name))
+        {
+            Snackbar.Add("Product name is required", Severity.Error);
+            return;
+        }
+
+        if (Product.CostPrice < 0)
+        {
+            Snackbar.Add("Cost price cannot be negative", Severity.Error);
+            return;
+        }
+
+        if (Product.Price <= 0)
+        {
+            Snackbar.Add("Selling price must be greater than zero", Severity.Error);
+            return;
+        }
+
+        if (Product.CostPrice > Product.Price)
+        {
+            Snackbar.Add("Warning: Selling price is lower than cost price - you will lose money!", Severity.Warning);
+        }
+
+        // Invoke the submit callback
+        await OnSubmit.InvokeAsync(Product);
+    }
+}

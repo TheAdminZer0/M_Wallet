@@ -1,0 +1,429 @@
+@page "/stats"
+@inject HttpClient Http
+@inject ISnackbar Snackbar
+@using M_Wallet.Shared
+@using System.Globalization
+
+<PageTitle>Statistics & Analytics</PageTitle>
+
+<MudText Typo="Typo.h3" GutterBottom="true">Statistics & Analytics</MudText>
+<MudText Class="mb-4">Overview of sales, profits, and business insights</MudText>
+
+@if (isLoading)
+{
+    <div class="d-flex justify-center pa-8">
+        <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+    </div>
+}
+else if (transactions == null || !transactions.Any())
+{
+    <MudAlert Severity="Severity.Info">No transaction data available yet.</MudAlert>
+}
+else
+{
+    <!-- Summary Cards -->
+    <MudGrid Spacing="3" Class="mb-4">
+        <MudItem xs="12" sm="6" md="3">
+            <MudCard Elevation="2">
+                <MudCardContent>
+                    <div class="d-flex justify-space-between align-center">
+                        <div>
+                            <MudText Typo="Typo.body2" Color="Color.Secondary">Total Sales</MudText>
+                            <MudText Typo="Typo.h5" Class="font-weight-bold">LYD @TotalSales.ToString("N2")</MudText>
+                        </div>
+                        <MudIcon Icon="@Icons.Material.Filled.AttachMoney" Size="Size.Large" Color="Color.Success" />
+                    </div>
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+
+        <MudItem xs="12" sm="6" md="3">
+            <MudCard Elevation="2">
+                <MudCardContent>
+                    <div class="d-flex justify-space-between align-center">
+                        <div>
+                            <MudText Typo="Typo.body2" Color="Color.Secondary">Total Profit</MudText>
+                            <MudText Typo="Typo.h5" Class="font-weight-bold" Color="Color.Success">LYD @TotalProfit.ToString("N2")</MudText>
+                        </div>
+                        <MudIcon Icon="@Icons.Material.Filled.TrendingUp" Size="Size.Large" Color="Color.Success" />
+                    </div>
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+
+        <MudItem xs="12" sm="6" md="3">
+            <MudCard Elevation="2">
+                <MudCardContent>
+                    <div class="d-flex justify-space-between align-center">
+                        <div>
+                            <MudText Typo="Typo.body2" Color="Color.Secondary">Total Orders</MudText>
+                            <MudText Typo="Typo.h5" Class="font-weight-bold">@transactions.Count</MudText>
+                        </div>
+                        <MudIcon Icon="@Icons.Material.Filled.Receipt" Size="Size.Large" Color="Color.Info" />
+                    </div>
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+
+        <MudItem xs="12" sm="6" md="3">
+            <MudCard Elevation="2">
+                <MudCardContent>
+                    <div class="d-flex justify-space-between align-center">
+                        <div>
+                            <MudText Typo="Typo.body2" Color="Color.Secondary">Items Sold</MudText>
+                            <MudText Typo="Typo.h5" Class="font-weight-bold">@TotalItemsSold</MudText>
+                        </div>
+                        <MudIcon Icon="@Icons.Material.Filled.Inventory" Size="Size.Large" Color="Color.Warning" />
+                    </div>
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+
+        <MudItem xs="12" sm="6" md="3">
+            <MudCard Elevation="2">
+                <MudCardContent>
+                    <div class="d-flex justify-space-between align-center">
+                        <div>
+                            <MudText Typo="Typo.body2" Color="Color.Secondary">Avg Order Value</MudText>
+                            <MudText Typo="Typo.h5" Class="font-weight-bold">LYD @AverageOrderValue.ToString("N2")</MudText>
+                        </div>
+                        <MudIcon Icon="@Icons.Material.Filled.ShoppingCart" Size="Size.Large" Color="Color.Primary" />
+                    </div>
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+
+        <MudItem xs="12" sm="6" md="3">
+            <MudCard Elevation="2">
+                <MudCardContent>
+                    <div class="d-flex justify-space-between align-center">
+                        <div>
+                            <MudText Typo="Typo.body2" Color="Color.Secondary">Profit Margin</MudText>
+                            <MudText Typo="Typo.h5" Class="font-weight-bold">@ProfitMargin.ToString("F1")%</MudText>
+                        </div>
+                        <MudIcon Icon="@Icons.Material.Filled.Percent" Size="Size.Large" Color="Color.Success" />
+                    </div>
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+
+        <MudItem xs="12" sm="6" md="3">
+            <MudCard Elevation="2">
+                <MudCardContent>
+                    <div class="d-flex justify-space-between align-center">
+                        <div>
+                            <MudText Typo="Typo.body2" Color="Color.Secondary">Today's Sales</MudText>
+                            <MudText Typo="Typo.h5" Class="font-weight-bold">LYD @TodaySales.ToString("N2")</MudText>
+                        </div>
+                        <MudIcon Icon="@Icons.Material.Filled.CalendarToday" Size="Size.Large" Color="Color.Info" />
+                    </div>
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+
+        <MudItem xs="12" sm="6" md="3">
+            <MudCard Elevation="2">
+                <MudCardContent>
+                    <div class="d-flex justify-space-between align-center">
+                        <div>
+                            <MudText Typo="Typo.body2" Color="Color.Secondary">Today's Profit</MudText>
+                            <MudText Typo="Typo.h5" Class="font-weight-bold" Color="Color.Success">LYD @TodayProfit.ToString("N2")</MudText>
+                        </div>
+                        <MudIcon Icon="@Icons.Material.Filled.CalendarToday" Size="Size.Large" Color="Color.Success" />
+                    </div>
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+    </MudGrid>
+
+    <!-- Charts Row -->
+    <MudGrid Spacing="3">
+        <!-- Daily Profit Chart (Last 30 Days) -->
+        <MudItem xs="12" lg="8">
+            <MudPaper Class="pa-4" Elevation="2">
+                <MudText Typo="Typo.h6" Class="mb-4">Daily Profit (Last 30 Days)</MudText>
+                <MudChart ChartType="ChartType.Bar" 
+                          ChartSeries="@dailyProfitSeries" 
+                          XAxisLabels="@dailyLabels"
+                          Width="100%" 
+                          Height="350px"
+                          ChartOptions="@chartOptions" />
+            </MudPaper>
+        </MudItem>
+
+        <!-- Monthly Overview -->
+        <MudItem xs="12" lg="4">
+            <MudPaper Class="pa-4" Elevation="2">
+                <MudText Typo="Typo.h6" Class="mb-4">This Month</MudText>
+                <MudStack Spacing="3">
+                    <div>
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">Sales</MudText>
+                        <MudText Typo="Typo.h6" Class="font-weight-bold">LYD @ThisMonthSales.ToString("N2")</MudText>
+                    </div>
+                    <MudDivider />
+                    <div>
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">Profit</MudText>
+                        <MudText Typo="Typo.h6" Class="font-weight-bold" Color="Color.Success">LYD @ThisMonthProfit.ToString("N2")</MudText>
+                    </div>
+                    <MudDivider />
+                    <div>
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">Orders</MudText>
+                        <MudText Typo="Typo.h6" Class="font-weight-bold">@ThisMonthOrders</MudText>
+                    </div>
+                    <MudDivider />
+                    <div>
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">Profit Margin</MudText>
+                        <MudText Typo="Typo.h6" Class="font-weight-bold">@ThisMonthMargin.ToString("F1")%</MudText>
+                    </div>
+                </MudStack>
+            </MudPaper>
+        </MudItem>
+
+        <!-- Monthly Profit Trend (Last 12 Months) -->
+        <MudItem xs="12" lg="8">
+            <MudPaper Class="pa-4" Elevation="2">
+                <MudText Typo="Typo.h6" Class="mb-4">Monthly Profit Trend</MudText>
+                <MudChart ChartType="ChartType.Line" 
+                          ChartSeries="@monthlyProfitSeries" 
+                          XAxisLabels="@monthlyLabels"
+                          Width="100%" 
+                          Height="350px"
+                          ChartOptions="@chartOptions" />
+            </MudPaper>
+        </MudItem>
+
+        <!-- Top Products -->
+        <MudItem xs="12" lg="4">
+            <MudPaper Class="pa-4" Elevation="2">
+                <MudText Typo="Typo.h6" Class="mb-4">Top Profitable Products</MudText>
+                <MudList T="string" Dense="true">
+                    @foreach (var item in TopProducts.Take(5))
+                    {
+                        <MudListItem T="string">
+                            <div class="d-flex justify-space-between align-center" style="width: 100%;">
+                                <div>
+                                    <MudText Typo="Typo.body2" Class="font-weight-bold">@item.ProductName</MudText>
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary">@item.Quantity sold • LYD @item.Revenue.ToString("N2") sales</MudText>
+                                </div>
+                                <MudText Typo="Typo.body2" Color="Color.Success" Class="font-weight-bold">
+                                    LYD @item.Profit.ToString("N2")
+                                </MudText>
+                            </div>
+                        </MudListItem>
+                        <MudDivider />
+                    }
+                </MudList>
+            </MudPaper>
+        </MudItem>
+    </MudGrid>
+}
+
+@code {
+    private List<Transaction>? transactions;
+    private List<Product>? products;
+    private bool isLoading = true;
+
+    // Summary metrics
+    private decimal TotalSales => transactions?.Sum(t => t.TotalAmount) ?? 0;
+    private decimal TotalProfit => CalculateTotalProfit();
+    private int TotalItemsSold => transactions?.Sum(t => t.Items.Sum(i => i.Quantity)) ?? 0;
+    private decimal AverageOrderValue => transactions?.Any() == true ? TotalSales / transactions.Count : 0;
+    private decimal ProfitMargin => TotalSales > 0 ? (TotalProfit / TotalSales) * 100 : 0;
+    
+    private decimal TodaySales => transactions?
+        .Where(t => t.TransactionDate.Date == DateTime.UtcNow.Date)
+        .Sum(t => t.TotalAmount) ?? 0;
+    
+    private decimal TodayProfit => CalculateProfitForTransactions(transactions?
+        .Where(t => t.TransactionDate.Date == DateTime.UtcNow.Date)
+        .ToList());
+
+    private decimal ThisMonthSales => transactions?
+        .Where(t => t.TransactionDate.Month == DateTime.UtcNow.Month && t.TransactionDate.Year == DateTime.UtcNow.Year)
+        .Sum(t => t.TotalAmount) ?? 0;
+    
+    private decimal ThisMonthProfit => CalculateProfitForTransactions(transactions?
+        .Where(t => t.TransactionDate.Month == DateTime.UtcNow.Month && t.TransactionDate.Year == DateTime.UtcNow.Year)
+        .ToList());
+    
+    private int ThisMonthOrders => transactions?
+        .Count(t => t.TransactionDate.Month == DateTime.UtcNow.Month && t.TransactionDate.Year == DateTime.UtcNow.Year) ?? 0;
+    
+    private decimal ThisMonthMargin => ThisMonthSales > 0 ? (ThisMonthProfit / ThisMonthSales) * 100 : 0;
+
+    // Chart data
+    private List<ChartSeries> dailyProfitSeries = new();
+    private string[] dailyLabels = Array.Empty<string>();
+    
+    private List<ChartSeries> monthlyProfitSeries = new();
+    private string[] monthlyLabels = Array.Empty<string>();
+
+    private ChartOptions chartOptions = new()
+    {
+        YAxisTicks = 5,
+        MaxNumYAxisTicks = 10,
+        YAxisFormat = "N0"
+    };
+
+    // Top products
+    private List<TopProductData> TopProducts = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        isLoading = true;
+        try
+        {
+            transactions = await Http.GetFromJsonAsync<List<Transaction>>("api/transactions");
+            products = await Http.GetFromJsonAsync<List<Product>>("api/products");
+            
+            if (transactions != null && products != null)
+            {
+                PrepareChartData();
+                CalculateTopProducts();
+            }
+        }
+        catch (Exception ex)
+        {
+            // Handle error silently
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private decimal CalculateTotalProfit()
+    {
+        if (transactions == null || products == null) return 0;
+
+        decimal totalProfit = 0;
+        foreach (var transaction in transactions)
+        {
+            foreach (var item in transaction.Items)
+            {
+                var product = products.FirstOrDefault(p => p.Id == item.ProductId);
+                if (product != null)
+                {
+                    var profit = (item.UnitPrice - product.CostPrice) * item.Quantity;
+                    totalProfit += profit;
+                }
+            }
+        }
+        return totalProfit;
+    }
+
+    private decimal CalculateProfitForTransactions(List<Transaction>? transactionList)
+    {
+        if (transactionList == null || !transactionList.Any() || products == null) return 0;
+
+        decimal totalProfit = 0;
+        foreach (var transaction in transactionList)
+        {
+            foreach (var item in transaction.Items)
+            {
+                var product = products.FirstOrDefault(p => p.Id == item.ProductId);
+                if (product != null)
+                {
+                    var profit = (item.UnitPrice - product.CostPrice) * item.Quantity;
+                    totalProfit += profit;
+                }
+            }
+        }
+        return totalProfit;
+    }
+
+    private void PrepareChartData()
+    {
+        if (transactions == null || products == null) return;
+
+        // Daily profit for last 30 days
+        var dailyData = new Dictionary<DateTime, decimal>();
+        var startDate = DateTime.UtcNow.Date.AddDays(-29);
+        
+        for (int i = 0; i < 30; i++)
+        {
+            var date = startDate.AddDays(i);
+            var dayTransactions = transactions.Where(t => t.TransactionDate.Date == date).ToList();
+            dailyData[date] = CalculateProfitForTransactions(dayTransactions);
+        }
+
+        dailyLabels = dailyData.Keys.Select(d => d.ToString("MM/dd")).ToArray();
+        dailyProfitSeries = new List<ChartSeries>
+        {
+            new ChartSeries 
+            { 
+                Name = "Daily Profit", 
+                Data = dailyData.Values.Select(v => (double)v).ToArray() 
+            }
+        };
+
+        // Monthly profit for last 12 months
+        var monthlyData = new Dictionary<DateTime, decimal>();
+        var startMonth = DateTime.UtcNow.Date.AddMonths(-11);
+        startMonth = new DateTime(startMonth.Year, startMonth.Month, 1);
+
+        for (int i = 0; i < 12; i++)
+        {
+            var month = startMonth.AddMonths(i);
+            var monthTransactions = transactions
+                .Where(t => t.TransactionDate.Year == month.Year && t.TransactionDate.Month == month.Month)
+                .ToList();
+            monthlyData[month] = CalculateProfitForTransactions(monthTransactions);
+        }
+
+        monthlyLabels = monthlyData.Keys.Select(d => d.ToString("MMM yyyy")).ToArray();
+        monthlyProfitSeries = new List<ChartSeries>
+        {
+            new ChartSeries 
+            { 
+                Name = "Monthly Profit", 
+                Data = monthlyData.Values.Select(v => (double)v).ToArray() 
+            }
+        };
+    }
+
+    private void CalculateTopProducts()
+    {
+        if (transactions == null || products == null) return;
+
+        var productSales = transactions
+            .SelectMany(t => t.Items)
+            .GroupBy(i => i.ProductId)
+            .Select(g => 
+            {
+                var product = products.FirstOrDefault(p => p.Id == g.Key);
+                var quantity = g.Sum(i => i.Quantity);
+                var revenue = g.Sum(i => i.Subtotal);
+                var profit = product != null 
+                    ? g.Sum(i => (i.UnitPrice - product.CostPrice) * i.Quantity)
+                    : 0;
+                
+                return new TopProductData
+                {
+                    ProductId = g.Key,
+                    ProductName = g.First().Product?.Name ?? "Unknown",
+                    Quantity = quantity,
+                    Revenue = revenue,
+                    Profit = profit
+                };
+            })
+            .OrderByDescending(p => p.Profit)
+            .ToList();
+
+        TopProducts = productSales;
+    }
+
+    private class TopProductData
+    {
+        public int ProductId { get; set; }
+        public string ProductName { get; set; } = "";
+        public int Quantity { get; set; }
+        public decimal Revenue { get; set; }
+        public decimal Profit { get; set; }
+    }
+}

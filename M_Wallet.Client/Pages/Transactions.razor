@@ -1,0 +1,396 @@
+@page "/transactions"
+@inject HttpClient Http
+@inject ISnackbar Snackbar
+@using M_Wallet.Shared
+
+<PageTitle>Transaction History</PageTitle>
+
+<MudText Typo="Typo.h3" GutterBottom="true">Sales History</MudText>
+<MudText Class="mb-4">View all sales transactions - Click on a row to see all items in the order</MudText>
+
+@if (transactions == null)
+{
+    <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+}
+else if (!transactions.Any())
+{
+    <MudAlert Severity="Severity.Info">No transactions found.</MudAlert>
+}
+else
+{
+    <!-- Filters Section -->
+    <MudPaper Class="pa-4 mb-4" Elevation="2">
+        <MudText Typo="Typo.h6" Class="mb-3">
+            <MudIcon Icon="@Icons.Material.Filled.FilterList" Class="mr-2" />
+            Filters
+        </MudText>
+        <MudGrid Spacing="2">
+            <MudItem xs="12" sm="6" md="3">
+                <MudDatePicker Label="From Date" 
+                               @bind-Date="filterFromDate" 
+                               Variant="Variant.Outlined"
+                               Margin="Margin.Dense"
+                               Clearable="true"
+                               MaxDate="@DateTime.Today" />
+            </MudItem>
+            <MudItem xs="12" sm="6" md="3">
+                <MudDatePicker Label="To Date" 
+                               @bind-Date="filterToDate" 
+                               Variant="Variant.Outlined"
+                               Margin="Margin.Dense"
+                               Clearable="true"
+                               MaxDate="@DateTime.Today" />
+            </MudItem>
+            <MudItem xs="12" sm="6" md="3">
+                <MudSelect T="int?" 
+                           Label="Filter by Product" 
+                           @bind-Value="filterProductId"
+                           Variant="Variant.Outlined"
+                           Margin="Margin.Dense"
+                           Clearable="true">
+                    @foreach (var product in GetUniqueProducts())
+                    {
+                        <MudSelectItem Value="@((int?)product.Id)">@product.Name</MudSelectItem>
+                    }
+                </MudSelect>
+            </MudItem>
+            <MudItem xs="12" sm="6" md="3">
+                <MudSelect T="string" 
+                           Label="Filter by Customer" 
+                           @bind-Value="filterCustomer"
+                           Variant="Variant.Outlined"
+                           Margin="Margin.Dense"
+                           Clearable="true">
+                    @foreach (var customer in GetUniqueCustomers())
+                    {
+                        <MudSelectItem Value="@customer">@customer</MudSelectItem>
+                    }
+                </MudSelect>
+            </MudItem>
+            <MudItem xs="12" sm="6" md="3">
+                <MudSelect T="string" 
+                           Label="Filter by Employee" 
+                           @bind-Value="filterEmployee"
+                           Variant="Variant.Outlined"
+                           Margin="Margin.Dense"
+                           Clearable="true">
+                    @foreach (var employee in GetUniqueEmployees())
+                    {
+                        <MudSelectItem Value="@employee">@employee</MudSelectItem>
+                    }
+                </MudSelect>
+            </MudItem>
+            <MudItem xs="12" sm="6" md="3">
+                <MudButton Variant="Variant.Filled" 
+                           Color="Color.Primary" 
+                           StartIcon="@Icons.Material.Filled.Clear"
+                           OnClick="ClearFilters"
+                           FullWidth="true"
+                           Class="mt-1">
+                    Clear Filters
+                </MudButton>
+            </MudItem>
+        </MudGrid>
+        
+        @if (FilteredTransactions.Count() != transactions.Count)
+        {
+            <MudAlert Severity="Severity.Info" Dense="true" Class="mt-3">
+                Showing @FilteredTransactions.Count() of @transactions.Count transactions
+            </MudAlert>
+        }
+    </MudPaper>
+
+    <MudPaper Class="pa-4" Elevation="2">
+        <div style="overflow-x:auto; -webkit-overflow-scrolling: touch;">
+            <MudTable Items="@FilteredTransactions" 
+                      Hover="true" 
+                      Dense="true" 
+                      Breakpoint="Breakpoint.None"
+                      Filter="new Func<Transaction, bool>(SearchFilter)"
+                      @bind-SelectedItem="selectedTransaction">
+                <ToolBarContent>
+                    <MudText Typo="Typo.h6">Sales History</MudText>
+                    <MudSpacer />
+                    <MudButton Variant="Variant.Outlined" 
+                               Color="Color.Primary"
+                               StartIcon="@(expandAll ? Icons.Material.Filled.UnfoldLess : Icons.Material.Filled.UnfoldMore)"
+                               OnClick="ToggleExpandAll"
+                               Class="mr-2">
+                        @(expandAll ? "Collapse All" : "Expand All")
+                    </MudButton>
+                    <MudTextField @bind-Value="searchString" 
+                                  Placeholder="Search" 
+                                  Adornment="Adornment.Start" 
+                                  AdornmentIcon="@Icons.Material.Filled.Search" 
+                                  IconSize="Size.Medium" 
+                                  Class="mt-0"
+                                  Immediate="true">
+                    </MudTextField>
+                </ToolBarContent>
+                <HeaderContent>
+                    <MudTh Style="width: 50px;"></MudTh>
+                    <MudTh>Order ID</MudTh>
+                    <MudTh>Date</MudTh>
+                    <MudTh>Items</MudTh>
+                    <MudTh>Quantity</MudTh>
+                    <MudTh>Total</MudTh>
+                    <MudTh>Customer</MudTh>
+                    <MudTh>Employee</MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd DataLabel="">
+                        <MudIconButton Icon="@(expandedTransactions.Contains(context.Id) ? Icons.Material.Filled.ExpandLess : Icons.Material.Filled.ExpandMore)"
+                                       Size="Size.Small"
+                                       OnClick="@(() => ToggleExpanded(context.Id))" />
+                    </MudTd>
+                    <MudTd DataLabel="Order ID">
+                        <MudChip T="string" Size="Size.Small" Color="Color.Primary">#@context.Id</MudChip>
+                    </MudTd>
+                    <MudTd DataLabel="Date">@context.TransactionDate.ToLocalTime().ToString("MM/dd/yy HH:mm")</MudTd>
+                    <MudTd DataLabel="Items">@string.Join(", ", context.Items.Select(i => i.Product?.Name ?? "Unknown").Distinct())</MudTd>
+                    <MudTd DataLabel="Quantity">@context.Items.Sum(i => i.Quantity)</MudTd>
+                    <MudTd DataLabel="Total">
+                        <MudText Color="Color.Success" Typo="Typo.body2" Class="font-weight-bold">
+                            LYD @context.TotalAmount.ToString("F2")
+                        </MudText>
+                    </MudTd>
+                    <MudTd DataLabel="Customer">@(context.CustomerName ?? "Walk-in")</MudTd>
+                    <MudTd DataLabel="Employee">@context.EmployeeName</MudTd>
+                </RowTemplate>
+                <ChildRowContent Context="trans">
+                    @if (expandedTransactions.Contains(trans.Id))
+                    {
+                        <MudTr>
+                            <td colspan="8">
+                                <MudCard Elevation="0" Class="ma-2" Style="background-color: var(--mud-palette-background-grey);">
+                                    <MudCardHeader>
+                                        <CardHeaderContent>
+                                            <MudText Typo="Typo.h6">Order #@trans.Id - Item Details</MudText>
+                                        </CardHeaderContent>
+                                    </MudCardHeader>
+                                    <MudCardContent>
+                                        <MudTable Items="@trans.Items" 
+                                                  Dense="true" 
+                                                  Hover="true"
+                                                  Elevation="0"
+                                                  Breakpoint="Breakpoint.None">
+                                            <HeaderContent>
+                                                <MudTh>Product Name</MudTh>
+                                                <MudTh>Quantity</MudTh>
+                                                <MudTh>Unit Price</MudTh>
+                                                <MudTh>Subtotal</MudTh>
+                                            </HeaderContent>
+                                            <RowTemplate Context="item">
+                                                <MudTd DataLabel="Product">
+                                                    <MudText Typo="Typo.body2">@item.Product?.Name</MudText>
+                                                </MudTd>
+                                                <MudTd DataLabel="Quantity">
+                                                    <MudChip T="string" Size="Size.Small" Color="Color.Info">@item.Quantity</MudChip>
+                                                </MudTd>
+                                                <MudTd DataLabel="Unit Price">LYD @item.UnitPrice.ToString("F2")</MudTd>
+                                                <MudTd DataLabel="Subtotal">
+                                                    <MudText Typo="Typo.body2" Class="font-weight-bold">LYD @item.Subtotal.ToString("F2")</MudText>
+                                                </MudTd>
+                                            </RowTemplate>
+                                            <FooterContent>
+                                                <MudTd colspan="3" Style="text-align: right;">
+                                                    <MudText Typo="Typo.h6">Order Total:</MudText>
+                                                </MudTd>
+                                                <MudTd>
+                                                    <MudText Typo="Typo.h6" Color="Color.Success" Class="font-weight-bold">
+                                                        LYD @trans.TotalAmount.ToString("F2")
+                                                    </MudText>
+                                                </MudTd>
+                                            </FooterContent>
+                                        </MudTable>
+                                    </MudCardContent>
+                                </MudCard>
+                            </td>
+                        </MudTr>
+                    }
+                </ChildRowContent>
+                <PagerContent>
+                    <MudTablePager PageSizeOptions="new int[] { 10, 25, 50, 100 }" />
+                </PagerContent>
+            </MudTable>
+        </div>
+
+        <div class="mt-4 d-flex justify-space-between align-center">
+            <MudText Typo="Typo.h6">
+                Total Orders: @FilteredTransactions.Count()
+            </MudText>
+            <MudText Typo="Typo.h6">
+                Total Items Sold: @FilteredTransactions.Sum(t => t.Items.Sum(i => i.Quantity))
+            </MudText>
+            <MudText Typo="Typo.h6" Color="Color.Success">
+                Total Sales: LYD @FilteredTransactions.Sum(t => t.TotalAmount).ToString("F2")
+            </MudText>
+        </div>
+    </MudPaper>
+}
+
+@code {
+    private List<Transaction>? transactions;
+    private Transaction? selectedTransaction;
+    private string searchString = "";
+    private HashSet<int> expandedTransactions = new();
+    private bool expandAll = false;
+
+    // Filter variables
+    private DateTime? filterFromDate;
+    private DateTime? filterToDate;
+    private int? filterProductId;
+    private string? filterCustomer;
+    private string? filterEmployee;
+
+    private IEnumerable<Transaction> FilteredTransactions
+    {
+        get
+        {
+            if (transactions == null) return Enumerable.Empty<Transaction>();
+
+            var filtered = transactions.AsEnumerable();
+
+            // Date range filter
+            if (filterFromDate.HasValue)
+            {
+                filtered = filtered.Where(t => t.TransactionDate.Date >= filterFromDate.Value.Date);
+            }
+            if (filterToDate.HasValue)
+            {
+                filtered = filtered.Where(t => t.TransactionDate.Date <= filterToDate.Value.Date);
+            }
+
+            // Product filter
+            if (filterProductId.HasValue)
+            {
+                filtered = filtered.Where(t => t.Items.Any(i => i.ProductId == filterProductId.Value));
+            }
+
+            // Customer filter
+            if (!string.IsNullOrWhiteSpace(filterCustomer))
+            {
+                filtered = filtered.Where(t => t.CustomerName == filterCustomer);
+            }
+
+            // Employee filter
+            if (!string.IsNullOrWhiteSpace(filterEmployee))
+            {
+                filtered = filtered.Where(t => t.EmployeeName == filterEmployee);
+            }
+
+            return filtered;
+        }
+    }
+
+    private bool SearchFilter(Transaction transaction)
+    {
+        if (string.IsNullOrWhiteSpace(searchString))
+            return true;
+        if (transaction.Id.ToString().Contains(searchString))
+            return true;
+        if (transaction.EmployeeName.Contains(searchString, StringComparison.OrdinalIgnoreCase))
+            return true;
+        if (transaction.CustomerName?.Contains(searchString, StringComparison.OrdinalIgnoreCase) ?? false)
+            return true;
+        if (transaction.TotalAmount.ToString().Contains(searchString))
+            return true;
+        if (transaction.Items.Any(i => i.Product?.Name.Contains(searchString, StringComparison.OrdinalIgnoreCase) ?? false))
+            return true;
+        return false;
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadTransactions();
+    }
+
+    private async Task LoadTransactions()
+    {
+        try
+        {
+            transactions = await Http.GetFromJsonAsync<List<Transaction>>("api/transactions");
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading transactions: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private void ToggleExpanded(int transactionId)
+    {
+        if (expandedTransactions.Contains(transactionId))
+        {
+            expandedTransactions.Remove(transactionId);
+        }
+        else
+        {
+            expandedTransactions.Add(transactionId);
+        }
+    }
+
+    private void ToggleExpandAll()
+    {
+        expandAll = !expandAll;
+        
+        if (expandAll)
+        {
+            // Expand all visible transactions
+            if (transactions != null)
+            {
+                expandedTransactions = FilteredTransactions.Select(t => t.Id).ToHashSet();
+            }
+        }
+        else
+        {
+            // Collapse all transactions
+            expandedTransactions.Clear();
+        }
+    }
+
+    private void ClearFilters()
+    {
+        filterFromDate = null;
+        filterToDate = null;
+        filterProductId = null;
+        filterCustomer = null;
+        filterEmployee = null;
+    }
+
+    private List<Product> GetUniqueProducts()
+    {
+        if (transactions == null) return new();
+
+        return transactions
+            .SelectMany(t => t.Items)
+            .Where(i => i.Product != null)
+            .Select(i => i.Product!)
+            .GroupBy(p => p.Id)
+            .Select(g => g.First())
+            .OrderBy(p => p.Name)
+            .ToList();
+    }
+
+    private List<string> GetUniqueCustomers()
+    {
+        if (transactions == null) return new();
+
+        return transactions
+            .Where(t => !string.IsNullOrWhiteSpace(t.CustomerName))
+            .Select(t => t.CustomerName!)
+            .Distinct()
+            .OrderBy(c => c)
+            .ToList();
+    }
+
+    private List<string> GetUniqueEmployees()
+    {
+        if (transactions == null) return new();
+
+        return transactions
+            .Select(t => t.EmployeeName)
+            .Distinct()
+            .OrderBy(e => e)
+            .ToList();
+    }
+}

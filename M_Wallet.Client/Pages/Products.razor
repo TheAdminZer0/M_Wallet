@@ -1,0 +1,242 @@
+﻿@page "/products"
+@inject HttpClient Http
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+@using M_Wallet.Shared
+
+<PageTitle>Product Management</PageTitle>
+
+<MudText Typo="Typo.h3" GutterBottom="true">Product Management</MudText>
+<MudText Class="mb-4">Add and manage products for your POS system</MudText>
+
+<MudButton Variant="Variant.Filled"
+           Color="Color.Primary"
+           StartIcon="@Icons.Material.Filled.Add"
+           OnClick="OpenAddDialog"
+           Class="mb-4">
+    Add New Product
+</MudButton>
+
+@if (products == null)
+{
+    <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+}
+else if (!products.Any())
+{
+    <MudAlert Severity="Severity.Info">No products found. Add your first product to get started!</MudAlert>
+}
+else
+{
+    <div style="overflow-x:auto; -webkit-overflow-scrolling: touch;">
+        <MudTable Items="@products" 
+                  Hover="true" 
+                  Dense="true" 
+                  Breakpoint="Breakpoint.None"
+                  Filter="new Func<Product, bool>(FilterFunc)"
+                  @bind-SelectedItem="selectedItem">
+            <ToolBarContent>
+                <MudText Typo="Typo.h6">Products</MudText>
+                <MudSpacer />
+                <MudTextField @bind-Value="searchString" 
+                              Placeholder="Search" 
+                              Adornment="Adornment.Start" 
+                              AdornmentIcon="@Icons.Material.Filled.Search" 
+                              IconSize="Size.Medium" 
+                              Class="mt-0"
+                              Immediate="true">
+                </MudTextField>
+            </ToolBarContent>
+            <HeaderContent>
+                <MudTh>Name</MudTh>
+                <MudTh>Description</MudTh>
+                <MudTh>Cost</MudTh>
+                <MudTh>Price</MudTh>
+                <MudTh>Profit</MudTh>
+                <MudTh>Stock</MudTh>
+                <MudTh>Actions</MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd>@context.Name</MudTd>
+                <MudTd>@context.Description</MudTd>
+                <MudTd>LYD @context.CostPrice.ToString("F2")</MudTd>
+                <MudTd> <MudText Color="Color.Success"> LYD @context.Price.ToString("F2") </MudText> </MudTd>
+                <MudTd>
+                    @{
+                        var profit = context.Price - context.CostPrice;
+                        var profitMargin = context.Price > 0 ? (profit / context.Price) * 100 : 0;
+                    }
+                    <MudText Color="@(profit > 0 ? Color.Info : Color.Error)" Typo="Typo.body2">
+                        LYD @profit.ToString("F2") (@profitMargin.ToString("F1")%)
+                    </MudText>
+                </MudTd>
+                <MudTd>@context.StockQuantity</MudTd>
+                <MudTd>
+                    <MudIconButton Icon="@Icons.Material.Filled.Edit"
+                                   Color="Color.Primary"
+                                   Size="Size.Small"
+                                   OnClick="@(() => OpenEditDialog(context))" />
+                    <MudIconButton Icon="@Icons.Material.Filled.Delete"
+                                   Color="Color.Error"
+                                   Size="Size.Small"
+                                   OnClick="@(() => DeleteProduct(context.Id))" />
+                </MudTd>
+            </RowTemplate>
+            <PagerContent>
+                <MudTablePager />
+            </PagerContent>
+        </MudTable>
+    </div>
+}
+
+@code {
+    private List<Product>? products;
+    private IDialogReference? currentDialog;
+    private string searchString = "";
+    private Product? selectedItem = null;
+
+    private bool FilterFunc(Product product)
+    {
+        if (string.IsNullOrWhiteSpace(searchString))
+            return true;
+        if (product.Name.Contains(searchString, StringComparison.OrdinalIgnoreCase))
+            return true;
+        if (product.Description?.Contains(searchString, StringComparison.OrdinalIgnoreCase) ?? false)
+            return true;
+        if (product.Price.ToString().Contains(searchString))
+            return true;
+        if (product.StockQuantity.ToString().Contains(searchString))
+            return true;
+        return false;
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadProducts();
+    }
+
+    private async Task LoadProducts()
+    {
+        try
+        {
+            products = await Http.GetFromJsonAsync<List<Product>>("api/products");
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading products: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task OpenAddDialog()
+    {
+        var product = new Product();
+        
+        var parameters = new DialogParameters<M_Wallet.Client.Components.ProductDialog>
+        {
+            { x => x.Product, product },
+            { x => x.IsEditMode, false },
+            { x => x.OnSubmit, EventCallback.Factory.Create<Product>(this, async (p) => {
+                await SaveProduct(p);
+                currentDialog?.Close();
+            })},
+            { x => x.OnCancel, EventCallback.Factory.Create(this, () => currentDialog?.Close()) }
+        };
+
+        var options = new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.Small, FullWidth = true };
+        currentDialog = await DialogService.ShowAsync<M_Wallet.Client.Components.ProductDialog>("Add Product", parameters, options);
+    }
+
+    private async Task OpenEditDialog(Product product)
+    {
+        var editProduct = new Product
+        {
+            Id = product.Id,
+            Name = product.Name,
+            Description = product.Description,
+            CostPrice = product.CostPrice,
+            Price = product.Price,
+            StockQuantity = product.StockQuantity,
+            ImageUrl = product.ImageUrl,
+            IsActive = product.IsActive
+        };
+        
+        var parameters = new DialogParameters<M_Wallet.Client.Components.ProductDialog>
+        {
+            { x => x.Product, editProduct },
+            { x => x.IsEditMode, true },
+            { x => x.OnSubmit, EventCallback.Factory.Create<Product>(this, async (p) => {
+                await UpdateProduct(p);
+                currentDialog?.Close();
+            })},
+            { x => x.OnCancel, EventCallback.Factory.Create(this, () => currentDialog?.Close()) }
+        };
+
+        var options = new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.Small, FullWidth = true };
+        currentDialog = await DialogService.ShowAsync<M_Wallet.Client.Components.ProductDialog>("Edit Product", parameters, options);
+    }
+
+    private async Task SaveProduct(Product product)
+    {
+        try
+        {
+            var response = await Http.PostAsJsonAsync("api/products", product);
+
+            if (response.IsSuccessStatusCode)
+            {
+                Snackbar.Add("Product added successfully!", Severity.Success);
+                await LoadProducts();
+            }
+            else
+            {
+                Snackbar.Add("Failed to add product", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task UpdateProduct(Product product)
+    {
+        try
+        {
+            var response = await Http.PutAsJsonAsync($"api/products/{product.Id}", product);
+
+            if (response.IsSuccessStatusCode)
+            {
+                Snackbar.Add("Product updated successfully!", Severity.Success);
+                await LoadProducts();
+            }
+            else
+            {
+                Snackbar.Add("Failed to update product", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task DeleteProduct(int id)
+    {
+        try
+        {
+            var response = await Http.DeleteAsync($"api/products/{id}");
+
+            if (response.IsSuccessStatusCode)
+            {
+                Snackbar.Add("Product deleted successfully", Severity.Success);
+                await LoadProducts();
+            }
+            else
+            {
+                Snackbar.Add("Failed to delete product", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+        }
+    }
+}

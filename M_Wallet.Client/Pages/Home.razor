@@ -1,59 +1,530 @@
 ﻿@page "/"
+@inject HttpClient Http
+@inject ISnackbar Snackbar
+@inject IJSRuntime JSRuntime
+@using M_Wallet.Shared
 
-<PageTitle>Home</PageTitle>
+<PageTitle>POS - Point of Sale</PageTitle>
 
-<MudText Typo="Typo.h3" GutterBottom="true">Hello, world!</MudText>
-<MudText Class="mb-8">Welcome to your new app, powered by MudBlazor and the .NET 9 Template!</MudText>
+<MudGrid Spacing="2">
+    <!-- Main Product Area -->
+    <MudItem xs="12" md="8">
+        <MudPaper Class="pa-4" Elevation="2">
+            <div class="d-flex justify-space-between align-center mb-4">
+                <MudText Typo="Typo.h5">Products</MudText>
+                <div class="d-flex align-center gap-2">
+                    <MudTextField @bind-Value="searchString" 
+                                  Placeholder="Search products..." 
+                                  Adornment="Adornment.Start" 
+                                  AdornmentIcon="@Icons.Material.Filled.Search" 
+                                  IconSize="Size.Medium" 
+                                  Margin="Margin.Dense"
+                                  Clearable="true"
+                                  Immediate="true"
+                                  Style="max-width: 300px;">
+                    </MudTextField>
+                    <MudToggleIconButton @bind-Toggled="@isGridView"
+                                         Icon="@Icons.Material.Filled.GridView" 
+                                         ToggledIcon="@Icons.Material.Filled.TableRows"
+                                         Color="@Color.Primary" 
+                                         ToggledColor="@Color.Primary"
+                                         Title="Toggle Grid/Table View" />
+                </div>
+            </div>
 
-<MudAlert Severity="Severity.Normal" ContentAlignment="HorizontalAlignment.Start">
-    You can find documentation and examples on our website here:
-    <MudLink Href="https://mudblazor.com" Target="_blank" Typo="Typo.body2" Color="Color.Primary">
-        <b>www.mudblazor.com</b>
-    </MudLink>
-</MudAlert>
+            @if (products == null)
+            {
+                <div class="d-flex justify-center pa-8">
+                    <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+                </div>
+            }
+            else if (!products.Any())
+            {
+                <MudAlert Severity="Severity.Info">No products available</MudAlert>
+            }
+            else
+            {
+                @if (isGridView)
+                {
+                    <!-- Grid View -->
+                    <MudGrid Spacing="3">
+                        @foreach (var product in FilteredProducts)
+                        {
+                            <MudItem xs="6" sm="4" md="3">
+                                <MudCard Class="cursor-pointer" 
+                                         Elevation="2"
+                                         @onclick="@(() => AddToCart(product))">
+                                    <MudCardMedia Image="@GetProductImage(product)" 
+                                                  Height="150" />
+                                    <MudCardContent Class="pa-2">
+                                        <MudText Typo="Typo.body2" Class="font-weight-bold">
+                                            @product.Name
+                                        </MudText>
+                                        <MudText Typo="Typo.caption" Color="Color.Success">
+                                            LYD @product.Price.ToString("F2")
+                                        </MudText>
+                                        <MudText Typo="Typo.caption" Color="@(product.StockQuantity > 10 ? Color.Default : Color.Error)">
+                                            Stock: @product.StockQuantity
+                                        </MudText>
+                                    </MudCardContent>
+                                </MudCard>
+                            </MudItem>
+                        }
+                    </MudGrid>
+                }
+                else
+                {
+                    <!-- Table View -->
+                    <div style="overflow-x:auto; -webkit-overflow-scrolling: touch;">
+                        <MudTable Items="@FilteredProducts" 
+                                  Hover="true" 
+                                  Dense="true" 
+                                  Breakpoint="Breakpoint.None"
+                                  OnRowClick="@((TableRowClickEventArgs<Product> args) => AddToCart(args.Item))">
+                            <HeaderContent>
+                                <MudTh>Name</MudTh>
+                                <MudTh>Price</MudTh>
+                                <MudTh>Stock</MudTh>
+                                <MudTh>Action</MudTh>
+                            </HeaderContent>
+                            <RowTemplate>
+                                <MudTd DataLabel="Name">@context.Name</MudTd>
+                                <MudTd DataLabel="Price">LYD @context.Price.ToString("F2")</MudTd>
+                                <MudTd DataLabel="Stock">
+                                    <MudChip T="string" Size="Size.Small" Color="@(context.StockQuantity > 10 ? Color.Success : Color.Warning)">
+                                        @context.StockQuantity
+                                    </MudChip>
+                                </MudTd>
+                                <MudTd DataLabel="Action">
+                                    <MudButton Size="Size.Small" 
+                                               Variant="Variant.Filled" 
+                                               Color="Color.Primary"
+                                               OnClick="@(() => AddToCart(context))"
+                                               Disabled="@(context.StockQuantity == 0)">
+                                        Add
+                                    </MudButton>
+                                </MudTd>
+                            </RowTemplate>
+                        </MudTable>
+                    </div>
+                }
+            }
+        </MudPaper>
+    </MudItem>
 
-<br />
-<MudText Typo="Typo.h5" GutterBottom="true">Interactivity in this Template</MudText>
-<br />
-<MudText Typo="Typo.body2">
-    When you opt for the "Global" Interactivity Location, <br />
-    the render modes are defined in App.razor and consequently apply to all child components.<br />
-    In this case, providers are globally set in the MainLayout.<br />
-    <br />
-    On the other hand, if you choose the "Per page/component" Interactivity Location,<br />
-    it is necessary to include the <br />
-    <br />
-    &lt;MudPopoverProvider /&gt; <br />
-    &lt;MudDialogProvider /&gt; <br />
-    &lt;MudSnackbarProvider /&gt; <br />
-    <br />
-    components on every interactive page.<br />
-    <br />
-    If a render mode is not specified for a page, it defaults to Server-Side Rendering (SSR),<br />
-    similar to this page. While MudBlazor allows pages to be rendered in SSR,<br />
-    please note that interactive features, such as buttons and dropdown menus, will not be functional.
-</MudText>
+    <!-- Checkout Sidebar -->
+    <MudItem xs="12" md="4">
+        <MudPaper Class="pa-4" Elevation="3" Style="position: sticky; top: 16px;">
+            <MudText Typo="Typo.h5" Class="mb-4">
+                <MudIcon Icon="@Icons.Material.Filled.ShoppingCart" Class="mr-2" />
+                Cart
+            </MudText>
+            
+            @if (!cartItems.Any())
+            {
+                <MudAlert Severity="Severity.Info" Class="my-4">
+                    Cart is empty.<br/>Tap items to add.
+                </MudAlert>
+            }
+            else
+            {
+                <div style="max-height: 400px; overflow-y: auto;" class="mb-4">
+                    @foreach (var item in cartItems)
+                    {
+                        <MudPaper Class="pa-2 mb-2" Elevation="1">
+                            <div class="d-flex justify-space-between align-center mb-2">
+                                <MudText Typo="Typo.body2" Class="font-weight-bold">
+                                    @item.Product!.Name
+                                </MudText>
+                                <MudIconButton Icon="@Icons.Material.Filled.Close" 
+                                               Size="Size.Small" 
+                                               Color="Color.Error"
+                                               OnClick="@(() => RemoveFromCart(item))" />
+                            </div>
+                            <div class="d-flex justify-space-between align-center">
+                                <div class="d-flex align-center">
+                                    <MudIconButton Icon="@Icons.Material.Filled.Remove" 
+                                                   Size="Size.Small" 
+                                                   Color="Color.Default"
+                                                   OnClick="@(() => DecreaseQuantity(item))" />
+                                    <MudText Class="mx-2" Typo="Typo.body2">@item.Quantity</MudText>
+                                    <MudIconButton Icon="@Icons.Material.Filled.Add" 
+                                                   Size="Size.Small" 
+                                                   Color="Color.Default"
+                                                   OnClick="@(() => IncreaseQuantity(item))"
+                                                   Disabled="@(item.Quantity >= item.Product.StockQuantity)" />
+                                    <MudText Class="mx-2" Typo="Typo.caption" Color="Color.Secondary">×</MudText>
+                                    @if (editingItemId == item.ProductId)
+                                    {
+                                        <MudTextField @ref="priceInputRef"
+                                                      Value="@editingPriceValue"
+                                                      Margin="Margin.Dense"
+                                                      Variant="Variant.Text"
+                                                      Style="width: 90px;"
+                                                      Immediate="true"
+                                                      ValueChanged="@((string val) => OnPriceValueChanged(item, val))"
+                                                      Adornment="Adornment.End"
+                                                      AdornmentIcon="@Icons.Material.Filled.Check"
+                                                      OnAdornmentClick="@(() => FinishEditing())"
+                                                      InputType="InputType.Text"
+                                                      OnBlur="@(() => FinishEditing())"
+                                                      @onkeydown="@((KeyboardEventArgs e) => HandleKeyDown(e))"
+                                                      AutoFocus="true" />
+                                    }
+                                    else
+                                    {
+                                        <MudText Typo="Typo.body2" 
+                                                 Style="cursor: pointer; min-width: 60px;"
+                                                 @onclick="@(async () => await StartEditingAsync(item))">
+                                            LYD @item.UnitPrice.ToString("F2")
+                                            @if (item.UnitPrice != item.Product.Price)
+                                            {
+                                                <MudIcon Icon="@Icons.Material.Filled.Edit" 
+                                                         Size="Size.Small" 
+                                                         Color="Color.Warning" 
+                                                         Style="vertical-align: middle; font-size: 14px;" />
+                                            }
+                                        </MudText>
+                                    }
+                                    @if (item.UnitPrice != item.Product.Price && editingItemId != item.ProductId)
+                                    {
+                                        <MudIconButton Icon="@Icons.Material.Filled.Refresh"
+                                                       Size="Size.Small"
+                                                       Color="Color.Default"
+                                                       OnClick="@(() => ResetItemPrice(item))"
+                                                       Style="margin-left: 4px;"
+                                                       Title="Reset to original price" />
+                                    }
+                                </div>
+                                <MudText Typo="Typo.body2" Color="Color.Success" Class="font-weight-bold">
+                                    LYD @item.Subtotal.ToString("F2")
+                                </MudText>
+                            </div>
+                        </MudPaper>
+                    }
+                </div>
 
-<br />
-<MudText Typo="Typo.h5" GutterBottom="true">What's New in Blazor with the Release of .NET 9</MudText>
-<br />
+                <MudDivider Class="my-4" />
+                
+                <MudTextField @bind-Value="customerName" 
+                              Label="Customer Name (Optional)" 
+                              Variant="Variant.Outlined" 
+                              Margin="Margin.Dense"
+                              Class="mb-2" />
+                <MudTextField @bind-Value="employeeName" 
+                              Label="Employee Name" 
+                              Variant="Variant.Outlined" 
+                              Margin="Margin.Dense"
+                              Required="true"
+                              Class="mb-3" />
 
-<MudText Typo="Typo.h6" GutterBottom="true">Prerendering</MudText>
-<MudText Typo="Typo.body2" GutterBottom="true">
-    If you're exploring the features of .NET 9 Blazor,<br /> you might be pleasantly surprised to learn that each page is prerendered on the server,<br /> regardless of the selected render mode.<br /><br />
-    This means that you'll need to inject all necessary services on the server,<br /> even when opting for the wasm (WebAssembly) render mode.<br /><br />
-    This prerendering functionality is crucial to ensuring that WebAssembly mode feels fast and responsive,<br /> especially when it comes to initial page load times.<br /><br />
-    For more information on how to detect prerendering and leverage the RenderContext, you can refer to the following link:
-    <MudLink Href="https://github.com/dotnet/aspnetcore/issues/51468#issuecomment-1783568121" Target="_blank" Typo="Typo.body2" Color="Color.Primary">
-        More details
-    </MudLink>
-</MudText>
+                <div class="d-flex justify-space-between align-center mb-4 pa-3" 
+                     style="background-color: var(--mud-palette-background-grey); border-radius: 8px;">
+                    <MudText Typo="Typo.h6">Total:</MudText>
+                    <MudText Typo="Typo.h5" Color="Color.Primary" Class="font-weight-bold">
+                        LYD @CalculateTotal().ToString("F2")
+                    </MudText>
+                </div>
 
-<br />
-<MudText Typo="Typo.h6" GutterBottom="true">InteractiveAuto</MudText>
-<MudText Typo="Typo.body2">
-    A discussion on how to achieve this can be found here:
-    <MudLink Href="https://github.com/dotnet/aspnetcore/issues/51468#issue-1950424116" Target="_blank" Typo="Typo.body2" Color="Color.Primary">
-        More details
-    </MudLink>
-</MudText>
+                <MudButton Variant="Variant.Filled" 
+                           Color="Color.Success" 
+                           FullWidth="true"
+                           Size="Size.Large"
+                           StartIcon="@Icons.Material.Filled.Payment"
+                           OnClick="CompleteCheckout"
+                           Disabled="@(string.IsNullOrWhiteSpace(employeeName) || isProcessing)">
+                    @(isProcessing ? "Processing..." : "Complete Sale")
+                </MudButton>
+
+                <MudButton Variant="Variant.Text" 
+                           Color="Color.Error" 
+                           FullWidth="true"
+                           Class="mt-2"
+                           StartIcon="@Icons.Material.Filled.Clear"
+                           OnClick="ClearCart"
+                           Disabled="@isProcessing">
+                    Clear Cart
+                </MudButton>
+            }
+        </MudPaper>
+    </MudItem>
+</MudGrid>
+
+<style>
+    .cursor-pointer {
+        cursor: pointer;
+        transition: transform 0.2s;
+    }
+    .cursor-pointer:hover {
+        transform: scale(1.05);
+    }
+</style>
+
+@code {
+
+    private List<Product>? products;
+    private List<TransactionItem> cartItems = new();
+    private string searchString = "";
+    private string customerName = "";
+    private string employeeName = "";
+    private bool isProcessing = false;
+    private bool isGridView = true;
+    private int? editingItemId = null;
+    private string editingPriceValue = "";
+    private MudTextField<string>? priceInputRef;
+
+    private IEnumerable<Product> FilteredProducts => products?.Where(p =>
+        p.IsActive &&
+        p.StockQuantity > 0 &&
+        (string.IsNullOrWhiteSpace(searchString) ||
+        p.Name.Contains(searchString, StringComparison.OrdinalIgnoreCase) ||
+        (p.Description?.Contains(searchString, StringComparison.OrdinalIgnoreCase) ?? false))
+    ) ?? Enumerable.Empty<Product>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadProducts();
+    }
+
+    private async Task LoadProducts()
+    {
+        try
+        {
+            products = await Http.GetFromJsonAsync<List<Product>>("api/products");
+        }
+        catch (Exception ex)
+        {
+            // Snackbar.Add($"Error loading products: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private void AddToCart(Product product)
+    {
+        if (product.StockQuantity == 0)
+        {
+            // Snackbar.Add($"{product.Name} is out of stock", Severity.Warning);
+            return;
+        }
+
+        var existingItem = cartItems.FirstOrDefault(i => i.ProductId == product.Id);
+
+        if (existingItem != null)
+        {
+            if (existingItem.Quantity < product.StockQuantity)
+            {
+                existingItem.Quantity++;
+                existingItem.Subtotal = existingItem.Quantity * existingItem.UnitPrice;
+                // Snackbar.Add($"{product.Name} quantity increased", Severity.Success);
+            }
+            else
+            {
+                // Snackbar.Add("Cannot exceed available stock", Severity.Warning);
+            }
+        }
+        else
+        {
+            cartItems.Add(new TransactionItem
+            {
+                ProductId = product.Id,
+                Product = product,
+                Quantity = 1,
+                UnitPrice = product.Price,
+                Subtotal = product.Price
+            });
+
+            // Snackbar.Add($"{product.Name} added to cart", Severity.Success);
+        }
+    }
+
+    private void IncreaseQuantity(TransactionItem item)
+    {
+        if (item.Quantity < item.Product!.StockQuantity)
+        {
+            item.Quantity++;
+            item.Subtotal = item.Quantity * item.UnitPrice;
+        }
+        else
+        {
+            // Snackbar.Add("Cannot exceed available stock", Severity.Warning);
+        }
+    }
+
+    private void DecreaseQuantity(TransactionItem item)
+    {
+        if (item.Quantity > 1)
+        {
+            item.Quantity--;
+            item.Subtotal = item.Quantity * item.UnitPrice;
+        }
+        else
+        {
+            RemoveFromCart(item);
+        }
+    }
+
+    private void UpdateItemPrice(TransactionItem item, decimal newPrice)
+    {
+        if (newPrice >= 0)
+        {
+            item.UnitPrice = newPrice;
+            item.Subtotal = item.Quantity * item.UnitPrice;
+        }
+    }
+
+    private async Task StartEditingAsync(TransactionItem item)
+    {
+        editingItemId = item.ProductId;
+        editingPriceValue = item.UnitPrice.ToString("F2");
+        
+        // Wait a tick for the input to render, then select all text
+        await Task.Delay(50);
+        if (priceInputRef != null)
+        {
+            try
+            {
+                await JSRuntime.InvokeVoidAsync("eval", 
+                    @"setTimeout(() => { 
+                        const input = document.activeElement; 
+                        if (input && input.tagName === 'INPUT') { 
+                            input.select(); 
+                        }
+                    }, 10);");
+            }
+            catch
+            {
+                // Ignore if JS fails
+            }
+        }
+    }
+
+    private void HandleKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            FinishEditing();
+        }
+    }
+
+    private void OnPriceValueChanged(TransactionItem item, string value)
+    {
+        // Only allow numbers and one decimal point
+        if (string.IsNullOrEmpty(value))
+        {
+            editingPriceValue = "";
+            return;
+        }
+
+        // Validate: only digits and at most one decimal point
+        var validChars = value.Where(c => char.IsDigit(c) || c == '.').ToArray();
+        var dotCount = validChars.Count(c => c == '.');
+        
+        if (dotCount <= 1)
+        {
+            editingPriceValue = new string(validChars);
+            
+            // Try to parse and update the price
+            if (decimal.TryParse(editingPriceValue, out decimal newPrice) && newPrice >= 0)
+            {
+                item.UnitPrice = newPrice;
+                item.Subtotal = item.Quantity * item.UnitPrice;
+            }
+        }
+    }
+
+    private void FinishEditing()
+    {
+        editingItemId = null;
+        editingPriceValue = "";
+    }
+
+    private void ResetItemPrice(TransactionItem item)
+    {
+        item.UnitPrice = item.Product!.Price;
+        item.Subtotal = item.Quantity * item.UnitPrice;
+    }
+
+    private void RemoveFromCart(TransactionItem item)
+    {
+        cartItems.Remove(item);
+        // Snackbar.Add("Item removed from cart", Severity.Info);
+    }
+
+    private void ClearCart()
+    {
+        cartItems.Clear();
+        customerName = "";
+        // Snackbar.Add("Cart cleared", Severity.Info);
+    }
+
+    private decimal CalculateTotal()
+    {
+        return cartItems.Sum(i => i.Subtotal);
+    }
+
+    private async Task CompleteCheckout()
+    {
+        if (!cartItems.Any())
+        {
+            // Snackbar.Add("Cart is empty", Severity.Warning);
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(employeeName))
+        {
+            // Snackbar.Add("Employee name is required", Severity.Warning);
+            return;
+        }
+
+        isProcessing = true;
+
+        try
+        {
+            var transaction = new Transaction
+            {
+                CustomerName = string.IsNullOrWhiteSpace(customerName) ? null : customerName,
+                EmployeeName = employeeName,
+                Items = cartItems.Select(ci => new TransactionItem
+                {
+                    ProductId = ci.ProductId,
+                    Quantity = ci.Quantity,
+                    UnitPrice = ci.UnitPrice,
+                    Subtotal = ci.Subtotal,
+                    // Don't include Product or Transaction navigation properties
+                    Product = null,
+                    Transaction = null
+                }).ToList()
+            };
+
+            var response = await Http.PostAsJsonAsync("api/transactions", transaction);
+
+            if (response.IsSuccessStatusCode)
+            {
+                var total = CalculateTotal();
+                // Snackbar.Add($"Sale completed! Total: LYD {total:F2}", Severity.Success);
+                ClearCart();
+                employeeName = "";
+                await LoadProducts(); // Refresh product stock
+            }
+            else
+            {
+                var errorContent = await response.Content.ReadAsStringAsync();
+                // Snackbar.Add($"Failed to complete sale: {errorContent}", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            // Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            isProcessing = false;
+        }
+    }
+
+    private string GetProductImage(Product product)
+    {
+        return string.IsNullOrWhiteSpace(product.ImageUrl) 
+            ? "images/placeholder-product.svg" 
+            : product.ImageUrl;
+    }
+}
