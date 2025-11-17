@@ -50,10 +50,10 @@
                     <MudGrid Spacing="3">
                         @foreach (var product in FilteredProducts)
                         {
+                            var availableStock = GetAvailableStock(product);
                             <MudItem xs="6" sm="4" md="3">
                                 <MudCard Class="cursor-pointer" 
                                          Elevation="2"
-                
                                          @onclick="@(() => AddToCart(product))">
                                     <MudCardMedia Image="@GetProductImage(product)" 
                                                   Height="150" />
@@ -64,8 +64,8 @@
                                         <MudText Typo="Typo.caption" Color="Color.Success">
                                             LYD @product.Price.ToString("F2")
                                         </MudText>
-                                        <MudText Typo="Typo.caption" Color="@(product.StockQuantity > 10 ? Color.Default : Color.Error)">
-                                            Stock: @product.StockQuantity
+                                        <MudText Typo="Typo.caption" Color="@(availableStock > 10 ? Color.Default : Color.Error)">
+                                            Stock: @availableStock
                                         </MudText>
                                     </MudCardContent>
                                 </MudCard>
@@ -89,11 +89,14 @@
                                 <MudTh>Action</MudTh>
                             </HeaderContent>
                             <RowTemplate>
+                                @{
+                                    var availableStock = GetAvailableStock(context);
+                                }
                                 <MudTd DataLabel="Name">@context.Name</MudTd>
                                 <MudTd DataLabel="Price">LYD @context.Price.ToString("F2")</MudTd>
                                 <MudTd DataLabel="Stock">
-                                    <MudChip T="string" Size="Size.Small" Color="@(context.StockQuantity > 10 ? Color.Success : Color.Warning)">
-                                        @context.StockQuantity
+                                    <MudChip T="string" Size="Size.Small" Color="@(availableStock > 10 ? Color.Success : Color.Warning)">
+                                        @availableStock
                                     </MudChip>
                                 </MudTd>
                                 <MudTd DataLabel="Action">
@@ -101,7 +104,7 @@
                                                Variant="Variant.Filled" 
                                                Color="Color.Primary"
                                                OnClick="@(() => AddToCart(context))"
-                                               Disabled="@(context.StockQuantity == 0)">
+                                               Disabled="@(availableStock == 0)">
                                         Add
                                     </MudButton>
                                 </MudTd>
@@ -133,7 +136,7 @@
                 <div style="max-height: 400px; overflow-y: auto;" class="mb-4">
                     @foreach (var item in cartItems)
                     {
-                        
+                        var availableStock = GetAvailableStock(item.Product!);
                         <MudPaper Class="pa-2 mb-2" Elevation="2">
                             <div class="d-flex justify-space-between align-center mb-2">
                                 <MudText Typo="Typo.body2" Class="font-weight-bold">
@@ -155,7 +158,7 @@
                                                    Size="Size.Small" 
                                                    Color="Color.Default"
                                                    OnClick="@(() => IncreaseQuantity(item))"
-                                                   Disabled="@(item.Quantity >= item.Product.StockQuantity)" />
+                                                   Disabled="@(availableStock == 0)" />
                                     <MudText Class="mx-2" Typo="Typo.caption" Color="Color.Secondary">×</MudText>
                                     @if (editingItemId == item.ProductId)
                                     {
@@ -279,7 +282,7 @@
 
     private IEnumerable<Product> FilteredProducts => products?.Where(p =>
         p.IsActive &&
-        p.StockQuantity > 0 &&
+        GetAvailableStock(p) > 0 &&
         (string.IsNullOrWhiteSpace(searchString) ||
         p.Name.Contains(searchString, StringComparison.OrdinalIgnoreCase) ||
         (p.Description?.Contains(searchString, StringComparison.OrdinalIgnoreCase) ?? false))
@@ -302,9 +305,24 @@
         }
     }
 
+    /// <summary>
+    /// Calculates the available stock for a product by subtracting the quantity already in the cart.
+    /// This provides instant UI feedback without modifying the database.
+    /// </summary>
+    private int GetAvailableStock(Product product)
+    {
+        var quantityInCart = cartItems
+            .Where(i => i.ProductId == product.Id)
+            .Sum(i => i.Quantity);
+        
+        return product.StockQuantity - quantityInCart;
+    }
+
     private void AddToCart(Product product)
     {
-        if (product.StockQuantity == 0)
+        var availableStock = GetAvailableStock(product);
+        
+        if (availableStock == 0)
         {
             // Snackbar.Add($"{product.Name} is out of stock", Severity.Warning);
             return;
@@ -314,7 +332,7 @@
 
         if (existingItem != null)
         {
-            if (existingItem.Quantity < product.StockQuantity)
+            if (availableStock > 0)
             {
                 existingItem.Quantity++;
                 existingItem.Subtotal = existingItem.Quantity * existingItem.UnitPrice;
@@ -342,7 +360,9 @@
 
     private void IncreaseQuantity(TransactionItem item)
     {
-        if (item.Quantity < item.Product!.StockQuantity)
+        var availableStock = GetAvailableStock(item.Product!);
+        
+        if (availableStock > 0)
         {
             item.Quantity++;
             item.Subtotal = item.Quantity * item.UnitPrice;
@@ -507,7 +527,7 @@
                 // Snackbar.Add($"Sale completed! Total: LYD {total:F2}", Severity.Success);
                 ClearCart();
                 employeeName = "";
-                await LoadProducts(); // Refresh product stock
+                await LoadProducts(); // Refresh product stock from database
             }
             else
             {
