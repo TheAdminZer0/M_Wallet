@@ -9,7 +9,7 @@
 <MudGrid Spacing="2">
     <!-- Main Product Area -->
     <MudItem xs="12" md="8">
-        <MudPaper Class="pa-4" Elevation="2">
+        <MudPaper Class="pa-4" Elevation="2" Style="background-color:var(--mud-palette-gray-lighter);">
             <div class="d-flex justify-space-between align-center mb-4">
                 <MudText Typo="Typo.h5">Products</MudText>
                 <div class="d-flex align-center gap-2">
@@ -53,6 +53,7 @@
                             <MudItem xs="6" sm="4" md="3">
                                 <MudCard Class="cursor-pointer" 
                                          Elevation="2"
+                
                                          @onclick="@(() => AddToCart(product))">
                                     <MudCardMedia Image="@GetProductImage(product)" 
                                                   Height="150" />
@@ -114,7 +115,8 @@
 
     <!-- Checkout Sidebar -->
     <MudItem xs="12" md="4">
-        <MudPaper Class="pa-4" Elevation="3" Style="position: sticky; top: 16px;">
+       
+        <MudPaper Class="pa-4" Elevation="2" Style="position: sticky; top: 16px; background-color:var(--mud-palette-gray-lighter);">
             <MudText Typo="Typo.h5" Class="mb-4">
                 <MudIcon Icon="@Icons.Material.Filled.ShoppingCart" Class="mr-2" />
                 Cart
@@ -131,7 +133,8 @@
                 <div style="max-height: 400px; overflow-y: auto;" class="mb-4">
                     @foreach (var item in cartItems)
                     {
-                        <MudPaper Class="pa-2 mb-2" Elevation="1">
+                        
+                        <MudPaper Class="pa-2 mb-2" Elevation="2">
                             <div class="d-flex justify-space-between align-center mb-2">
                                 <MudText Typo="Typo.body2" Class="font-weight-bold">
                                     @item.Product!.Name
@@ -218,6 +221,7 @@
                               Required="true"
                               Class="mb-3" />
 
+                
                 <div class="d-flex justify-space-between align-center mb-4 pa-3" 
                      style="background-color: var(--mud-palette-background-grey); border-radius: 8px;">
                     <MudText Typo="Typo.h6">Total:</MudText>

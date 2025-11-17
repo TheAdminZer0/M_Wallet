@@ -1,12 +1,43 @@
 {
-	"version": "2.0.0",
-	"tasks": [
-		{
-			"type": "dotnet",
-			"task": "watch M_Wallet.Client",
-			"file": "C:\\Users\\AdminZer0\\source\\repos\\M_Wallet\\M_Wallet.Client\\M_Wallet.Client.csproj",
-			"problemMatcher": [],
-			"label": "dotnet: watch M_Wallet.Client"
-		}
-	]
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "dotnet: watch M_Wallet Server",
+            "type": "process",
+            "command": "dotnet",
+            "args": [
+                "watch",
+                "run",
+                "--project",
+                "${workspaceFolder}/M_Wallet/M_Wallet.csproj"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "problemMatcher": ["$msCompile"]
+        },
+        {
+            "label": "Kill dotnet",
+            "type": "process",
+            "command": "powershell",
+            "args": [
+                "-NoProfile",
+                "-Command",
+                "$ErrorActionPreference = 'Stop'; try { taskkill /IM dotnet.exe /F | Out-Null } catch { Write-Host 'dotnet.exe not running'; }; exit 0"
+            ],
+            "problemMatcher": [],
+            "presentation": {
+                "reveal": "never",
+                "panel": "dedicated"
+            }
+        },
+        {
+            "label": "Run Blazor clean",
+            "dependsOrder": "sequence",
+            "dependsOn": [
+                "Kill dotnet",
+                "dotnet: watch M_Wallet Server"
+            ]
+        }
+    ]
 }
