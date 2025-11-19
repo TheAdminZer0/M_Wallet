@@ -1,5 +1,10 @@
 @using M_Wallet.Shared
+@using M_Wallet.Client.Components
+@using MudBlazor
+@using System.Security.Cryptography
+@using System.Text
 @inject ISnackbar Snackbar
+@inject IDialogService DialogService
 
 <MudDialog>
     <TitleContent>
@@ -13,37 +18,81 @@
                       Required="true" 
                       RequiredError="Name is required"
                       Variant="Variant.Outlined"
-                      Class="mb-3" />
+                  Class="mb-2" />
 
         <MudTextField @bind-Value="Product.Description" 
                       Label="Description" 
                       Lines="3"
                       Variant="Variant.Outlined"
-                      Class="mb-3" />
+                  Class="mb-2" />
 
-        <MudNumericField @bind-Value="Product.CostPrice" 
-                         Label="Cost Price (What you paid)" 
-                         Format="F2"
-                         Min="0m"
-                         Adornment="Adornment.Start" 
-                         AdornmentText="LYD"
-                         Variant="Variant.Outlined"
-                         Class="mb-3" />
+        <MudGrid GutterSize="2" Class="mb-2">
+            <MudItem xs="12" sm="6">
+                <MudNumericField @bind-Value="Product.CostPrice" 
+                                 Label="Cost Price (What you paid)" 
+                                 Format="F2"
+                                 Min="0m"
+                                 Adornment="Adornment.Start" 
+                                 AdornmentText="LYD"
+                                 Variant="Variant.Outlined" />
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudNumericField @bind-Value="Product.Price" 
+                                 Label="Selling Price" 
+                                 Format="F2"
+                                 Min="0m"
+                                 Adornment="Adornment.Start" 
+                                 AdornmentText="LYD"
+                                 Variant="Variant.Outlined" />
+            </MudItem>
+        </MudGrid>
 
-        <MudNumericField @bind-Value="Product.Price" 
-                         Label="Selling Price" 
-                         Format="F2"
-                         Min="0m"
-                         Adornment="Adornment.Start" 
-                         AdornmentText="LYD"
-                         Variant="Variant.Outlined"
-                         Class="mb-3" />
+        <MudStack Spacing="1" Class="mb-2">
+            <MudStack Direction="Row" Spacing="1" AlignItems="AlignItems.Center">
+                <MudTextField @bind-Value="_currentBarcodeValue"
+                              Label="Barcode / SKU"
+                              Variant="Variant.Outlined"
+                              Margin="Margin.Dense"
+                              Placeholder="Scan or type"
+                              @onkeydown="HandleBarcodeKeyDown"
+                              OnBlur="HandleBarcodeBlur" />
+                <MudIconButton Icon="@Icons.Material.Filled.Add"
+                               Color="Color.Primary"
+                               Size="Size.Medium"
+                               OnClick="StartNewBarcode" />
+                <MudButton Variant="Variant.Outlined"
+                           Color="Color.Default"
+                           Size="Size.Small"
+                           OnClick="GenerateBarcode">
+                    Generate
+                </MudButton>
+                <MudButton Variant="Variant.Outlined"
+                           Color="Color.Primary"
+                           Size="Size.Small"
+                           OnClick="OpenScannerDialogAsync">
+                    Scan
+                </MudButton>
+            </MudStack>
+            @if (Product.Barcodes.Any())
+            {
+                <MudStack Direction="Row" Spacing="1" Class="flex-wrap">
+                    @foreach (var barcode in Product.Barcodes)
+                    {
+                        <MudChip T="string"
+                                 Text="@barcode.Barcode"
+                                 OnClose="@(() => RemoveBarcode(barcode))"
+                                 Color="Color.Primary"
+                                 Variant="Variant.Outlined" />
+                    }
+                </MudStack>
+            }
+        </MudStack>
 
         @if (Product.CostPrice > 0 && Product.Price > 0)
         {
             var profit = Product.Price - Product.CostPrice;
             var profitMargin = (profit / Product.Price) * 100;
-            <MudAlert Severity="@(profit > 0 ? Severity.Success : Severity.Warning)" Dense="true" Class="mb-3">
+            <MudAlert Severity="@(profit > 0 ? Severity.Success : Severity.Warning)" Dense="true" Class="mb-2">
                 Profit: LYD @profit.ToString("F2") (@profitMargin.ToString("F1")% margin)
             </MudAlert>
         }
@@ -52,16 +101,16 @@
                          Label="Stock Quantity" 
                          Min="0"
                          Variant="Variant.Outlined"
-                         Class="mb-3" />
+                 Class="mb-2" />
 
         <MudTextField @bind-Value="Product.ImageUrl" 
                       Label="Image URL (Optional)" 
                       Variant="Variant.Outlined"
-                      Class="mb-3" />
+                  Class="mb-2" />
     </DialogContent>
     
     <DialogActions>
-        <MudButton OnClick="@(() => OnCancel.InvokeAsync())">Cancel</MudButton>
+        <MudButton OnClick="CancelAsync">Cancel</MudButton>
         <MudButton Color="Color.Primary" 
                    Variant="Variant.Filled" 
                    OnClick="Submit">
@@ -85,6 +134,8 @@
 
     private async Task Submit()
     {
+        AddCurrentBarcode();
+
         // Basic validation
         if (string.IsNullOrWhiteSpace(Product.Name))
         {
@@ -111,5 +162,98 @@
 
         // Invoke the submit callback
         await OnSubmit.InvokeAsync(Product);
+    }
+
+    private async Task CancelAsync()
+    {
+        await OnCancel.InvokeAsync();
+    }
+
+    private string _currentBarcodeValue = string.Empty;
+
+    private void GenerateBarcode()
+    {
+        var builder = new StringBuilder(13);
+        for (var i = 0; i < 13; i++)
+        {
+            builder.Append(RandomNumberGenerator.GetInt32(0, 10));
+        }
+
+        _currentBarcodeValue = builder.ToString();
+    }
+
+    private void AddCurrentBarcode()
+    {
+        if (!string.IsNullOrWhiteSpace(_currentBarcodeValue))
+        {
+            var trimmed = _currentBarcodeValue.Trim();
+            if (!string.IsNullOrWhiteSpace(trimmed) && !Product.Barcodes.Any(b => string.Equals(b.Barcode, trimmed, StringComparison.OrdinalIgnoreCase)))
+            {
+                Product.Barcodes.Add(new ProductBarcode { Barcode = trimmed });
+            }
+            _currentBarcodeValue = string.Empty;
+        }
+    }
+
+    private void HandleBarcodeKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            AddCurrentBarcode();
+        }
+    }
+
+    private void StartNewBarcode()
+    {
+        AddCurrentBarcode();
+    }
+
+    private void HandleBarcodeBlur(FocusEventArgs _)
+    {
+        AddCurrentBarcode();
+    }
+
+    private void RemoveBarcode(ProductBarcode barcode)
+    {
+        Product.Barcodes.Remove(barcode);
+    }
+
+    private IDialogReference? _scannerDialogReference;
+
+    private async Task OpenScannerDialogAsync()
+    {
+        var parameters = new DialogParameters<BarcodeScannerDialog>
+        {
+            { x => x.OnDetected, EventCallback.Factory.Create<string>(this, HandleBarcodeDetectedAsync) },
+            { x => x.OnCancel, EventCallback.Factory.Create(this, CloseScannerDialogAsync) }
+        };
+
+        var options = new DialogOptions
+        {
+            FullScreen = true,
+            CloseButton = true
+        };
+
+        _scannerDialogReference = await DialogService.ShowAsync<BarcodeScannerDialog>("Scan Barcode", parameters, options);
+    }
+
+    private async Task HandleBarcodeDetectedAsync(string code)
+    {
+        if (!string.IsNullOrWhiteSpace(code))
+        {
+            _currentBarcodeValue = code;
+            AddCurrentBarcode();
+            Snackbar.Add($"Barcode captured: {code}", Severity.Success);
+            StateHasChanged();
+        }
+
+        await CloseScannerDialogAsync();
+    }
+
+    private Task CloseScannerDialogAsync()
+    {
+        _scannerDialogReference?.Close();
+        _scannerDialogReference = null;
+        return Task.CompletedTask;
     }
 }

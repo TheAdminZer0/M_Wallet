@@ -1,0 +1,178 @@
+@using MudBlazor
+@using Microsoft.JSInterop
+@inject IJSRuntime JSRuntime
+@inject ISnackbar Snackbar
+
+@implements IAsyncDisposable
+
+<MudDialog>
+    <DialogContent>
+        <MudStack Spacing="2">
+            <MudText Typo="Typo.h5">Camera Scanner</MudText>
+
+            @if (_devices.Count > 1)
+            {
+                <MudSelect T="string"
+                           Label="Camera"
+                           Dense="true"
+                           Value="_selectedDeviceId"
+                           ValueChanged="OnCameraChanged"
+                           Immediate="true">
+                    @foreach (var device in _devices)
+                    {
+                        <MudSelectItem Value="@device.DeviceId">@device.Label</MudSelectItem>
+                    }
+                </MudSelect>
+            }
+
+            <video id="@_videoElementId"
+                   autoplay
+                   playsinline
+                   muted
+                   style="width:100%;height:auto;border-radius:12px;background-color:#000;"></video>
+
+            <MudText Typo="Typo.body2" Color="Color.Secondary">@_statusMessage</MudText>
+        </MudStack>
+    </DialogContent>
+
+    <DialogActions>
+        <MudButton Variant="Variant.Text" OnClick="CancelAsync">Cancel</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [Parameter]
+    public EventCallback<string> OnDetected { get; set; }
+
+    [Parameter]
+    public EventCallback OnCancel { get; set; }
+
+    private readonly string _videoElementId = $"barcode-video-{Guid.NewGuid():N}";
+    private DotNetObjectReference<BarcodeScannerDialog>? _dotNetRef;
+    private readonly List<CameraDevice> _devices = new();
+    private string? _selectedDeviceId;
+    private string _statusMessage = "Initializing camera…";
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender)
+        {
+            return;
+        }
+
+        _dotNetRef = DotNetObjectReference.Create(this);
+
+        try
+        {
+            var devices = await JSRuntime.InvokeAsync<List<CameraDevice>>("barcodeScanner.getDevices");
+            _devices.Clear();
+            _devices.AddRange(devices);
+            _selectedDeviceId ??= GetPreferredCameraDeviceId();
+
+            if (_selectedDeviceId is null)
+            {
+                _statusMessage = "No cameras detected.";
+            }
+            else
+            {
+                await StartScannerAsync();
+            }
+        }
+        catch (JSException ex)
+        {
+            _statusMessage = ex.Message;
+        }
+        catch (Exception ex)
+        {
+            _statusMessage = ex.Message;
+        }
+
+        StateHasChanged();
+    }
+
+    private async Task StartScannerAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_selectedDeviceId))
+        {
+            return;
+        }
+
+        _statusMessage = "Point your camera at a barcode…";
+        StateHasChanged();
+
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("barcodeScanner.start", _videoElementId, _dotNetRef, new { deviceId = _selectedDeviceId });
+        }
+        catch (JSException ex)
+        {
+            _statusMessage = ex.Message;
+            StateHasChanged();
+        }
+    }
+
+    private async Task OnCameraChanged(string? deviceId)
+    {
+        _selectedDeviceId = deviceId;
+        await RestartScannerAsync();
+    }
+
+    private async Task RestartScannerAsync()
+    {
+        await StopScannerAsync();
+        await StartScannerAsync();
+    }
+
+    private async Task StopScannerAsync()
+    {
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("barcodeScanner.stop", _videoElementId);
+        }
+        catch (JSException)
+        {
+        }
+    }
+
+    [JSInvokable]
+    public async Task OnBarcodeDetected(string code)
+    {
+        if (string.IsNullOrWhiteSpace(code))
+        {
+            return;
+        }
+
+        await StopScannerAsync();
+        Snackbar.Add($"Barcode captured: {code}", Severity.Success);
+        await OnDetected.InvokeAsync(code);
+    }
+
+    private async Task CancelAsync()
+    {
+        await StopScannerAsync();
+        await OnCancel.InvokeAsync();
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        await StopScannerAsync();
+        _dotNetRef?.Dispose();
+    }
+
+    private record CameraDevice(string DeviceId, string Label);
+
+    private string? GetPreferredCameraDeviceId()
+    {
+        if (_devices.Count == 0)
+        {
+            return null;
+        }
+
+        var preferred = _devices.FirstOrDefault(device =>
+            device.Label?.Contains("back", System.StringComparison.OrdinalIgnoreCase) == true ||
+            device.Label?.Contains("rear", System.StringComparison.OrdinalIgnoreCase) == true ||
+            device.Label?.Contains("environment", System.StringComparison.OrdinalIgnoreCase) == true);
+
+        return preferred?.DeviceId ?? _devices.First().DeviceId;
+    }
+}

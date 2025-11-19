@@ -10,6 +10,7 @@ public class AppDbContext : DbContext
     }
 
     public DbSet<Product> Products { get; set; }
+    public DbSet<ProductBarcode> ProductBarcodes { get; set; }
     public DbSet<Transaction> Transactions { get; set; }
     public DbSet<TransactionItem> TransactionItems { get; set; }
 
@@ -21,6 +22,17 @@ public class AppDbContext : DbContext
         {
             entity.Property(p => p.CostPrice).HasPrecision(18, 2);
             entity.Property(p => p.Price).HasPrecision(18, 2);
+            
+            entity.HasMany(p => p.Barcodes)
+                .WithOne(pb => pb.Product)
+                .HasForeignKey(pb => pb.ProductId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<ProductBarcode>(entity =>
+        {
+            entity.Property(pb => pb.Barcode).HasMaxLength(64).IsRequired();
+            entity.HasIndex(pb => pb.Barcode);
         });
 
         modelBuilder.Entity<Transaction>(entity =>

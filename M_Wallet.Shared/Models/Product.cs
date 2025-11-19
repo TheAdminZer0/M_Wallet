@@ -8,6 +8,7 @@ public class Product
     public decimal CostPrice { get; set; } = 0;
     public decimal Price { get; set; }
     public string? ImageUrl { get; set; }
+    public List<ProductBarcode> Barcodes { get; set; } = new();
     public int StockQuantity { get; set; }
     public bool IsActive { get; set; } = true;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;

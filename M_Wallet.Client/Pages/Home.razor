@@ -2,7 +2,9 @@
 @inject HttpClient Http
 @inject ISnackbar Snackbar
 @inject IJSRuntime JSRuntime
-@using M_Wallet.Shared
+@inject IDialogService DialogService
+
+
 
 <PageTitle>POS - Point of Sale</PageTitle>
 
@@ -10,8 +12,7 @@
     <!-- Main Product Area -->
     <MudItem xs="12" md="8">
         <MudPaper Class="pa-4" Elevation="2" Style="background-color:var(--mud-palette-gray-lighter);">
-            <div class="d-flex justify-space-between align-center mb-4">
-                <MudText Typo="Typo.h5">Products</MudText>
+           
                 <div class="d-flex align-center gap-2">
                     <MudTextField @bind-Value="searchString" 
                                   Placeholder="Search products..." 
@@ -23,6 +24,11 @@
                                   Immediate="true"
                                   Style="max-width: 300px;">
                     </MudTextField>
+                    <MudIconButton Icon="@Icons.Material.Filled.CenterFocusStrong"
+                                   Color="Color.Primary"
+                                   Size="Size.Medium"
+                                   Title="Scan barcode to search"
+                                   OnClick="OpenSearchScannerAsync" />
                     <MudToggleIconButton @bind-Toggled="@isGridView"
                                          Icon="@Icons.Material.Filled.GridView" 
                                          ToggledIcon="@Icons.Material.Filled.TableRows"
@@ -30,7 +36,7 @@
                                          ToggledColor="@Color.Primary"
                                          Title="Toggle Grid/Table View" />
                 </div>
-            </div>
+           
 
             @if (products == null)
             {
@@ -56,17 +62,19 @@
                                          Elevation="2"
                                          @onclick="@(() => AddToCart(product))">
                                     <MudCardMedia Image="@GetProductImage(product)" 
-                                                  Height="150" />
+                                                  Height="120"/>
                                     <MudCardContent Class="pa-2">
-                                        <MudText Typo="Typo.body2" Class="font-weight-bold">
+                                        <MudText Typo="Typo.body1" Class="font-weight-bold">
                                             @product.Name
                                         </MudText>
-                                        <MudText Typo="Typo.caption" Color="Color.Success">
-                                            LYD @product.Price.ToString("F2")
-                                        </MudText>
-                                        <MudText Typo="Typo.caption" Color="@(availableStock > 10 ? Color.Default : Color.Error)">
-                                            Stock: @availableStock
-                                        </MudText>
+                                        <div class="d-flex justify-space-between align-center">
+                                            <MudText Typo="Typo.h6" Color="Color.Success">
+                                                @product.Price.ToString("F2")
+                                            </MudText>
+                                            <MudText Typo="Typo.body1" Color="@(availableStock > 10 ? Color.Default : Color.Error)">
+                                                Stock: @availableStock
+                                            </MudText>
+                                        </div>
                                     </MudCardContent>
                                 </MudCard>
                             </MudItem>
@@ -81,7 +89,7 @@
                                   Hover="true" 
                                   Dense="true" 
                                   Breakpoint="Breakpoint.None"
-                                  OnRowClick="@((TableRowClickEventArgs<Product> args) => AddToCart(args.Item))">
+                                  OnRowClick="@((TableRowClickEventArgs<Product> args) => AddToCart(args.Item!))">
                             <HeaderContent>
                                 <MudTh>Name</MudTh>
                                 <MudTh>Price</MudTh>
@@ -137,74 +145,89 @@
                     @foreach (var item in cartItems)
                     {
                         var availableStock = GetAvailableStock(item.Product!);
-                        <MudPaper Class="pa-2 mb-2" Elevation="2">
-                            <div class="d-flex justify-space-between align-center mb-2">
-                                <MudText Typo="Typo.body2" Class="font-weight-bold">
-                                    @item.Product!.Name
-                                </MudText>
-                                <MudIconButton Icon="@Icons.Material.Filled.Close" 
-                                               Size="Size.Small" 
-                                               Color="Color.Error"
-                                               OnClick="@(() => RemoveFromCart(item))" />
-                            </div>
-                            <div class="d-flex justify-space-between align-center">
-                                <div class="d-flex align-center">
-                                    <MudIconButton Icon="@Icons.Material.Filled.Remove" 
-                                                   Size="Size.Small" 
-                                                   Color="Color.Default"
-                                                   OnClick="@(() => DecreaseQuantity(item))" />
-                                    <MudText Class="mx-2" Typo="Typo.body2">@item.Quantity</MudText>
-                                    <MudIconButton Icon="@Icons.Material.Filled.Add" 
-                                                   Size="Size.Small" 
-                                                   Color="Color.Default"
-                                                   OnClick="@(() => IncreaseQuantity(item))"
-                                                   Disabled="@(availableStock == 0)" />
-                                    <MudText Class="mx-2" Typo="Typo.caption" Color="Color.Secondary">×</MudText>
-                                    @if (editingItemId == item.ProductId)
-                                    {
-                                        <MudTextField @ref="priceInputRef"
-                                                      Value="@editingPriceValue"
-                                                      Margin="Margin.Dense"
-                                                      Variant="Variant.Text"
-                                                      Style="width: 90px;"
-                                                      Immediate="true"
-                                                      ValueChanged="@((string val) => OnPriceValueChanged(item, val))"
-                                                      Adornment="Adornment.End"
-                                                      AdornmentIcon="@Icons.Material.Filled.Check"
-                                                      OnAdornmentClick="@(() => FinishEditing())"
-                                                      InputType="InputType.Text"
-                                                      OnBlur="@(() => FinishEditing())"
-                                                      @onkeydown="@((KeyboardEventArgs e) => HandleKeyDown(e))"
-                                                      AutoFocus="true" />
-                                    }
-                                    else
-                                    {
-                                        <MudText Typo="Typo.body2" 
-                                                 Style="cursor: pointer; min-width: 60px;"
-                                                 @onclick="@(async () => await StartEditingAsync(item))">
-                                            LYD @item.UnitPrice.ToString("F2")
-                                            @if (item.UnitPrice != item.Product.Price)
-                                            {
-                                                <MudIcon Icon="@Icons.Material.Filled.Edit" 
-                                                         Size="Size.Small" 
-                                                         Color="Color.Warning" 
-                                                         Style="vertical-align: middle; font-size: 14px;" />
-                                            }
-                                        </MudText>
-                                    }
-                                    @if (item.UnitPrice != item.Product.Price && editingItemId != item.ProductId)
-                                    {
-                                        <MudIconButton Icon="@Icons.Material.Filled.Refresh"
-                                                       Size="Size.Small"
-                                                       Color="Color.Default"
-                                                       OnClick="@(() => ResetItemPrice(item))"
-                                                       Style="margin-left: 4px;"
-                                                       Title="Reset to original price" />
-                                    }
+                        var referencePrice = item.Product?.Price ?? item.UnitPrice;
+                        <MudPaper Class="cart-item-card pa-2 mb-2" Elevation="2">
+                            <div class="cart-item-line">
+                                <div class="cart-item-info">
+                                    <img src="@GetProductImage(item.Product)"
+                                         alt="@item.Product?.Name"
+                                         class="cart-item-image"
+                                         loading="lazy" />
+                                    <MudText Typo="Typo.body1" Class="font-weight-bold">
+                                        @item.Product?.Name
+                                    </MudText>
                                 </div>
-                                <MudText Typo="Typo.body2" Color="Color.Success" Class="font-weight-bold">
-                                    LYD @item.Subtotal.ToString("F2")
-                                </MudText>
+                                <div class="cart-item-right">
+                                    <div class="cart-quantity-editor">
+                                        <MudIconButton Icon="@Icons.Material.Filled.Remove" 
+                                                       Size="Size.Small" 
+                                                       Color="Color.Default"
+                                                       OnClick="@(() => DecreaseQuantity(item))" />
+                                        <MudNumericField T="int?"
+                                                         Value="item.Quantity"
+                                                         ValueChanged="@(val => OnQuantityInputChanged(item, val))"
+                                                         ValueExpression="() => item.Quantity"
+                                                         Min="1"
+                                                         Max="@GetMaxQuantity(item)"
+                                                         Immediate="true"
+                                                         HideSpinButtons="true"
+                                                         Dense="true"
+                                                         Class="cart-qty-input" />
+                                        <MudIconButton Icon="@Icons.Material.Filled.Add" 
+                                                       Size="Size.Small" 
+                                                       Color="Color.Default"
+                                                       OnClick="@(() => IncreaseQuantity(item))"
+                                                       Disabled="@(availableStock == 0)" />
+                                    </div>
+                                    <div class="cart-price-total">
+                                        <div class="cart-price-edit">
+                                            @if (editingItemId == item.ProductId)
+                                            {
+                                                <MudTextField @ref="priceInputRef"
+                                                              Value="@editingPriceValue"
+                                                              Margin="Margin.Dense"
+                                                              Variant="Variant.Text"
+                                                              Style="width: 80px;"
+                                                              Immediate="true"
+                                                              ValueChanged="@((string val) => OnPriceValueChanged(item, val))"
+                                                              InputType="InputType.Text"
+                                                              OnBlur="@(() => FinishEditing())"
+                                                              @onkeydown="@((KeyboardEventArgs e) => HandleKeyDown(e))"
+                                                              AutoFocus="true" />
+                                            }
+                                            else
+                                            {
+                                                <MudText Typo="Typo.body1" 
+                                                         Style="cursor: pointer; min-width: 60px;"
+                                                         @onclick="@(async () => await StartEditingAsync(item))">
+                                                    x @item.UnitPrice.ToString("F2")
+                                                    @if (item.UnitPrice != referencePrice)
+                                                    {
+                                                        <MudIcon Icon="@Icons.Material.Filled.Edit" 
+                                                                 Size="Size.Small" 
+                                                                 Color="Color.Warning" 
+                                                                 Style="vertical-align: middle; font-size: 14px;" />
+                                                    }
+                                                </MudText>
+                                            }
+                                            @if (item.UnitPrice != referencePrice && editingItemId != item.ProductId)
+                                            {
+                                                <MudIconButton Icon="@Icons.Material.Filled.Refresh"
+                                                               Size="Size.Small"
+                                                               Color="Color.Default"
+                                                               OnClick="@(() => ResetItemPrice(item))" />
+                                            }
+                                        </div>
+                                        <MudText Typo="Typo.body2" Color="Color.Success" Class="font-weight-bold cart-item-subtotal">
+                                            <span class="cart-amount">@item.Subtotal.ToString("F2")</span>
+                                            <span class="cart-currency">LYD</span>
+                                        </MudText>
+                                    </div>
+                                    <MudIconButton Icon="@Icons.Material.Filled.Close" 
+                                                   Size="Size.Small" 
+                                                   Color="Color.Error"
+                                                   OnClick="@(() => RemoveFromCart(item))" />
+                                </div>
                             </div>
                         </MudPaper>
                     }
@@ -228,8 +251,9 @@
                 <div class="d-flex justify-space-between align-center mb-4 pa-3" 
                      style="background-color: var(--mud-palette-background-grey); border-radius: 8px;">
                     <MudText Typo="Typo.h6">Total:</MudText>
-                    <MudText Typo="Typo.h5" Color="Color.Primary" Class="font-weight-bold">
-                        LYD @CalculateTotal().ToString("F2")
+                    <MudText Typo="Typo.h5" Color="Color.Primary" Class="font-weight-bold cart-total-display">
+                        <span class="cart-amount">@CalculateTotal().ToString("F2")</span>
+                        <span class="cart-currency">LYD</span>
                     </MudText>
                 </div>
 
@@ -265,6 +289,78 @@
     .cursor-pointer:hover {
         transform: scale(1.05);
     }
+    .cart-item-image {
+        width: 52px;
+        height: 52px;
+        object-fit: cover;
+        border-radius: 8px;
+        margin-right: 1px;
+        background-color: var(--mud-palette-grey-light);
+    }
+    .cart-item-card {
+        border-radius: 12px;
+    }
+    .cart-item-line {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1px;
+        flex-wrap: wrap;
+    }
+    .cart-item-info {
+        display: flex;
+        align-items: center;
+        gap: 1px;
+        min-width: 120px;
+        flex: 1 1 auto;
+        
+    }
+    .cart-item-right {
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 5px;
+        flex: 1 1 auto;
+        flex-wrap: nowrap;
+        min-width: 0;
+    }
+    .cart-quantity-editor {
+        display: flex;
+        align-items: center;
+        gap: 1px;
+    }
+    .cart-qty-input {
+        width: 30px;
+        text-align: center;
+    }
+    .cart-price-total {
+        display: flex;
+        align-items: center;
+        gap: 1px;
+        flex-wrap: nowrap;
+    }
+    .cart-price-edit {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+    .cart-item-subtotal,
+    .cart-total-display {
+        min-width: 80px;
+        text-align: right;
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+        line-height: 1.1;
+    }
+    .cart-amount {
+        font-size: 1.5em;
+    }
+    .cart-currency {
+        font-size: 0.85em;
+        letter-spacing: 0.5px;
+    }
+
 </style>
 
 @code {
@@ -279,14 +375,32 @@
     private int? editingItemId = null;
     private string editingPriceValue = "";
     private MudTextField<string>? priceInputRef;
+    private IDialogReference? _searchScannerDialog;
 
-    private IEnumerable<Product> FilteredProducts => products?.Where(p =>
-        p.IsActive &&
-        GetAvailableStock(p) > 0 &&
-        (string.IsNullOrWhiteSpace(searchString) ||
-        p.Name.Contains(searchString, StringComparison.OrdinalIgnoreCase) ||
-        (p.Description?.Contains(searchString, StringComparison.OrdinalIgnoreCase) ?? false))
-    ) ?? Enumerable.Empty<Product>();
+    private IEnumerable<Product> FilteredProducts
+    {
+        get
+        {
+            if (products is null)
+            {
+                return Enumerable.Empty<Product>();
+            }
+
+            var query = products.Where(p => p.IsActive);
+
+            if (string.IsNullOrWhiteSpace(searchString))
+            {
+                return query;
+            }
+
+            var term = searchString.Trim();
+
+            return query.Where(p =>
+                p.Name.Contains(term, System.StringComparison.OrdinalIgnoreCase) ||
+                (p.Description?.Contains(term, System.StringComparison.OrdinalIgnoreCase) ?? false) ||
+                (p.Barcodes?.Any(b => b.Barcode.Contains(term, System.StringComparison.OrdinalIgnoreCase)) ?? false));
+        }
+    }
 
     protected override async Task OnInitializedAsync()
     {
@@ -299,7 +413,7 @@
         {
             products = await Http.GetFromJsonAsync<List<Product>>("api/products");
         }
-        catch (Exception ex)
+        catch (Exception)
         {
             // Snackbar.Add($"Error loading products: {ex.Message}", Severity.Error);
         }
@@ -485,6 +599,41 @@
         return cartItems.Sum(i => i.Subtotal);
     }
 
+    private async Task OpenSearchScannerAsync()
+    {
+        var parameters = new DialogParameters<M_Wallet.Client.Components.BarcodeScannerDialog>
+        {
+            { x => x.OnDetected, EventCallback.Factory.Create<string>(this, HandleSearchBarcodeDetectedAsync) },
+            { x => x.OnCancel, EventCallback.Factory.Create(this, CloseSearchScannerAsync) }
+        };
+
+        var options = new DialogOptions
+        {
+            FullScreen = true,
+            CloseButton = true
+        };
+
+        _searchScannerDialog = await DialogService.ShowAsync<M_Wallet.Client.Components.BarcodeScannerDialog>("Scan Product", parameters, options);
+    }
+
+    private async Task HandleSearchBarcodeDetectedAsync(string code)
+    {
+        if (!string.IsNullOrWhiteSpace(code))
+        {
+            searchString = code;
+            Snackbar.Add($"Searching for barcode {code}", Severity.Info);
+        }
+
+        await CloseSearchScannerAsync();
+    }
+
+    private Task CloseSearchScannerAsync()
+    {
+        _searchScannerDialog?.Close();
+        _searchScannerDialog = null;
+        return Task.CompletedTask;
+    }
+
     private async Task CompleteCheckout()
     {
         if (!cartItems.Any())
@@ -535,7 +684,7 @@
                 // Snackbar.Add($"Failed to complete sale: {errorContent}", Severity.Error);
             }
         }
-        catch (Exception ex)
+        catch (Exception)
         {
             // Snackbar.Add($"Error: {ex.Message}", Severity.Error);
         }
@@ -545,10 +694,43 @@
         }
     }
 
-    private string GetProductImage(Product product)
+    private void OnQuantityInputChanged(TransactionItem item, int? newQuantity)
     {
-        return string.IsNullOrWhiteSpace(product.ImageUrl) 
-            ? "images/placeholder-product.svg" 
-            : product.ImageUrl;
+        if (newQuantity is null)
+        {
+            return;
+        }
+
+        var maxQuantity = GetMaxQuantity(item);
+        var normalized = Math.Clamp(newQuantity.Value, 1, maxQuantity);
+        item.Quantity = normalized;
+        item.Subtotal = item.Quantity * item.UnitPrice;
+    }
+
+    private int GetMaxQuantity(TransactionItem item)
+    {
+        var product = item.Product;
+        if (product is null)
+        {
+            return item.Quantity;
+        }
+
+        var totalForProduct = cartItems
+            .Where(i => i.ProductId == item.ProductId)
+            .Sum(i => i.Quantity);
+
+        var otherQuantity = totalForProduct - item.Quantity;
+        var max = product.StockQuantity - otherQuantity;
+        return max > 0 ? max : item.Quantity;
+    }
+
+    private string GetProductImage(Product? product)
+    {
+        if (product is null || string.IsNullOrWhiteSpace(product.ImageUrl))
+        {
+            return "images/placeholder-product.svg";
+        }
+
+        return product.ImageUrl;
     }
 }

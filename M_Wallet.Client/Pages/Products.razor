@@ -33,7 +33,8 @@ else
                   Dense="true" 
                   Breakpoint="Breakpoint.None"
                   Filter="new Func<Product, bool>(FilterFunc)"
-                  @bind-SelectedItem="selectedItem">
+                  @bind-SelectedItem="selectedItem"
+                  SortLabel="Sort By">
             <ToolBarContent>
                 <MudText Typo="Typo.h6">Products</MudText>
                 <MudSpacer />
@@ -47,16 +48,32 @@ else
                 </MudTextField>
             </ToolBarContent>
             <HeaderContent>
-                <MudTh>Name</MudTh>
+                <MudTh><MudTableSortLabel InitialDirection="SortDirection.Ascending" SortBy="new Func<Product, object>(x => x.Name)">Name</MudTableSortLabel></MudTh>
+                <MudTh>Barcode</MudTh>
                 <MudTh>Description</MudTh>
-                <MudTh>Cost</MudTh>
-                <MudTh>Price</MudTh>
-                <MudTh>Profit</MudTh>
-                <MudTh>Stock</MudTh>
+                <MudTh><MudTableSortLabel SortBy="new Func<Product, object>(x => x.CostPrice)">Cost</MudTableSortLabel></MudTh>
+                <MudTh><MudTableSortLabel SortBy="new Func<Product, object>(x => x.Price)">Price</MudTableSortLabel></MudTh>
+                <MudTh><MudTableSortLabel SortBy="new Func<Product, object>(x => x.Price - x.CostPrice)">Profit</MudTableSortLabel></MudTh>
+                <MudTh><MudTableSortLabel SortBy="new Func<Product, object>(x => x.StockQuantity)">Stock</MudTableSortLabel></MudTh>
                 <MudTh>Actions</MudTh>
             </HeaderContent>
             <RowTemplate>
                 <MudTd>@context.Name</MudTd>
+                <MudTd>
+                    @if (context.Barcodes.Any())
+                    {
+                        <MudStack Direction="Row" Spacing="1" Class="flex-wrap">
+                            @foreach (var barcode in context.Barcodes)
+                            {
+                                <MudChip T="string" Text="@barcode.Barcode" Size="Size.Small" Color="Color.Primary" Variant="Variant.Text" />
+                            }
+                        </MudStack>
+                    }
+                    else
+                    {
+                        <text>-</text>
+                    }
+                </MudTd>
                 <MudTd>@context.Description</MudTd>
                 <MudTd>LYD @context.CostPrice.ToString("F2")</MudTd>
                 <MudTd> <MudText Color="Color.Success"> LYD @context.Price.ToString("F2") </MudText> </MudTd>
@@ -101,6 +118,8 @@ else
         if (product.Name.Contains(searchString, StringComparison.OrdinalIgnoreCase))
             return true;
         if (product.Description?.Contains(searchString, StringComparison.OrdinalIgnoreCase) ?? false)
+            return true;
+        if (product.Barcodes.Any(b => b.Barcode.Contains(searchString, StringComparison.OrdinalIgnoreCase)))
             return true;
         if (product.Price.ToString().Contains(searchString))
             return true;
@@ -156,7 +175,16 @@ else
             Price = product.Price,
             StockQuantity = product.StockQuantity,
             ImageUrl = product.ImageUrl,
-            IsActive = product.IsActive
+            IsActive = product.IsActive,
+            Barcodes = product.Barcodes
+                .Select(b => new ProductBarcode
+                {
+                    Id = b.Id,
+                    Barcode = b.Barcode,
+                    ProductId = b.ProductId,
+                    CreatedAt = b.CreatedAt
+                })
+                .ToList()
         };
         
         var parameters = new DialogParameters<M_Wallet.Client.Components.ProductDialog>

@@ -107,7 +107,8 @@ else
                       Dense="true" 
                       Breakpoint="Breakpoint.None"
                       Filter="new Func<Transaction, bool>(SearchFilter)"
-                      @bind-SelectedItem="selectedTransaction">
+                      @bind-SelectedItem="selectedTransaction"
+                      SortLabel="Sort By">
                 <ToolBarContent>
                     <MudText Typo="Typo.h6">Sales History</MudText>
                     <MudSpacer />
@@ -129,13 +130,13 @@ else
                 </ToolBarContent>
                 <HeaderContent>
                     <MudTh Style="width: 50px;"></MudTh>
-                    <MudTh>Order ID</MudTh>
-                    <MudTh>Date</MudTh>
+                    <MudTh><MudTableSortLabel InitialDirection="SortDirection.Descending" SortBy="new Func<Transaction, object>(x => x.Id)">Order ID</MudTableSortLabel></MudTh>
+                    <MudTh><MudTableSortLabel SortBy="new Func<Transaction, object>(x => x.TransactionDate)">Date</MudTableSortLabel></MudTh>
                     <MudTh>Items</MudTh>
-                    <MudTh>Quantity</MudTh>
-                    <MudTh>Total</MudTh>
-                    <MudTh>Customer</MudTh>
-                    <MudTh>Employee</MudTh>
+                    <MudTh><MudTableSortLabel SortBy="new Func<Transaction, object>(x => x.Items.Sum(i => i.Quantity))">Quantity</MudTableSortLabel></MudTh>
+                    <MudTh><MudTableSortLabel SortBy="new Func<Transaction, object>(x => x.TotalAmount)">Total</MudTableSortLabel></MudTh>
+                    <MudTh><MudTableSortLabel SortBy="new Func<Transaction, object>(x => x.CustomerName ?? string.Empty)">Customer</MudTableSortLabel></MudTh>
+                    <MudTh><MudTableSortLabel SortBy="new Func<Transaction, object>(x => x.EmployeeName)">Employee</MudTableSortLabel></MudTh>
                 </HeaderContent>
                 <RowTemplate>
                     <MudTd DataLabel="">
@@ -173,12 +174,13 @@ else
                                                   Dense="true" 
                                                   Hover="true"
                                                   Elevation="0"
-                                                  Breakpoint="Breakpoint.None">
+                                                  Breakpoint="Breakpoint.None"
+                                                  SortLabel="Sort By">
                                             <HeaderContent>
-                                                <MudTh>Product Name</MudTh>
-                                                <MudTh>Quantity</MudTh>
-                                                <MudTh>Unit Price</MudTh>
-                                                <MudTh>Subtotal</MudTh>
+                                                <MudTh><MudTableSortLabel SortBy="new Func<TransactionItem, object>(x => x.Product!.Name)">Product Name</MudTableSortLabel></MudTh>
+                                                <MudTh><MudTableSortLabel SortBy="new Func<TransactionItem, object>(x => x.Quantity)">Quantity</MudTableSortLabel></MudTh>
+                                                <MudTh><MudTableSortLabel SortBy="new Func<TransactionItem, object>(x => x.UnitPrice)">Unit Price</MudTableSortLabel></MudTh>
+                                                <MudTh><MudTableSortLabel SortBy="new Func<TransactionItem, object>(x => x.Subtotal)">Subtotal</MudTableSortLabel></MudTh>
                                             </HeaderContent>
                                             <RowTemplate Context="item">
                                                 <MudTd DataLabel="Product">

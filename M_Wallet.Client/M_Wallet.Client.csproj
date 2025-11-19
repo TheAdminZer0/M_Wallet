@@ -17,4 +17,8 @@
     <ProjectReference Include="..\M_Wallet.Shared\M_Wallet.Shared.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Shared\" />
+  </ItemGroup>
+
 </Project>

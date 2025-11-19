@@ -2,12 +2,30 @@
     "version": "2.0.0",
     "tasks": [
         {
+            "label": "build",
+            "command": "dotnet",
+            "type": "process",
+            "args": [
+                "build",
+                "${workspaceFolder}/M_Wallet/M_Wallet.csproj",
+                "/property:GenerateFullPaths=true",
+                "/consoleloggerparameters:NoSummary;ForceNoAlign"
+            ],
+            "problemMatcher": "$msCompile",
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            }
+        },
+        {
             "label": "dotnet: watch M_Wallet Server",
             "type": "process",
             "command": "dotnet",
             "args": [
                 "watch",
                 "run",
+                "--launch-profile",
+                "https",
                 "--project",
                 "${workspaceFolder}/M_Wallet/M_Wallet.csproj"
             ],

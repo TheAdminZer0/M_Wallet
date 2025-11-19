@@ -3,6 +3,7 @@ using System;
 using M_Wallet.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace M_Wallet.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251117231627_AddProductBarcode")]
+    partial class AddProductBarcode
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -29,6 +32,10 @@ namespace M_Wallet.Migrations
                         .HasColumnType("integer");
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Barcode")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
 
                     b.Property<decimal>("CostPrice")
                         .HasPrecision(18, 2)
@@ -59,35 +66,11 @@ namespace M_Wallet.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("Barcode")
+                        .IsUnique()
+                        .HasFilter("\"Barcode\" IS NOT NULL");
+
                     b.ToTable("Products");
-                });
-
-            modelBuilder.Entity("M_Wallet.Shared.ProductBarcode", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("Barcode")
-                        .IsRequired()
-                        .HasMaxLength(64)
-                        .HasColumnType("character varying(64)");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<int>("ProductId")
-                        .HasColumnType("integer");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("Barcode");
-
-                    b.HasIndex("ProductId");
-
-                    b.ToTable("ProductBarcodes");
                 });
 
             modelBuilder.Entity("M_Wallet.Shared.Transaction", b =>
@@ -151,17 +134,6 @@ namespace M_Wallet.Migrations
                     b.ToTable("TransactionItems");
                 });
 
-            modelBuilder.Entity("M_Wallet.Shared.ProductBarcode", b =>
-                {
-                    b.HasOne("M_Wallet.Shared.Product", "Product")
-                        .WithMany("Barcodes")
-                        .HasForeignKey("ProductId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Product");
-                });
-
             modelBuilder.Entity("M_Wallet.Shared.TransactionItem", b =>
                 {
                     b.HasOne("M_Wallet.Shared.Product", "Product")
@@ -179,11 +151,6 @@ namespace M_Wallet.Migrations
                     b.Navigation("Product");
 
                     b.Navigation("Transaction");
-                });
-
-            modelBuilder.Entity("M_Wallet.Shared.Product", b =>
-                {
-                    b.Navigation("Barcodes");
                 });
 
             modelBuilder.Entity("M_Wallet.Shared.Transaction", b =>
