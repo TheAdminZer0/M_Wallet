@@ -1,4 +1,5 @@
 ﻿@page "/"
+@using M_Wallet.Client.Components
 @inject HttpClient Http
 @inject ISnackbar Snackbar
 @inject IJSRuntime JSRuntime
@@ -14,7 +15,8 @@
         <MudPaper Class="pa-4" Elevation="2" Style="background-color:var(--mud-palette-gray-lighter);">
            
                 <div class="d-flex align-center gap-2">
-                    <MudTextField @bind-Value="searchString" 
+                    <MudTextField Value="searchString" 
+                                  ValueChanged="@(EventCallback.Factory.Create<string>(this, OnSearchChanged))"
                                   Placeholder="Search products..." 
                                   Adornment="Adornment.Start" 
                                   AdornmentIcon="@Icons.Material.Filled.Search" 
@@ -29,6 +31,12 @@
                                    Size="Size.Medium"
                                    Title="Scan barcode to search"
                                    OnClick="OpenSearchScannerAsync" />
+                    <MudSelect T="string" Value="sortBy" ValueChanged="OnSortChanged" Label="Sort By" Margin="Margin.Dense" Variant="Variant.Outlined" Style="min-width: 150px;">
+                        <MudSelectItem Value="@("Name")">Name (A-Z)</MudSelectItem>
+                        <MudSelectItem Value="@("PriceAsc")">Price (Low-High)</MudSelectItem>
+                        <MudSelectItem Value="@("PriceDesc")">Price (High-Low)</MudSelectItem>
+                        <MudSelectItem Value="@("MostSold")">Most Sold (30 Days)</MudSelectItem>
+                    </MudSelect>
                     <MudToggleIconButton @bind-Toggled="@isGridView"
                                          Icon="@Icons.Material.Filled.GridView" 
                                          ToggledIcon="@Icons.Material.Filled.TableRows"
@@ -50,36 +58,86 @@
             }
             else
             {
+                @if (PinnedProducts.Any())
+                {
+                    <MudText Typo="Typo.h6" Class="mb-2">Pinned Products</MudText>
+                    <div class="d-flex gap-3 overflow-x-auto py-2 mb-4" style="overflow-x: auto;">
+                        @foreach (var product in PinnedProducts)
+                        {
+                            var availableStock = GetAvailableStock(product);
+                            <MudCard Class="cursor-pointer flex-shrink-0" 
+                                     Style="width: 200px;" 
+                                     Elevation="2"
+                                     @onclick="@(() => AddToCart(product))">
+                                <div style="position: relative;">
+                                    <MudCardMedia Image="@GetProductImage(product)" Height="120" />
+                                    <div @onclick:stopPropagation="true" style="position: absolute; top: 5px; right: 5px; z-index: 10;">
+                                        <MudIconButton Icon="@Icons.Material.Filled.Info" 
+                                                       Color="Color.Default" 
+                                                       Size="Size.Small"
+                                                       Variant="Variant.Filled"
+                                                       OnClick="@((e) => ShowProductDetails(product))" />
+                                    </div>
+                                </div>
+                                <MudCardContent Class="pa-2">
+                                    <MudText Typo="Typo.body1" Class="font-weight-bold" Style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                                        @product.Name
+                                    </MudText>
+                                    <div class="d-flex justify-space-between align-center mt-1">
+                                        <MudText Typo="Typo.h6" Color="Color.Success">
+                                            @product.Price.ToString("F2")
+                                        </MudText>
+                                        <MudText Typo="Typo.body1" Color="@(availableStock > 10 ? Color.Default : Color.Error)">
+                                            Stock: @availableStock
+                                        </MudText>
+                                    </div>
+                                </MudCardContent>
+                            </MudCard>
+                        }
+                    </div>
+                    <MudDivider Class="mb-4"/>
+                }
+
                 @if (isGridView)
                 {
                     <!-- Grid View -->
-                    <MudGrid Spacing="3">
-                        @foreach (var product in FilteredProducts)
+                    <div class="d-flex flex-wrap gap-4 justify-center justify-sm-start">
+                        @foreach (var product in FilteredProducts.Skip((currentPage - 1) * pageSize).Take(pageSize))
                         {
                             var availableStock = GetAvailableStock(product);
-                            <MudItem xs="6" sm="4" md="3">
-                                <MudCard Class="cursor-pointer" 
-                                         Elevation="2"
-                                         @onclick="@(() => AddToCart(product))">
-                                    <MudCardMedia Image="@GetProductImage(product)" 
-                                                  Height="120"/>
-                                    <MudCardContent Class="pa-2">
-                                        <MudText Typo="Typo.body1" Class="font-weight-bold">
-                                            @product.Name
+                            <MudCard Class="cursor-pointer flex-shrink-0" 
+                                     Elevation="2"
+                                     Style="width: 200px;"
+                                     @onclick="@(() => AddToCart(product))">
+                                <div style="position: relative;">
+                                    <MudCardMedia Image="@GetProductImage(product)" Height="120"/>
+                                    <div @onclick:stopPropagation="true" style="position: absolute; top: 5px; right: 5px; z-index: 10;">
+                                        <MudIconButton Icon="@Icons.Material.Filled.Info" 
+                                                       Color="Color.Default" 
+                                                       Size="Size.Small"
+                                                       Variant="Variant.Filled"
+                                                       OnClick="@((e) => ShowProductDetails(product))" />
+                                    </div>
+                                </div>
+                                <MudCardContent Class="pa-2">
+                                    <MudText Typo="Typo.body1" Class="font-weight-bold" Style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                                        @product.Name
+                                    </MudText>
+                                    <div class="d-flex justify-space-between align-center">
+                                        <MudText Typo="Typo.h6" Color="Color.Success">
+                                            @product.Price.ToString("F2")
                                         </MudText>
-                                        <div class="d-flex justify-space-between align-center">
-                                            <MudText Typo="Typo.h6" Color="Color.Success">
-                                                @product.Price.ToString("F2")
-                                            </MudText>
-                                            <MudText Typo="Typo.body1" Color="@(availableStock > 10 ? Color.Default : Color.Error)">
-                                                Stock: @availableStock
-                                            </MudText>
-                                        </div>
-                                    </MudCardContent>
-                                </MudCard>
-                            </MudItem>
+                                        <MudText Typo="Typo.body1" Color="@(availableStock > 10 ? Color.Default : Color.Error)">
+                                            Stock: @availableStock
+                                        </MudText>
+                                    </div>
+                                </MudCardContent>
+                            </MudCard>
                         }
-                    </MudGrid>
+                    </div>
+                    <div class="d-flex justify-center mt-4">
+                        <MudPagination Count="@((FilteredProducts.Count() + pageSize - 1) / pageSize)" SelectedChanged="OnPageChanged" Selected="@currentPage" />
+                    </div>
                 }
                 else
                 {
@@ -108,15 +166,25 @@
                                     </MudChip>
                                 </MudTd>
                                 <MudTd DataLabel="Action">
-                                    <MudButton Size="Size.Small" 
-                                               Variant="Variant.Filled" 
-                                               Color="Color.Primary"
-                                               OnClick="@(() => AddToCart(context))"
-                                               Disabled="@(availableStock == 0)">
-                                        Add
-                                    </MudButton>
+                                    <div @onclick:stopPropagation="true" class="d-inline-flex align-center">
+                                        <MudIconButton Icon="@Icons.Material.Filled.Info" 
+                                                       Color="Color.Default" 
+                                                       Size="Size.Small" 
+                                                       OnClick="@((e) => ShowProductDetails(context))"
+                                                       Class="mr-2" />
+                                        <MudButton Size="Size.Small" 
+                                                   Variant="Variant.Filled" 
+                                                   Color="Color.Primary"
+                                                   OnClick="@(() => AddToCart(context))"
+                                                   Disabled="@(availableStock == 0)">
+                                            Add
+                                        </MudButton>
+                                    </div>
                                 </MudTd>
                             </RowTemplate>
+                            <PagerContent>
+                                <MudTablePager />
+                            </PagerContent>
                         </MudTable>
                     </div>
                 }
@@ -368,6 +436,9 @@
     private List<Product>? products;
     private List<TransactionItem> cartItems = new();
     private string searchString = "";
+    private string sortBy = "Name";
+    private int currentPage = 1;
+    private int pageSize = 12;
     private string customerName = "";
     private string employeeName = "";
     private bool isProcessing = false;
@@ -377,28 +448,50 @@
     private MudTextField<string>? priceInputRef;
     private IDialogReference? _searchScannerDialog;
 
+    private IEnumerable<Product> PinnedProducts
+    {
+        get
+        {
+            if (products is null) return Enumerable.Empty<Product>();
+            return products.Where(p => p.IsPinned && p.IsActive);
+        }
+    }
+
     private IEnumerable<Product> FilteredProducts
     {
         get
         {
+            // Reset to page 1 when search or sort changes
+            // Note: This side effect in a getter is not ideal but works for simple binding. 
+            // A better approach would be to reset currentPage in the setter of searchString/sortBy.
+            
             if (products is null)
             {
                 return Enumerable.Empty<Product>();
             }
 
-            var query = products.Where(p => p.IsActive);
+            var query = products.Where(p => p.IsActive && !p.IsPinned);
 
-            if (string.IsNullOrWhiteSpace(searchString))
+            if (!string.IsNullOrWhiteSpace(searchString))
             {
-                return query;
+                var term = searchString.Trim();
+                query = query.Where(p =>
+                    p.Name.Contains(term, System.StringComparison.OrdinalIgnoreCase) ||
+                    (p.Description?.Contains(term, System.StringComparison.OrdinalIgnoreCase) ?? false) ||
+                    (p.Barcodes?.Any(b => b.Barcode.Contains(term, System.StringComparison.OrdinalIgnoreCase)) ?? false));
             }
 
-            var term = searchString.Trim();
-
-            return query.Where(p =>
-                p.Name.Contains(term, System.StringComparison.OrdinalIgnoreCase) ||
-                (p.Description?.Contains(term, System.StringComparison.OrdinalIgnoreCase) ?? false) ||
-                (p.Barcodes?.Any(b => b.Barcode.Contains(term, System.StringComparison.OrdinalIgnoreCase)) ?? false));
+            switch (sortBy)
+            {
+                case "PriceAsc":
+                    return query.OrderBy(p => p.Price);
+                case "PriceDesc":
+                    return query.OrderByDescending(p => p.Price);
+                case "MostSold":
+                    return query.OrderByDescending(p => p.SoldLast30Days);
+                default:
+                    return query.OrderBy(p => p.Name);
+            }
         }
     }
 
@@ -599,6 +692,18 @@
         return cartItems.Sum(i => i.Subtotal);
     }
 
+    private async Task ShowProductDetails(Product product)
+    {
+        IDialogReference? dialog = null;
+        var parameters = new DialogParameters
+        { 
+            { "Product", product },
+            { "OnClose", EventCallback.Factory.Create(this, () => dialog?.Close()) }
+        };
+        var options = new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.Medium, FullWidth = true };
+        dialog = await DialogService.ShowAsync<M_Wallet.Client.Components.ProductDetailsDialog>("Product Details", parameters, options);
+    }
+
     private async Task OpenSearchScannerAsync()
     {
         var parameters = new DialogParameters<M_Wallet.Client.Components.BarcodeScannerDialog>
@@ -692,6 +797,23 @@
         {
             isProcessing = false;
         }
+    }
+
+    private void OnSearchChanged(string value)
+    {
+        searchString = value;
+        currentPage = 1;
+    }
+
+    private void OnSortChanged(string value)
+    {
+        sortBy = value;
+        currentPage = 1;
+    }
+
+    private void OnPageChanged(int page)
+    {
+        currentPage = page;
     }
 
     private void OnQuantityInputChanged(TransactionItem item, int? newQuantity)

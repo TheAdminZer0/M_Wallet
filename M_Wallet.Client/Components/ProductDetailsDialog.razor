@@ -1,0 +1,67 @@
+@using M_Wallet.Shared
+@using MudBlazor
+@inject IDialogService DialogService
+
+<MudDialog>
+    <DialogContent>
+        <MudGrid>
+            <MudItem xs="12" sm="6">
+                @if (!string.IsNullOrEmpty(Product.ImageUrl))
+                {
+                    <MudImage Src="@Product.ImageUrl" Alt="@Product.Name" ObjectFit="ObjectFit.Cover" Height="300" Fluid="true" Class="rounded-lg" />
+                }
+                else
+                {
+                    <div class="d-flex justify-center align-center rounded-lg" style="height: 300px; background-color: var(--mud-palette-grey-lighter);">
+                        <MudIcon Icon="@Icons.Material.Filled.Image" Size="Size.Large" Color="Color.Default" />
+                    </div>
+                }
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudText Typo="Typo.h5" Class="mb-2">@Product.Name</MudText>
+                
+                <MudText Typo="Typo.h4" Color="Color.Primary" Class="mb-4">
+                    LYD @Product.Price.ToString("F2")
+                </MudText>
+
+                <MudText Typo="Typo.body1" Class="mb-2">
+                    <strong>Stock:</strong> 
+                    <MudChip T="string" Size="Size.Small" Color="@(Product.StockQuantity > 10 ? Color.Success : Color.Warning)">
+                        @Product.StockQuantity
+                    </MudChip>
+                </MudText>
+
+                <MudText Typo="Typo.body1" Class="mb-2">
+                    <strong>Total Sold:</strong> @Product.TotalSoldQuantity
+                </MudText>
+
+                @if (!string.IsNullOrEmpty(Product.Description))
+                {
+                    <MudText Typo="Typo.body1" Class="mb-2"><strong>Description:</strong></MudText>
+                    <MudText Typo="Typo.body2" Class="mb-4">@Product.Description</MudText>
+                }
+
+                @if (Product.Barcodes != null && Product.Barcodes.Any())
+                {
+                    <MudText Typo="Typo.body1" Class="mb-2"><strong>Barcodes:</strong></MudText>
+                    <div class="d-flex flex-wrap gap-1">
+                        @foreach (var barcode in Product.Barcodes)
+                        {
+                            <MudChip T="string" Variant="Variant.Outlined" Size="Size.Small">@barcode.Barcode</MudChip>
+                        }
+                    </div>
+                }
+            </MudItem>
+        </MudGrid>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Close</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [Parameter] public Product Product { get; set; } = default!;
+    [Parameter] public EventCallback OnClose { get; set; }
+
+    private async Task Cancel() => await OnClose.InvokeAsync();
+}

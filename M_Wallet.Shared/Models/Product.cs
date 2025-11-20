@@ -11,5 +11,12 @@ public class Product
     public List<ProductBarcode> Barcodes { get; set; } = new();
     public int StockQuantity { get; set; }
     public bool IsActive { get; set; } = true;
+    public bool IsPinned { get; set; } = false;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    
+    [System.ComponentModel.DataAnnotations.Schema.NotMapped]
+    public int SoldLast30Days { get; set; }
+
+    [System.ComponentModel.DataAnnotations.Schema.NotMapped]
+    public int TotalSoldQuantity { get; set; }
 }

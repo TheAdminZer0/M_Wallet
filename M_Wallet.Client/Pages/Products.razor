@@ -54,7 +54,9 @@ else
                 <MudTh><MudTableSortLabel SortBy="new Func<Product, object>(x => x.CostPrice)">Cost</MudTableSortLabel></MudTh>
                 <MudTh><MudTableSortLabel SortBy="new Func<Product, object>(x => x.Price)">Price</MudTableSortLabel></MudTh>
                 <MudTh><MudTableSortLabel SortBy="new Func<Product, object>(x => x.Price - x.CostPrice)">Profit</MudTableSortLabel></MudTh>
+                <MudTh><MudTableSortLabel SortBy="new Func<Product, object>(x => x.TotalSoldQuantity)">Total Sold</MudTableSortLabel></MudTh>
                 <MudTh><MudTableSortLabel SortBy="new Func<Product, object>(x => x.StockQuantity)">Stock</MudTableSortLabel></MudTh>
+                <MudTh><MudTableSortLabel SortBy="new Func<Product, object>(x => x.IsPinned)">Pinned</MudTableSortLabel></MudTh>
                 <MudTh>Actions</MudTh>
             </HeaderContent>
             <RowTemplate>
@@ -62,12 +64,15 @@ else
                 <MudTd>
                     @if (context.Barcodes.Any())
                     {
-                        <MudStack Direction="Row" Spacing="1" Class="flex-wrap">
-                            @foreach (var barcode in context.Barcodes)
-                            {
-                                <MudChip T="string" Text="@barcode.Barcode" Size="Size.Small" Color="Color.Primary" Variant="Variant.Text" />
-                            }
-                        </MudStack>
+                        <MudTooltip Text="@string.Join(", ", context.Barcodes.Select(b => b.Barcode))">
+                            <div class="d-flex gap-1 align-center">
+                                <MudChip T="string" Text="@context.Barcodes.First().Barcode" Size="Size.Small" Color="Color.Primary" Variant="Variant.Text" />
+                                @if (context.Barcodes.Count > 1)
+                                {
+                                    <MudChip T="string" Text="@($"+{context.Barcodes.Count - 1}")" Size="Size.Small" Variant="Variant.Outlined" />
+                                }
+                            </div>
+                        </MudTooltip>
                     }
                     else
                     {
@@ -86,7 +91,11 @@ else
                         LYD @profit.ToString("F2") (@profitMargin.ToString("F1")%)
                     </MudText>
                 </MudTd>
+                <MudTd>@context.TotalSoldQuantity</MudTd>
                 <MudTd>@context.StockQuantity</MudTd>
+                <MudTd>
+                    <MudCheckBox T="bool" Value="@context.IsPinned" ValueChanged="@((bool val) => TogglePin(context, val))" Color="Color.Warning" CheckedIcon="@Icons.Material.Filled.PushPin" UncheckedIcon="@Icons.Material.Outlined.PushPin" Size="Size.Small" />
+                </MudTd>
                 <MudTd>
                     <MudIconButton Icon="@Icons.Material.Filled.Edit"
                                    Color="Color.Primary"
@@ -242,6 +251,29 @@ else
         }
         catch (Exception ex)
         {
+            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task TogglePin(Product product, bool isPinned)
+    {
+        product.IsPinned = isPinned;
+        try
+        {
+            var response = await Http.PutAsJsonAsync($"api/products/{product.Id}", product);
+            if (response.IsSuccessStatusCode)
+            {
+                Snackbar.Add(isPinned ? "Product pinned" : "Product unpinned", Severity.Success);
+            }
+            else
+            {
+                product.IsPinned = !isPinned;
+                Snackbar.Add("Failed to update pin status", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            product.IsPinned = !isPinned;
             Snackbar.Add($"Error: {ex.Message}", Severity.Error);
         }
     }

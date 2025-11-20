@@ -22,11 +22,37 @@ public class ProductsController : ControllerBase
     [HttpGet]
     public async Task<ActionResult<IEnumerable<Product>>> GetProducts()
     {
-        return await _context.Products
+        var products = await _context.Products
             .Include(p => p.Barcodes)
             .Where(p => p.IsActive)
             .OrderBy(p => p.Name)
             .ToListAsync();
+
+        var thirtyDaysAgo = DateTime.UtcNow.AddDays(-30);
+        var salesStats = await _context.TransactionItems
+            .Where(ti => ti.Transaction!.TransactionDate >= thirtyDaysAgo)
+            .GroupBy(ti => ti.ProductId)
+            .Select(g => new { ProductId = g.Key, SoldCount = g.Sum(ti => ti.Quantity) })
+            .ToDictionaryAsync(x => x.ProductId, x => x.SoldCount);
+
+        var allTimeStats = await _context.TransactionItems
+            .GroupBy(ti => ti.ProductId)
+            .Select(g => new { ProductId = g.Key, SoldCount = g.Sum(ti => ti.Quantity) })
+            .ToDictionaryAsync(x => x.ProductId, x => x.SoldCount);
+
+        foreach (var product in products)
+        {
+            if (salesStats.TryGetValue(product.Id, out int count30))
+            {
+                product.SoldLast30Days = count30;
+            }
+            if (allTimeStats.TryGetValue(product.Id, out int countTotal))
+            {
+                product.TotalSoldQuantity = countTotal;
+            }
+        }
+
+        return products;
     }
 
     [HttpGet("{id}")]
@@ -73,6 +99,7 @@ public class ProductsController : ControllerBase
         existingProduct.StockQuantity = product.StockQuantity;
         existingProduct.ImageUrl = product.ImageUrl;
         existingProduct.IsActive = product.IsActive;
+        existingProduct.IsPinned = product.IsPinned;
 
         var sanitizedBarcodes = NormalizeBarcodes(product.Barcodes);
 
