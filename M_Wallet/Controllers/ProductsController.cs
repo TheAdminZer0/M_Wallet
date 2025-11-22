@@ -24,7 +24,6 @@ public class ProductsController : ControllerBase
     {
         var products = await _context.Products
             .Include(p => p.Barcodes)
-            .Where(p => p.IsActive)
             .OrderBy(p => p.Name)
             .ToListAsync();
 
@@ -64,6 +63,17 @@ public class ProductsController : ControllerBase
         
         if (product == null)
             return NotFound();
+
+        // Calculate stats
+        var thirtyDaysAgo = DateTime.UtcNow.AddDays(-30);
+        
+        product.SoldLast30Days = await _context.TransactionItems
+            .Where(ti => ti.ProductId == id && ti.Transaction!.TransactionDate >= thirtyDaysAgo)
+            .SumAsync(ti => ti.Quantity);
+
+        product.TotalSoldQuantity = await _context.TransactionItems
+            .Where(ti => ti.ProductId == id)
+            .SumAsync(ti => ti.Quantity);
         
         return product;
     }
@@ -147,7 +157,13 @@ public class ProductsController : ControllerBase
         if (product == null)
             return NotFound();
 
-        product.IsActive = false;
+        var hasOrders = await _context.TransactionItems.AnyAsync(ti => ti.ProductId == id);
+        if (hasOrders)
+        {
+            return BadRequest("Cannot delete product because it has linked orders.");
+        }
+
+        _context.Products.Remove(product);
         await _context.SaveChangesAsync();
 
         return NoContent();

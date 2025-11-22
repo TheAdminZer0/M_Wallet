@@ -22,6 +22,8 @@ public class TransactionsController : ControllerBase
         return await _context.Transactions
             .Include(t => t.Items)
             .ThenInclude(i => i.Product)
+            .Include(t => t.PaymentAllocations)
+            .ThenInclude(pa => pa.Payment)
             .OrderByDescending(t => t.TransactionDate)
             .ToListAsync();
     }
@@ -76,6 +78,9 @@ public class TransactionsController : ControllerBase
                 // Update stock quantity
                 product.StockQuantity -= item.Quantity;
                 
+                // Capture the cost at the time of sale
+                item.UnitCost = product.CostPrice;
+
                 // Calculate subtotal
                 item.Subtotal = item.Quantity * item.UnitPrice;
             }
@@ -98,5 +103,43 @@ public class TransactionsController : ControllerBase
         {
             return StatusCode(500, $"Internal server error: {ex.Message}");
         }
+    }
+
+    [HttpDelete("{id}")]
+    public async Task<IActionResult> DeleteTransaction(int id)
+    {
+        var transaction = await _context.Transactions
+            .Include(t => t.Items)
+            .Include(t => t.PaymentAllocations)
+            .FirstOrDefaultAsync(t => t.Id == id);
+
+        if (transaction == null)
+        {
+            return NotFound();
+        }
+
+        // 1. Restore Stock
+        foreach (var item in transaction.Items)
+        {
+            var product = await _context.Products.FindAsync(item.ProductId);
+            if (product != null)
+            {
+                product.StockQuantity += item.Quantity;
+            }
+        }
+
+        // 2. Remove Payment Allocations
+        if (transaction.PaymentAllocations != null)
+        {
+            _context.PaymentAllocations.RemoveRange(transaction.PaymentAllocations);
+        }
+
+        // 3. Remove Transaction (Items will cascade delete if configured, but let's be safe)
+        _context.TransactionItems.RemoveRange(transaction.Items);
+        _context.Transactions.Remove(transaction);
+
+        await _context.SaveChangesAsync();
+
+        return NoContent();
     }
 }

@@ -13,6 +13,10 @@ public class AppDbContext : DbContext
     public DbSet<ProductBarcode> ProductBarcodes { get; set; }
     public DbSet<Transaction> Transactions { get; set; }
     public DbSet<TransactionItem> TransactionItems { get; set; }
+    public DbSet<Payment> Payments { get; set; }
+    public DbSet<PaymentAllocation> PaymentAllocations { get; set; }
+    public DbSet<Purchase> Purchases { get; set; }
+    public DbSet<PurchaseItem> PurchaseItems { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -47,6 +51,19 @@ public class AppDbContext : DbContext
         {
             entity.Property(ti => ti.UnitPrice).HasPrecision(18, 2);
             entity.Property(ti => ti.Subtotal).HasPrecision(18, 2);
+        });
+
+        modelBuilder.Entity<Purchase>(entity =>
+        {
+            entity.Property(p => p.TotalAmount).HasPrecision(18, 2);
+            entity.HasMany(p => p.Items)
+                .WithOne(pi => pi.Purchase)
+                .HasForeignKey(pi => pi.PurchaseId);
+        });
+
+        modelBuilder.Entity<PurchaseItem>(entity =>
+        {
+            entity.Property(pi => pi.UnitCost).HasPrecision(18, 2);
         });
     }
 }

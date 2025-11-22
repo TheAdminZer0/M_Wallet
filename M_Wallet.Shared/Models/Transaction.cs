@@ -8,6 +8,7 @@ public class Transaction
     public decimal TotalAmount { get; set; }
     public string EmployeeName { get; set; } = string.Empty;
     public List<TransactionItem> Items { get; set; } = new();
+    public List<PaymentAllocation> PaymentAllocations { get; set; } = new();
 }
 
 public class TransactionItem
@@ -19,5 +20,6 @@ public class TransactionItem
     public Product? Product { get; set; }
     public int Quantity { get; set; }
     public decimal UnitPrice { get; set; }
+    public decimal UnitCost { get; set; }
     public decimal Subtotal { get; set; }
 }

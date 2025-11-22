@@ -21,7 +21,7 @@
                 <MudText Typo="Typo.h5" Class="mb-2">@Product.Name</MudText>
                 
                 <MudText Typo="Typo.h4" Color="Color.Primary" Class="mb-4">
-                    LYD @Product.Price.ToString("F2")
+                    LD @Product.Price.ToString("F2")
                 </MudText>
 
                 <MudText Typo="Typo.body1" Class="mb-2">
@@ -60,8 +60,8 @@
 </MudDialog>
 
 @code {
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = default!;
     [Parameter] public Product Product { get; set; } = default!;
-    [Parameter] public EventCallback OnClose { get; set; }
 
-    private async Task Cancel() => await OnClose.InvokeAsync();
+    private void Cancel() => MudDialog.Cancel();
 }

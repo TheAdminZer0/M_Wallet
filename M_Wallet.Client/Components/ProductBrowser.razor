@@ -1,0 +1,450 @@
+@using M_Wallet.Shared
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+
+<MudPaper Class="pa-4" Elevation="2" Style="@($"background-color:var(--mud-palette-gray-lighter); height: {Height}; display: flex; flex-direction: column;")">
+    <!-- Toolbar -->
+    <div class="d-flex align-center gap-2 mb-4">
+        <MudIconButton Icon="@Icons.Material.Filled.QrCodeScanner"
+                       Color="Color.Primary"
+                       Size="Size.Medium"
+                       Title="Scan barcode to search"
+                       OnClick="OpenSearchScannerAsync" />
+        <MudTextField T="string"
+                      Value="SearchString"
+                      ValueChanged="OnSearchChanged"
+                      Placeholder="Search products..."
+                      Adornment="Adornment.Start"
+                      AdornmentIcon="@Icons.Material.Filled.Search"
+                      IconSize="Size.Medium"
+                      Margin="Margin.Dense"
+                      Clearable="true"
+                      Immediate="true"
+                      Class="flex-grow-1" />
+        
+        @if (ToolbarContent != null)
+        {
+            @ToolbarContent
+        }
+
+        <MudMenu Icon="@Icons.Material.Filled.Sort" Color="Color.Primary" AnchorOrigin="Origin.BottomCenter" TransformOrigin="Origin.TopCenter" Dense="true">
+            <MudMenuItem Disabled="true" Style="opacity: 1 !important; cursor: default !important;" Class="pb-1">
+                <MudText Typo="Typo.body1" Color="Color.Secondary">
+                    Current: <b>@GetSortLabel(sortBy)</b>
+                </MudText>
+            </MudMenuItem>
+            <MudDivider Class="my-0"/>
+            <MudMenuItem OnClick="@(() => OnSortChanged("Name"))">Name (A-Z)</MudMenuItem>
+            <MudMenuItem OnClick="@(() => OnSortChanged("PriceAsc"))">Price (Low-High)</MudMenuItem>
+            <MudMenuItem OnClick="@(() => OnSortChanged("PriceDesc"))">Price (High-Low)</MudMenuItem>
+            <MudMenuItem OnClick="@(() => OnSortChanged("MostSold"))">Most Sold (30 Days)</MudMenuItem>
+        </MudMenu>
+        <MudToggleIconButton @bind-Toggled="@isGridView"
+                             Icon="@Icons.Material.Filled.GridView"
+                             ToggledIcon="@Icons.Material.Filled.TableRows"
+                             Color="@Color.Primary"
+                             ToggledColor="@Color.Primary"
+                             Title="Toggle Grid/Table View" />
+    </div>
+
+    <!-- Content -->
+    <div class="flex-grow-1 overflow-auto">
+        @if (Products == null)
+        {
+            <div class="d-flex justify-center pa-8">
+                <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+            </div>
+        }
+        else if (!Products.Any())
+        {
+            <MudAlert Severity="Severity.Info">No products available</MudAlert>
+        }
+        else
+        {
+            @if (PinnedProducts.Any())
+            {
+                <MudText Typo="Typo.h6" Class="mb-2">Pinned Products</MudText>
+                <MudGrid Spacing="3" Class="flex-nowrap overflow-x-auto pb-4 mb-2">
+                    @foreach (var product in PinnedProducts)
+                    {
+                        var availableStock = GetStockLevel(product);
+                        <MudItem xs="6" sm="4" md="3" Class="flex-shrink-0" Style="min-width: 160px;">
+                            <MudCard Class="cursor-pointer mud-ripple" 
+                                     Elevation="2"
+                                     Style="@(availableStock == 0 ? "opacity: 0.6; background-color: var(--mud-palette-background-grey);" : "")"
+                                     @onclick="@(() => OnProductClicked.InvokeAsync(product))">
+                                <div style="position: relative;">
+                                    <MudCardMedia Image="@GetProductImage(product)" Height="120" />
+                                    @if (ShowInfoButton)
+                                    {
+                                        <div @onclick:stopPropagation="true" style="position: absolute; top: 5px; right: 5px; z-index: 10;">
+                                            <MudIconButton Icon="@Icons.Material.Filled.Info" 
+                                                           Color="Color.Default" 
+                                                           Size="Size.Small"
+                                                           Variant="Variant.Filled"
+                                                           OnClick="@((e) => ShowProductDetails(product))" />
+                                        </div>
+                                    }
+                                    @if (ShowSplitButton)
+                                    {
+                                        <div @onclick:stopPropagation="true" style="position: absolute; top: 5px; left: 5px; z-index: 10;">
+                                            <MudIconButton Icon="@Icons.Material.Filled.CallSplit" 
+                                                           Color="Color.Default" 
+                                                           Size="Size.Small"
+                                                           Variant="Variant.Filled"
+                                                           Title="Add as separate line"
+                                                           OnClick="@((e) => OnSplitClicked.InvokeAsync(product))" />
+                                        </div>
+                                    }
+                                </div>
+                                <MudCardContent Class="pa-2">
+                                    <MudText Typo="Typo.body1" Class="font-weight-bold" Style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                                        @product.Name
+                                    </MudText>
+                                    <div class="d-flex justify-space-between align-center mt-1">
+                                        <div>
+                                            @if (ShowPublicPrice)
+                                            {
+                                                <MudText Typo="Typo.h6" Color="Color.Success" Style="font-size: 1rem;">
+                                                    @product.Price.ToString("F2")
+                                                </MudText>
+                                            }
+                                            @if (ShowCostPrice)
+                                            {
+                                                <MudText Typo="Typo.caption" Class="d-block">
+                                                    Cost: @product.CostPrice.ToString("F2")
+                                                </MudText>
+                                            }
+                                        </div>
+                                        @if (ShowStock)
+                                        {
+                                            <div class="d-flex align-center">
+                                                <MudIcon Icon="@Icons.Material.Filled.Inventory2" Size="Size.Small" Class="mr-1" Color="@(availableStock > 10 ? Color.Default : Color.Error)"/>
+                                                <MudText Typo="Typo.body1" Color="@(availableStock > 10 ? Color.Default : Color.Error)">
+                                                    @availableStock
+                                                </MudText>
+                                            </div>
+                                        }
+                                    </div>
+                                </MudCardContent>
+                            </MudCard>
+                        </MudItem>
+                    }
+                </MudGrid>
+                <MudDivider Class="mb-4"/>
+            }
+
+            @if (isGridView)
+            {
+                <!-- Grid View -->
+                <MudGrid Spacing="3">
+                    @foreach (var product in FilteredProducts.Skip((currentPage - 1) * pageSize).Take(pageSize))
+                    {
+                        var availableStock = GetStockLevel(product);
+                        <MudItem xs="6" sm="4" md="3">
+                            <MudCard Class="cursor-pointer mud-ripple" 
+                                     Elevation="2"
+                                     Style="@(availableStock == 0 ? "opacity: 0.6; background-color: var(--mud-palette-background-grey);" : "")"
+                                     @onclick="@(() => OnProductClicked.InvokeAsync(product))">
+                                <div style="position: relative;">
+                                    <MudCardMedia Image="@GetProductImage(product)" Height="120"/>
+                                    @if (ShowInfoButton)
+                                    {
+                                        <div @onclick:stopPropagation="true" style="position: absolute; top: 5px; right: 5px; z-index: 10;">
+                                            <MudIconButton Icon="@Icons.Material.Filled.Info" 
+                                                           Color="Color.Default" 
+                                                           Size="Size.Small"
+                                                           Variant="Variant.Filled"
+                                                           OnClick="@((e) => ShowProductDetails(product))" />
+                                        </div>
+                                    }
+                                    @if (ShowSplitButton)
+                                    {
+                                        <div @onclick:stopPropagation="true" style="position: absolute; top: 5px; left: 5px; z-index: 10;">
+                                            <MudIconButton Icon="@Icons.Material.Filled.CallSplit" 
+                                                           Color="Color.Default" 
+                                                           Size="Size.Small"
+                                                           Variant="Variant.Filled"
+                                                           Title="Add as separate line"
+                                                           OnClick="@((e) => OnSplitClicked.InvokeAsync(product))" />
+                                        </div>
+                                    }
+                                </div>
+                                <MudCardContent Class="pa-2">
+                                    <MudText Typo="Typo.body1" Class="font-weight-bold" Style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                                        @product.Name
+                                    </MudText>
+                                    <div class="d-flex justify-space-between align-center mt-1">
+                                        <div>
+                                            @if (ShowPublicPrice)
+                                            {
+                                                <MudText Typo="Typo.h6" Color="Color.Success" Style="font-size: 1rem;">
+                                                    @product.Price.ToString("F2")
+                                                </MudText>
+                                            }
+                                            @if (ShowCostPrice)
+                                            {
+                                                <MudText Typo="Typo.caption" Class="d-block">
+                                                    Cost: @product.CostPrice.ToString("F2")
+                                                </MudText>
+                                            }
+                                        </div>
+                                        @if (ShowStock)
+                                        {
+                                            <div class="d-flex align-center">
+                                                <MudIcon Icon="@Icons.Material.Filled.Inventory2" Size="Size.Small" Class="mr-1" Color="@(availableStock > 10 ? Color.Default : Color.Error)"/>
+                                                <MudText Typo="Typo.body1" Color="@(availableStock > 10 ? Color.Default : Color.Error)">
+                                                    @availableStock
+                                                </MudText>
+                                            </div>
+                                        }
+                                    </div>
+                                </MudCardContent>
+                            </MudCard>
+                        </MudItem>
+                    }
+                </MudGrid>
+                <div class="d-flex justify-center mt-4">
+                    <MudPagination Count="@((FilteredProducts.Count() + pageSize - 1) / pageSize)" SelectedChanged="OnPageChanged" Selected="@currentPage" />
+                </div>
+            }
+            else
+            {
+                <!-- Table View -->
+                <div style="overflow-x:auto; -webkit-overflow-scrolling: touch;">
+                    <MudTable Items="@FilteredProducts" 
+                              Hover="true" 
+                              Dense="true" 
+                              Breakpoint="Breakpoint.None"
+                              OnRowClick="@((TableRowClickEventArgs<Product> args) => OnProductClicked.InvokeAsync(args.Item!))">
+                        <HeaderContent>
+                            <MudTh>Name</MudTh>
+                            @if (ShowPublicPrice) { <MudTh>Price</MudTh> }
+                            @if (ShowCostPrice) { <MudTh>Cost</MudTh> }
+                            @if (ShowStock) { <MudTh>Stock</MudTh> }
+                            <MudTh>Action</MudTh>
+                        </HeaderContent>
+                        <RowTemplate>
+                            @{
+                                var availableStock = GetStockLevel(context);
+                            }
+                            <MudTd DataLabel="Name">@context.Name</MudTd>
+                            @if (ShowPublicPrice) { <MudTd DataLabel="Price">LD @context.Price.ToString("F2")</MudTd> }
+                            @if (ShowCostPrice) { <MudTd DataLabel="Cost">LD @context.CostPrice.ToString("F2")</MudTd> }
+                            @if (ShowStock) {
+                                <MudTd DataLabel="Stock">
+                                    <MudChip T="string" Size="Size.Small" Variant="Variant.Text" Color="@(availableStock > 10 ? Color.Success : Color.Warning)">
+                                        @availableStock
+                                    </MudChip>
+                                </MudTd>
+                            }
+                            <MudTd DataLabel="Action">
+                                <div @onclick:stopPropagation="true" class="d-inline-flex align-center">
+                                    @if (ShowSplitButton)
+                                    {
+                                        <MudIconButton Icon="@Icons.Material.Filled.CallSplit" 
+                                                       Color="Color.Default" 
+                                                       Size="Size.Small" 
+                                                       Title="Add as separate line"
+                                                       OnClick="@((e) => OnSplitClicked.InvokeAsync(context))"
+                                                       Class="mr-2" />
+                                    }
+                                    @if (ShowInfoButton)
+                                    {
+                                        <MudIconButton Icon="@Icons.Material.Filled.Info" 
+                                                       Color="Color.Default" 
+                                                       Size="Size.Small" 
+                                                       OnClick="@((e) => ShowProductDetails(context))"
+                                                       Class="mr-2" />
+                                    }
+                                    <MudButton Size="Size.Small" 
+                                               Variant="Variant.Filled" 
+                                               Color="Color.Primary"
+                                               OnClick="@(() => OnProductClicked.InvokeAsync(context))"
+                                               Disabled="@(availableStock == 0)">
+                                        @ActionLabel
+                                    </MudButton>
+                                </div>
+                            </MudTd>
+                        </RowTemplate>
+                        <PagerContent>
+                            <MudTablePager />
+                        </PagerContent>
+                    </MudTable>
+                </div>
+            }
+        }
+    </div>
+</MudPaper>
+
+@code {
+    [Parameter] public IEnumerable<Product>? Products { get; set; }
+    [Parameter] public EventCallback<Product> OnProductClicked { get; set; }
+    [Parameter] public EventCallback<Product> OnSplitClicked { get; set; }
+    [Parameter] public bool ShowCostPrice { get; set; } = false;
+    [Parameter] public bool ShowPublicPrice { get; set; } = true;
+    [Parameter] public bool ShowStock { get; set; } = true;
+    [Parameter] public bool ShowInfoButton { get; set; } = true;
+    [Parameter] public bool ShowSplitButton { get; set; } = true;
+    [Parameter] public string ActionLabel { get; set; } = "Add";
+    [Parameter] public RenderFragment? ToolbarContent { get; set; }
+    [Parameter] public string Height { get; set; } = "100%";
+    [Parameter] public Func<Product, int>? GetAvailableStock { get; set; }
+    [Parameter] public string SearchString { get; set; } = "";
+    [Parameter] public EventCallback<string> SearchStringChanged { get; set; }
+
+    private string sortBy = "MostSold";
+    private int currentPage = 1;
+    private int pageSize = 12;
+    private bool isGridView = true;
+    private IDialogReference? _searchScannerDialog;
+
+    private int GetStockLevel(Product product)
+    {
+        return GetAvailableStock?.Invoke(product) ?? product.StockQuantity;
+    }
+
+    private async Task ShowProductDetails(Product product)
+    {
+        var parameters = new DialogParameters
+        { 
+            { "Product", product }
+        };
+        var options = new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.Medium, FullWidth = true };
+        await DialogService.ShowAsync<ProductDetailsDialog>("Product Details", parameters, options);
+    }
+
+    private IEnumerable<Product> PinnedProducts
+    {
+        get
+        {
+            if (Products is null) return Enumerable.Empty<Product>();
+            
+            var query = Products.Where(p => p.IsPinned && p.IsActive);
+
+            if (!string.IsNullOrWhiteSpace(SearchString))
+            {
+                var term = SearchString.Trim();
+                query = query.Where(p =>
+                    p.Name.Contains(term, System.StringComparison.OrdinalIgnoreCase) ||
+                    (p.Description?.Contains(term, System.StringComparison.OrdinalIgnoreCase) ?? false) ||
+                    (p.Barcodes?.Any(b => b.Barcode.Contains(term, System.StringComparison.OrdinalIgnoreCase)) ?? false));
+            }
+
+            switch (sortBy)
+            {
+                case "PriceAsc":
+                    return query.OrderBy(p => p.Price);
+                case "PriceDesc":
+                    return query.OrderByDescending(p => p.Price);
+                case "MostSold":
+                    return query.OrderByDescending(p => p.SoldLast30Days);
+                default:
+                    return query.OrderBy(p => p.Name);
+            }
+        }
+    }
+
+    private IEnumerable<Product> FilteredProducts
+    {
+        get
+        {
+            if (Products is null) return Enumerable.Empty<Product>();
+
+            var query = Products.Where(p => p.IsActive && !p.IsPinned);
+
+            if (!string.IsNullOrWhiteSpace(SearchString))
+            {
+                var term = SearchString.Trim();
+                query = query.Where(p =>
+                    p.Name.Contains(term, System.StringComparison.OrdinalIgnoreCase) ||
+                    (p.Description?.Contains(term, System.StringComparison.OrdinalIgnoreCase) ?? false) ||
+                    (p.Barcodes?.Any(b => b.Barcode.Contains(term, System.StringComparison.OrdinalIgnoreCase)) ?? false));
+            }
+
+            switch (sortBy)
+            {
+                case "PriceAsc":
+                    return query.OrderBy(p => p.Price);
+                case "PriceDesc":
+                    return query.OrderByDescending(p => p.Price);
+                case "MostSold":
+                    return query.OrderByDescending(p => p.SoldLast30Days);
+                default:
+                    return query.OrderBy(p => p.Name);
+            }
+        }
+    }
+
+    private string GetSortLabel(string value)
+    {
+        switch (value)
+        {
+            case "PriceAsc": return "Price: Low to High";
+            case "PriceDesc": return "Price: High to Low";
+            case "MostSold": return "Most Sold";
+            default: return "Name: A to Z";
+        }
+    }
+
+    private void OnSortChanged(string value)
+    {
+        sortBy = value;
+        currentPage = 1;
+    }
+
+    private void OnPageChanged(int page)
+    {
+        currentPage = page;
+    }
+
+    private async Task OnSearchChanged(string value)
+    {
+        SearchString = value;
+        await SearchStringChanged.InvokeAsync(value);
+        currentPage = 1;
+    }
+
+    private string GetProductImage(Product? product)
+    {
+        if (product is null || string.IsNullOrWhiteSpace(product.ImageUrl))
+        {
+            return "images/placeholder-product.svg";
+        }
+        return product.ImageUrl;
+    }
+
+    private async Task OpenSearchScannerAsync()
+    {
+        var parameters = new DialogParameters<M_Wallet.Client.Components.BarcodeScannerDialog>
+        {
+            { x => x.OnDetected, EventCallback.Factory.Create<string>(this, HandleSearchBarcodeDetectedAsync) },
+            { x => x.OnCancel, EventCallback.Factory.Create(this, CloseSearchScannerAsync) }
+        };
+
+        var options = new DialogOptions
+        {
+            FullScreen = true,
+            CloseButton = true
+        };
+
+        _searchScannerDialog = await DialogService.ShowAsync<M_Wallet.Client.Components.BarcodeScannerDialog>("Scan Product", parameters, options);
+    }
+
+    private async Task HandleSearchBarcodeDetectedAsync(string code)
+    {
+        if (!string.IsNullOrWhiteSpace(code))
+        {
+            await OnSearchChanged(code);
+            Snackbar.Add($"Searching for barcode {code}", Severity.Info);
+        }
+        await CloseSearchScannerAsync();
+    }
+
+    private Task CloseSearchScannerAsync()
+    {
+        _searchScannerDialog?.Close();
+        _searchScannerDialog = null;
+        return Task.CompletedTask;
+    }
+}

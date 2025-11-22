@@ -1,0 +1,132 @@
+@using M_Wallet.Shared
+@using MudBlazor
+@inject HttpClient Http
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+
+<MudDialog>
+    <DialogContent>
+        <MudText Typo="Typo.h6" Class="mb-4">Payment History for Order #@Transaction.Id</MudText>
+        @if (Transaction.PaymentAllocations == null || !Transaction.PaymentAllocations.Any())
+        {
+            <MudAlert Severity="Severity.Info">No payments recorded for this order.</MudAlert>
+        }
+        else
+        {
+            <MudTable Items="@Transaction.PaymentAllocations.OrderByDescending(pa => pa.Payment?.PaymentDate)" Dense="true" Hover="true" Elevation="0">
+                <HeaderContent>
+                    <MudTh>Date</MudTh>
+                    <MudTh>Amount</MudTh>
+                    <MudTh>Method</MudTh>
+                    <MudTh>Reference</MudTh>
+                    <MudTh>Actions</MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd>@(context.Payment?.PaymentDate.ToLocalTime().ToString("g") ?? "-")</MudTd>
+                    <MudTd>
+                        <div class="d-flex align-center">
+                            <MudText>@context.Amount.ToString("F2")</MudText>
+                            @if (IsCompletingPayment(context))
+                            {
+                                <MudChip T="string" Size="Size.Small" Variant="Variant.Filled" Color="Color.Success" Class="ml-4">
+                                    Profit: @CalculateOrderProfit().ToString("F2")
+                                </MudChip>
+                            }
+                        </div>
+                    </MudTd>
+                    <MudTd>@(context.Payment?.PaymentMethod ?? "-")</MudTd>
+                    <MudTd>@(context.Payment?.Reference ?? "-")</MudTd>
+                    <MudTd>
+                        <MudIconButton Icon="@Icons.Material.Filled.Delete" 
+                                       Color="Color.Error" 
+                                       Size="Size.Small" 
+                                       OnClick="@(() => DeletePayment(context))" />
+                    </MudTd>
+                </RowTemplate>
+            </MudTable>
+            <div class="d-flex justify-end mt-4 gap-4">
+                <MudText Typo="Typo.subtitle1"><b>Total Paid:</b> @Transaction.PaymentAllocations.Sum(pa => pa.Amount).ToString("F2")</MudText>
+                <MudText Typo="Typo.subtitle1"><b>Total Amount:</b> @Transaction.TotalAmount.ToString("F2")</MudText>
+                <MudText Typo="Typo.subtitle1" Color="@(Balance > 0 ? Color.Error : Color.Success)"><b>Balance:</b> @Balance.ToString("F2")</MudText>
+            </div>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Close">Close</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = default!;
+    [Parameter] public Transaction Transaction { get; set; } = default!;
+
+    private decimal Balance => Transaction.TotalAmount - (Transaction.PaymentAllocations?.Sum(pa => pa.Amount) ?? 0);
+
+    private void Close() => MudDialog.Close(DialogResult.Ok(true));
+
+    private decimal CalculateOrderProfit()
+    {
+        if (Transaction.Items == null) return 0;
+        return Transaction.Items.Sum(item =>
+        {
+            var cost = item.UnitCost > 0 ? item.UnitCost : (item.Product?.CostPrice ?? 0);
+            return (item.UnitPrice - cost) * item.Quantity;
+        });
+    }
+
+    private bool IsCompletingPayment(PaymentAllocation allocation)
+    {
+        if (Transaction.PaymentAllocations == null || !Transaction.PaymentAllocations.Any())
+            return false;
+
+        var sortedPayments = Transaction.PaymentAllocations
+            .Where(pa => pa != null)
+            .OrderBy(pa => pa.Payment?.PaymentDate ?? DateTime.MinValue)
+            .ToList();
+
+        decimal cumulative = 0;
+        foreach (var pa in sortedPayments)
+        {
+            cumulative += pa.Amount;
+
+            if (cumulative >= Transaction.TotalAmount - 0.01m)
+            {
+                return pa.Id == allocation.Id;
+            }
+        }
+
+        return false;
+    }
+
+    private async Task DeletePayment(PaymentAllocation allocation)
+    {
+        if (allocation.Payment == null) return;
+
+        var confirm = await DialogService.ShowMessageBox(
+            "Delete Payment", 
+            $"Are you sure you want to delete this payment of LD {allocation.Amount:F2}?", 
+            yesText: "Delete", cancelText: "Cancel");
+
+        if (confirm == true)
+        {
+            try
+            {
+                var response = await Http.DeleteAsync($"api/payments/{allocation.Payment.Id}");
+                if (response.IsSuccessStatusCode)
+                {
+                    Snackbar.Add("Payment deleted successfully", Severity.Success);
+                    Transaction.PaymentAllocations.Remove(allocation);
+                    StateHasChanged();
+                }
+                else
+                {
+                    Snackbar.Add("Failed to delete payment", Severity.Error);
+                }
+            }
+            catch (Exception ex)
+            {
+                Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+            }
+        }
+    }
+}

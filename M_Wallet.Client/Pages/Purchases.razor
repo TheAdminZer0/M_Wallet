@@ -1,0 +1,426 @@
+@page "/purchases"
+@inject HttpClient Http
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+@using M_Wallet.Shared
+@using M_Wallet.Client.Components
+
+<PageTitle>Purchases & Inventory</PageTitle>
+
+<MudText Typo="Typo.h3" GutterBottom="true">Purchases & Inventory</MudText>
+<MudText Class="mb-4">Manage incoming stock and supplier invoices.</MudText>
+
+@if (isCreating)
+{
+    <MudGrid Spacing="2">
+        <!-- Left Side: Product Selection (POS Style) -->
+        <MudItem xs="12" md="8">
+            <ProductBrowser Products="@allProducts" 
+                            OnProductClicked="@SelectProduct"
+                            OnSplitClicked="@AddSeparateLineToInvoice"
+                            ShowCostPrice="true"
+                            ShowPublicPrice="false"
+                            ShowSplitButton="true"
+                            @bind-SearchString="searchString">
+                <ToolbarContent>
+                    <MudButton Variant="Variant.Filled" 
+                               Color="Color.Secondary" 
+                               StartIcon="@Icons.Material.Filled.Add" 
+                               OnClick="OpenNewProductDialog">New Product</MudButton>
+                </ToolbarContent>
+            </ProductBrowser>
+        </MudItem>
+
+        <!-- Right Side: Invoice Details -->
+        <MudItem xs="12" md="4">
+            <MudPaper Class="pa-4" Elevation="2" Style="position: sticky; top: 16px; background-color:var(--mud-palette-gray-lighter);">
+                <MudText Typo="Typo.h5" Class="mb-4">
+                    <MudIcon Icon="@Icons.Material.Filled.ReceiptLong" Class="mr-2" />
+                    New Invoice
+                </MudText>
+                
+                <MudTextField @bind-Value="newPurchase.SupplierName" 
+                              Label="Supplier Name" 
+                              Variant="Variant.Outlined" 
+                              Margin="Margin.Dense" 
+                              Class="mb-4" />
+                
+                @if (!newPurchase.Items.Any())
+                {
+                    <MudAlert Severity="Severity.Info" Class="my-4">
+                        Invoice is empty.<br/>Tap items to add.
+                    </MudAlert>
+                }
+                else
+                {
+                    <div style="max-height: 400px; overflow-y: auto;" class="mb-4">
+                        @foreach (var item in newPurchase.Items)
+                        {
+                            <MudPaper Class="cart-item-card pa-2 mb-2" Elevation="2">
+                                <div class="cart-item-line">
+                                    <div class="cart-item-info">
+                                        <img src="@GetProductImage(item.Product)"
+                                             alt="@item.Product?.Name"
+                                             class="cart-item-image"
+                                             loading="lazy" />
+                                        <MudText Typo="Typo.body1" Class="font-weight-bold">
+                                            @item.Product?.Name
+                                        </MudText>
+                                    </div>
+                                    <div class="cart-item-right">
+                                        <div class="cart-quantity-editor">
+                                            <MudIconButton Icon="@Icons.Material.Filled.Remove" 
+                                                           Size="Size.Small" 
+                                                           Color="Color.Default"
+                                                           OnClick="@(() => DecreaseQuantity(item))" />
+                                            <MudNumericField T="int"
+                                                             Value="item.Quantity"
+                                                             ValueChanged="@(val => OnQuantityChanged(item, val))"
+                                                             Min="1"
+                                                             HideSpinButtons="true"
+                                                             Dense="true"
+                                                             Class="cart-qty-input" />
+                                            <MudIconButton Icon="@Icons.Material.Filled.Add" 
+                                                           Size="Size.Small" 
+                                                           Color="Color.Default"
+                                                           OnClick="@(() => IncreaseQuantity(item))" />
+                                        </div>
+                                        <div class="cart-price-total">
+                                            <div class="cart-price-edit">
+                                                <MudNumericField T="decimal"
+                                                                 Value="item.UnitCost"
+                                                                 ValueChanged="@(val => OnCostChanged(item, val))"
+                                                                 Format="F2"
+                                                                 HideSpinButtons="true"
+                                                                 Dense="true"
+                                                                 Margin="Margin.None"
+                                                                 Variant="Variant.Text"
+                                                                 Style="width: 60px; text-align: right;" />
+                                            </div>
+                                            <MudText Typo="Typo.body2" Color="Color.Success" Class="font-weight-bold cart-item-subtotal">
+                                                <span class="cart-amount">@item.TotalCost.ToString("F2")</span>
+                                                <span class="cart-currency">LD</span>
+                                            </MudText>
+                                        </div>
+                                        <MudIconButton Icon="@Icons.Material.Filled.Close" 
+                                                       Size="Size.Small" 
+                                                       Color="Color.Error"
+                                                       OnClick="@(() => RemoveItem(item))" />
+                                    </div>
+                                </div>
+                            </MudPaper>
+                        }
+                    </div>
+
+                    <MudDivider Class="my-4" />
+                    
+                    <div class="d-flex justify-space-between align-center mb-4 pa-3" 
+                         style="background-color: var(--mud-palette-background-grey); border-radius: 8px;">
+                        <MudText Typo="Typo.h6">Total:</MudText>
+                        <MudText Typo="Typo.h5" Color="Color.Primary" Class="font-weight-bold cart-total-display">
+                            <span class="cart-amount">@newPurchase.Items.Sum(i => i.TotalCost).ToString("F2")</span>
+                            <span class="cart-currency">LD</span>
+                        </MudText>
+                    </div>
+
+                    <MudButton Variant="Variant.Filled" 
+                               Color="Color.Success" 
+                               FullWidth="true"
+                               Size="Size.Large"
+                               StartIcon="@Icons.Material.Filled.Save"
+                               OnClick="SavePurchase"
+                               Disabled="@(!newPurchase.Items.Any())">
+                        Save Purchase
+                    </MudButton>
+
+                    <MudButton Variant="Variant.Text" 
+                               Color="Color.Error" 
+                               FullWidth="true"
+                               Class="mt-2"
+                               StartIcon="@Icons.Material.Filled.Clear"
+                               OnClick="CancelCreate">
+                        Cancel
+                    </MudButton>
+                }
+            </MudPaper>
+        </MudItem>
+    </MudGrid>
+}
+else
+{
+    <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" OnClick="StartCreate" Class="mb-4">New Purchase</MudButton>
+
+    <MudTable Items="@purchases" Hover="true" Dense="true" Loading="@(purchases == null)">
+        <HeaderContent>
+            <MudTh>ID</MudTh>
+            <MudTh>Date</MudTh>
+            <MudTh>Supplier</MudTh>
+            <MudTh>Items</MudTh>
+            <MudTh>Total Amount</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd>#@context.Id</MudTd>
+            <MudTd>@context.PurchaseDate.ToLocalTime().ToString("g")</MudTd>
+            <MudTd>@(context.SupplierName ?? "-")</MudTd>
+            <MudTd>@context.Items.Count</MudTd>
+            <MudTd>@context.TotalAmount.ToString("F2")</MudTd>
+        </RowTemplate>
+        <PagerContent>
+            <MudTablePager />
+        </PagerContent>
+    </MudTable>
+}
+
+<style>
+    .cart-item-image {
+        width: 40px;
+        height: 40px;
+        object-fit: cover;
+        border-radius: 6px;
+        margin-right: 8px;
+        background-color: var(--mud-palette-grey-light);
+    }
+    .cart-item-card {
+        border-radius: 8px;
+    }
+    .cart-item-line {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+    .cart-item-info {
+        display: flex;
+        align-items: center;
+        min-width: 120px;
+        flex: 1 1 auto;
+    }
+    .cart-item-right {
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 8px;
+        flex: 1 1 auto;
+        flex-wrap: nowrap;
+        min-width: 0;
+    }
+    .cart-quantity-editor {
+        display: flex;
+        align-items: center;
+        gap: 2px;
+    }
+    .cart-qty-input {
+        width: 35px;
+        text-align: center;
+    }
+    .cart-qty-input input {
+        text-align: center;
+        padding: 0;
+    }
+    .cart-price-total {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: nowrap;
+    }
+    .cart-price-edit {
+        display: flex;
+        align-items: center;
+    }
+    .cart-item-subtotal,
+    .cart-total-display {
+        min-width: 70px;
+        text-align: right;
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+        line-height: 1.1;
+    }
+    .cart-amount {
+        font-size: 1.1em;
+    }
+    .cart-currency {
+        font-size: 0.75em;
+        letter-spacing: 0.5px;
+    }
+    .cart-total-display .cart-amount {
+        font-size: 1.5em;
+    }
+</style>
+
+@code {
+    private List<Purchase>? purchases;
+    private List<Product> allProducts = new();
+    private bool isCreating = false;
+    private Purchase newPurchase = new();
+    private string searchString = "";
+    
+    // Form inputs
+    private Product? selectedProduct;
+    private int quantity = 1;
+    private decimal costPrice = 0;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        try
+        {
+            purchases = await Http.GetFromJsonAsync<List<Purchase>>("api/purchases");
+            allProducts = await Http.GetFromJsonAsync<List<Product>>("api/products") ?? new();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading data: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private void StartCreate()
+    {
+        newPurchase = new Purchase();
+        isCreating = true;
+    }
+
+    private void CancelCreate()
+    {
+        isCreating = false;
+        newPurchase = new Purchase();
+    }
+
+    private void SelectProduct(Product product)
+    {
+        var existingItem = newPurchase.Items.FirstOrDefault(i => i.ProductId == product.Id);
+        if (existingItem != null)
+        {
+            existingItem.Quantity++;
+        }
+        else
+        {
+            newPurchase.Items.Add(new PurchaseItem
+            {
+                ProductId = product.Id,
+                Product = product,
+                Quantity = 1,
+                UnitCost = product.CostPrice
+            });
+        }
+    }
+
+    private void AddSeparateLineToInvoice(Product product)
+    {
+        newPurchase.Items.Add(new PurchaseItem
+        {
+            ProductId = product.Id,
+            Product = product,
+            Quantity = 1,
+            UnitCost = product.CostPrice
+        });
+    }
+
+    private void IncreaseQuantity(PurchaseItem item)
+    {
+        item.Quantity++;
+    }
+
+    private void DecreaseQuantity(PurchaseItem item)
+    {
+        if (item.Quantity > 1)
+        {
+            item.Quantity--;
+        }
+        else
+        {
+            RemoveItem(item);
+        }
+    }
+
+    private void OnQuantityChanged(PurchaseItem item, int newQuantity)
+    {
+        if (newQuantity < 1) newQuantity = 1;
+        item.Quantity = newQuantity;
+    }
+
+    private void OnCostChanged(PurchaseItem item, decimal newCost)
+    {
+        if (newCost < 0) newCost = 0;
+        item.UnitCost = newCost;
+    }
+
+    private string GetProductImage(Product? product)
+    {
+        if (product is null || string.IsNullOrWhiteSpace(product.ImageUrl))
+        {
+            return "images/placeholder-product.svg";
+        }
+        return product.ImageUrl;
+    }
+
+    private void RemoveItem(PurchaseItem item)
+    {
+        newPurchase.Items.Remove(item);
+    }
+
+    private async Task SavePurchase()
+    {
+        newPurchase.TotalAmount = newPurchase.Items.Sum(i => i.TotalCost);
+        
+        try
+        {
+            var response = await Http.PostAsJsonAsync("api/purchases", newPurchase);
+            if (response.IsSuccessStatusCode)
+            {
+                Snackbar.Add("Purchase saved successfully. Stock updated.", Severity.Success);
+                isCreating = false;
+                await LoadData();
+            }
+            else
+            {
+                var error = await response.Content.ReadAsStringAsync();
+                Snackbar.Add($"Error saving purchase: {error}", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task OpenNewProductDialog()
+    {
+        var product = new Product();
+        IDialogReference? dialog = null;
+
+        var parameters = new DialogParameters<M_Wallet.Client.Components.ProductDialog>
+        {
+            { x => x.Product, product },
+            { x => x.IsEditMode, false },
+            { x => x.OnSubmit, EventCallback.Factory.Create<Product>(this, async (p) => {
+                // Save the new product first
+                var response = await Http.PostAsJsonAsync("api/products", p);
+                if (response.IsSuccessStatusCode)
+                {
+                    var createdProduct = await response.Content.ReadFromJsonAsync<Product>();
+                    if (createdProduct != null)
+                    {
+                        allProducts.Add(createdProduct);
+                        selectedProduct = createdProduct; // Auto-select the new product
+                        Snackbar.Add("Product created!", Severity.Success);
+                    }
+                    dialog?.Close();
+                }
+                else 
+                {
+                    Snackbar.Add("Failed to create product", Severity.Error);
+                }
+            })},
+            { x => x.OnCancel, EventCallback.Factory.Create(this, () => dialog?.Close()) }
+        };
+        
+        var options = new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.Small, FullWidth = true };
+        dialog = await DialogService.ShowAsync<M_Wallet.Client.Components.ProductDialog>("Create New Product", parameters, options);
+    }
+}

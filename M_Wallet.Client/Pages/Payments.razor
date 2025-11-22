@@ -1,0 +1,203 @@
+@page "/payments"
+@inject HttpClient Http
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+@using M_Wallet.Shared
+@using M_Wallet.Client.Components
+
+<PageTitle>Payments</PageTitle>
+
+<MudText Typo="Typo.h3" GutterBottom="true">Payments</MudText>
+<MudText Class="mb-4">Manage customer payments and outstanding invoices</MudText>
+
+<MudTabs Elevation="2" Rounded="true" ApplyEffectsToContainer="true" PanelClass="pa-6">
+    <MudTabPanel Text="Outstanding Invoices">
+        @if (transactions == null)
+        {
+            <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+        }
+        else
+        {
+            var unpaidTransactions = transactions.Where(t => GetBalanceDue(t) > 0).ToList();
+            
+            @if (!unpaidTransactions.Any())
+            {
+                <MudAlert Severity="Severity.Success">No outstanding invoices! All caught up.</MudAlert>
+            }
+            else
+            {
+                <MudTable Items="@unpaidTransactions" Hover="true" Dense="true" Filter="new Func<Transaction, bool>(FilterFunc)">
+                    <ToolBarContent>
+                        <MudText Typo="Typo.h6">Unpaid Invoices</MudText>
+                        <MudSpacer />
+                        <MudTextField @bind-Value="searchString" Placeholder="Search" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium" Class="mt-0"></MudTextField>
+                    </ToolBarContent>
+                    <HeaderContent>
+                        <MudTh>Order ID</MudTh>
+                        <MudTh>Date</MudTh>
+                        <MudTh>Customer</MudTh>
+                        <MudTh>Total</MudTh>
+                        <MudTh>Paid</MudTh>
+                        <MudTh>Balance</MudTh>
+                        <MudTh>Action</MudTh>
+                    </HeaderContent>
+                    <RowTemplate>
+                        <MudTd DataLabel="Order ID">#@context.Id</MudTd>
+                        <MudTd DataLabel="Date">@context.TransactionDate.ToLocalTime().ToString("MM/dd/yy")</MudTd>
+                        <MudTd DataLabel="Customer">@(context.CustomerName ?? "Walk-in")</MudTd>
+                        <MudTd DataLabel="Total">LD @context.TotalAmount.ToString("F2")</MudTd>
+                        <MudTd DataLabel="Paid">LD @GetPaidAmount(context).ToString("F2")</MudTd>
+                        <MudTd DataLabel="Balance">
+                            <MudText Color="Color.Error" Class="font-weight-bold">
+                                LD @GetBalanceDue(context).ToString("F2")
+                            </MudText>
+                        </MudTd>
+                        <MudTd DataLabel="Action">
+                            <MudButton Variant="Variant.Filled" Color="Color.Success" Size="Size.Small" OnClick="@(() => OpenPaymentDialog(context))">
+                                Pay
+                            </MudButton>
+                        </MudTd>
+                    </RowTemplate>
+                    <PagerContent>
+                        <MudTablePager />
+                    </PagerContent>
+                </MudTable>
+            }
+        }
+    </MudTabPanel>
+    <MudTabPanel Text="Payment History">
+        @if (payments == null)
+        {
+            <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+        }
+        else
+        {
+            <MudTable Items="@payments" Hover="true" Dense="true">
+                <HeaderContent>
+                    <MudTh>Payment ID</MudTh>
+                    <MudTh>Date</MudTh>
+                    <MudTh>Method</MudTh>
+                    <MudTh>Reference</MudTh>
+                    <MudTh>Amount</MudTh>
+                    <MudTh>Allocations</MudTh>
+                    <MudTh>Actions</MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd>#@context.Id</MudTd>
+                    <MudTd>@context.PaymentDate.ToLocalTime().ToString("MM/dd/yy HH:mm")</MudTd>
+                    <MudTd>@context.PaymentMethod</MudTd>
+                    <MudTd>@context.Reference</MudTd>
+                    <MudTd>
+                        <MudText Color="Color.Success" Class="font-weight-bold">
+                            LD @context.Amount.ToString("F2")
+                        </MudText>
+                    </MudTd>
+                    <MudTd>
+                        @foreach(var alloc in context.Allocations)
+                        {
+                            <div>Order #@alloc.TransactionId: LD @alloc.Amount.ToString("F2")</div>
+                        }
+                    </MudTd>
+                    <MudTd>
+                        <MudIconButton Icon="@Icons.Material.Filled.Delete" 
+                                       Color="Color.Error" 
+                                       Size="Size.Small" 
+                                       OnClick="@(() => DeletePayment(context))" />
+                    </MudTd>
+                </RowTemplate>
+                <PagerContent>
+                    <MudTablePager />
+                </PagerContent>
+            </MudTable>
+        }
+    </MudTabPanel>
+</MudTabs>
+
+@code {
+    private List<Transaction>? transactions;
+    private List<Payment>? payments;
+    private string searchString = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        try
+        {
+            transactions = await Http.GetFromJsonAsync<List<Transaction>>("api/transactions");
+            payments = await Http.GetFromJsonAsync<List<Payment>>("api/payments");
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading data: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private decimal GetPaidAmount(Transaction t)
+    {
+        return t.PaymentAllocations?.Sum(pa => pa.Amount) ?? 0;
+    }
+
+    private decimal GetBalanceDue(Transaction t)
+    {
+        return t.TotalAmount - GetPaidAmount(t);
+    }
+
+    private bool FilterFunc(Transaction t)
+    {
+        if (string.IsNullOrWhiteSpace(searchString)) return true;
+        if (t.CustomerName?.Contains(searchString, StringComparison.OrdinalIgnoreCase) == true) return true;
+        if (t.Id.ToString().Contains(searchString)) return true;
+        return false;
+    }
+
+    private async Task OpenPaymentDialog(Transaction transaction)
+    {
+        var balance = GetBalanceDue(transaction);
+        
+        var parameters = new DialogParameters();
+        parameters.Add("TransactionId", transaction.Id);
+        parameters.Add("BalanceDue", balance);
+        parameters.Add("CustomerName", transaction.CustomerName);
+
+        var dialog = await DialogService.ShowAsync<PaymentDialog>("Record Payment", parameters);
+        var result = await dialog.Result;
+
+        if (result != null && !result.Canceled)
+        {
+            await LoadData();
+        }
+    }
+
+    private async Task DeletePayment(Payment payment)
+    {
+        var confirm = await DialogService.ShowMessageBox(
+            "Delete Payment", 
+            $"Are you sure you want to delete Payment #{payment.Id} of LD {payment.Amount:F2}?", 
+            yesText: "Delete", cancelText: "Cancel");
+
+        if (confirm == true)
+        {
+            try
+            {
+                var response = await Http.DeleteAsync($"api/payments/{payment.Id}");
+                if (response.IsSuccessStatusCode)
+                {
+                    Snackbar.Add("Payment deleted successfully", Severity.Success);
+                    await LoadData();
+                }
+                else
+                {
+                    Snackbar.Add("Failed to delete payment", Severity.Error);
+                }
+            }
+            catch (Exception ex)
+            {
+                Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+            }
+        }
+    }
+}

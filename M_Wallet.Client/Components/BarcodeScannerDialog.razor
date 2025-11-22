@@ -1,12 +1,14 @@
+@page "/BarcodeScanner"
 @using MudBlazor
 @using Microsoft.JSInterop
 @inject IJSRuntime JSRuntime
 @inject ISnackbar Snackbar
+@inject NavigationManager NavigationManager
 
 @implements IAsyncDisposable
 
-<MudDialog>
-    <DialogContent>
+<MudContainer MaxWidth="MaxWidth.Small" Class="pa-4">
+    <MudPaper Class="pa-4" Elevation="3">
         <MudStack Spacing="2">
             <MudText Typo="Typo.h5">Camera Scanner</MudText>
 
@@ -32,13 +34,11 @@
                    style="width:100%;height:auto;border-radius:12px;background-color:#000;"></video>
 
             <MudText Typo="Typo.body2" Color="Color.Secondary">@_statusMessage</MudText>
+            
+            <MudButton Variant="Variant.Filled" Color="Color.Secondary" OnClick="GoBack" Class="mt-4">Back</MudButton>
         </MudStack>
-    </DialogContent>
-
-    <DialogActions>
-        <MudButton Variant="Variant.Text" OnClick="CancelAsync">Cancel</MudButton>
-    </DialogActions>
-</MudDialog>
+    </MudPaper>
+</MudContainer>
 
 @code {
     [Parameter]
@@ -46,6 +46,9 @@
 
     [Parameter]
     public EventCallback OnCancel { get; set; }
+
+    // If used as a page, we might not have these callbacks set, so we handle navigation manually
+    private bool _isDialogMode => OnDetected.HasDelegate;
 
     private readonly string _videoElementId = $"barcode-video-{Guid.NewGuid():N}";
     private DotNetObjectReference<BarcodeScannerDialog>? _dotNetRef;
@@ -144,13 +147,36 @@
 
         await StopScannerAsync();
         Snackbar.Add($"Barcode captured: {code}", Severity.Success);
-        await OnDetected.InvokeAsync(code);
+        
+        if (_isDialogMode)
+        {
+            await OnDetected.InvokeAsync(code);
+        }
+        else
+        {
+            // If used as a standalone page, navigate back or do something with the code
+            // For now, let's just go back, assuming the user wanted to scan something for the previous page
+            // In a real app, you might want to pass the code via query string or a service
+             NavigationManager.NavigateTo($"/?scan={Uri.EscapeDataString(code)}");
+        }
     }
 
     private async Task CancelAsync()
     {
         await StopScannerAsync();
-        await OnCancel.InvokeAsync();
+        if (_isDialogMode)
+        {
+            await OnCancel.InvokeAsync();
+        }
+        else
+        {
+            GoBack();
+        }
+    }
+    
+    private void GoBack()
+    {
+        NavigationManager.NavigateTo("/");
     }
 
     public async ValueTask DisposeAsync()

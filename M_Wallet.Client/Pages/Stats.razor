@@ -29,7 +29,7 @@ else
                     <div class="d-flex justify-space-between align-center">
                         <div>
                             <MudText Typo="Typo.body2" Color="Color.Secondary">Total Sales</MudText>
-                            <MudText Typo="Typo.h5" Class="font-weight-bold">LYD @TotalSales.ToString("N2")</MudText>
+                            <MudText Typo="Typo.h5" Class="font-weight-bold">LD @TotalSales.ToString("N2")</MudText>
                         </div>
                         <MudIcon Icon="@Icons.Material.Filled.AttachMoney" Size="Size.Large" Color="Color.Success" />
                     </div>
@@ -43,7 +43,7 @@ else
                     <div class="d-flex justify-space-between align-center">
                         <div>
                             <MudText Typo="Typo.body2" Color="Color.Secondary">Total Profit</MudText>
-                            <MudText Typo="Typo.h5" Class="font-weight-bold" Color="Color.Success">LYD @TotalProfit.ToString("N2")</MudText>
+                            <MudText Typo="Typo.h5" Class="font-weight-bold" Color="Color.Success">LD @TotalProfit.ToString("N2")</MudText>
                         </div>
                         <MudIcon Icon="@Icons.Material.Filled.TrendingUp" Size="Size.Large" Color="Color.Success" />
                     </div>
@@ -85,7 +85,7 @@ else
                     <div class="d-flex justify-space-between align-center">
                         <div>
                             <MudText Typo="Typo.body2" Color="Color.Secondary">Avg Order Value</MudText>
-                            <MudText Typo="Typo.h5" Class="font-weight-bold">LYD @AverageOrderValue.ToString("N2")</MudText>
+                            <MudText Typo="Typo.h5" Class="font-weight-bold">LD @AverageOrderValue.ToString("N2")</MudText>
                         </div>
                         <MudIcon Icon="@Icons.Material.Filled.ShoppingCart" Size="Size.Large" Color="Color.Primary" />
                     </div>
@@ -113,7 +113,7 @@ else
                     <div class="d-flex justify-space-between align-center">
                         <div>
                             <MudText Typo="Typo.body2" Color="Color.Secondary">Today's Sales</MudText>
-                            <MudText Typo="Typo.h5" Class="font-weight-bold">LYD @TodaySales.ToString("N2")</MudText>
+                            <MudText Typo="Typo.h5" Class="font-weight-bold">LD @TodaySales.ToString("N2")</MudText>
                         </div>
                         <MudIcon Icon="@Icons.Material.Filled.CalendarToday" Size="Size.Large" Color="Color.Info" />
                     </div>
@@ -127,7 +127,7 @@ else
                     <div class="d-flex justify-space-between align-center">
                         <div>
                             <MudText Typo="Typo.body2" Color="Color.Secondary">Today's Profit</MudText>
-                            <MudText Typo="Typo.h5" Class="font-weight-bold" Color="Color.Success">LYD @TodayProfit.ToString("N2")</MudText>
+                            <MudText Typo="Typo.h5" Class="font-weight-bold" Color="Color.Success">LD @TodayProfit.ToString("N2")</MudText>
                         </div>
                         <MudIcon Icon="@Icons.Material.Filled.CalendarToday" Size="Size.Large" Color="Color.Success" />
                     </div>
@@ -158,12 +158,12 @@ else
                 <MudStack Spacing="3">
                     <div>
                         <MudText Typo="Typo.body2" Color="Color.Secondary">Sales</MudText>
-                        <MudText Typo="Typo.h6" Class="font-weight-bold">LYD @ThisMonthSales.ToString("N2")</MudText>
+                        <MudText Typo="Typo.h6" Class="font-weight-bold">LD @ThisMonthSales.ToString("N2")</MudText>
                     </div>
                     <MudDivider />
                     <div>
                         <MudText Typo="Typo.body2" Color="Color.Secondary">Profit</MudText>
-                        <MudText Typo="Typo.h6" Class="font-weight-bold" Color="Color.Success">LYD @ThisMonthProfit.ToString("N2")</MudText>
+                        <MudText Typo="Typo.h6" Class="font-weight-bold" Color="Color.Success">LD @ThisMonthProfit.ToString("N2")</MudText>
                     </div>
                     <MudDivider />
                     <div>
@@ -203,10 +203,10 @@ else
                             <div class="d-flex justify-space-between align-center" style="width: 100%;">
                                 <div>
                                     <MudText Typo="Typo.body2" Class="font-weight-bold">@item.ProductName</MudText>
-                                    <MudText Typo="Typo.caption" Color="Color.Secondary">@item.Quantity sold • LYD @item.Revenue.ToString("N2") sales</MudText>
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary">@item.Quantity sold  LD @item.Revenue.ToString("N2") sales</MudText>
                                 </div>
                                 <MudText Typo="Typo.body2" Color="Color.Success" Class="font-weight-bold">
-                                    LYD @item.Profit.ToString("N2")
+                                    LD @item.Profit.ToString("N2")
                                 </MudText>
                             </div>
                         </MudListItem>
@@ -221,29 +221,30 @@ else
 @code {
     private List<Transaction>? transactions;
     private List<Product>? products;
+    private List<Payment>? payments;
     private bool isLoading = true;
 
     // Summary metrics
-    private decimal TotalSales => transactions?.Sum(t => t.TotalAmount) ?? 0;
+    private decimal TotalSales => payments?.Sum(p => p.Amount) ?? 0;
     private decimal TotalProfit => CalculateTotalProfit();
     private int TotalItemsSold => transactions?.Sum(t => t.Items.Sum(i => i.Quantity)) ?? 0;
-    private decimal AverageOrderValue => transactions?.Any() == true ? TotalSales / transactions.Count : 0;
+    private decimal AverageOrderValue => transactions?.Any() == true ? (transactions.Sum(t => t.TotalAmount) / transactions.Count) : 0;
     private decimal ProfitMargin => TotalSales > 0 ? (TotalProfit / TotalSales) * 100 : 0;
     
-    private decimal TodaySales => transactions?
-        .Where(t => t.TransactionDate.Date == DateTime.UtcNow.Date)
-        .Sum(t => t.TotalAmount) ?? 0;
+    private decimal TodaySales => payments?
+        .Where(p => p.PaymentDate.Date == DateTime.UtcNow.Date)
+        .Sum(p => p.Amount) ?? 0;
     
-    private decimal TodayProfit => CalculateProfitForTransactions(transactions?
-        .Where(t => t.TransactionDate.Date == DateTime.UtcNow.Date)
+    private decimal TodayProfit => CalculateProfitFromPayments(payments?
+        .Where(p => p.PaymentDate.Date == DateTime.UtcNow.Date)
         .ToList());
 
-    private decimal ThisMonthSales => transactions?
-        .Where(t => t.TransactionDate.Month == DateTime.UtcNow.Month && t.TransactionDate.Year == DateTime.UtcNow.Year)
-        .Sum(t => t.TotalAmount) ?? 0;
+    private decimal ThisMonthSales => payments?
+        .Where(p => p.PaymentDate.Month == DateTime.UtcNow.Month && p.PaymentDate.Year == DateTime.UtcNow.Year)
+        .Sum(p => p.Amount) ?? 0;
     
-    private decimal ThisMonthProfit => CalculateProfitForTransactions(transactions?
-        .Where(t => t.TransactionDate.Month == DateTime.UtcNow.Month && t.TransactionDate.Year == DateTime.UtcNow.Year)
+    private decimal ThisMonthProfit => CalculateProfitFromPayments(payments?
+        .Where(p => p.PaymentDate.Month == DateTime.UtcNow.Month && p.PaymentDate.Year == DateTime.UtcNow.Year)
         .ToList());
     
     private int ThisMonthOrders => transactions?
@@ -280,8 +281,9 @@ else
         {
             transactions = await Http.GetFromJsonAsync<List<Transaction>>("api/transactions");
             products = await Http.GetFromJsonAsync<List<Product>>("api/products");
+            payments = await Http.GetFromJsonAsync<List<Payment>>("api/payments");
             
-            if (transactions != null && products != null)
+            if (transactions != null && products != null && payments != null)
             {
                 PrepareChartData();
                 CalculateTopProducts();
@@ -299,38 +301,33 @@ else
 
     private decimal CalculateTotalProfit()
     {
-        if (transactions == null || products == null) return 0;
-
-        decimal totalProfit = 0;
-        foreach (var transaction in transactions)
-        {
-            foreach (var item in transaction.Items)
-            {
-                var product = products.FirstOrDefault(p => p.Id == item.ProductId);
-                if (product != null)
-                {
-                    var profit = (item.UnitPrice - product.CostPrice) * item.Quantity;
-                    totalProfit += profit;
-                }
-            }
-        }
-        return totalProfit;
+        return CalculateProfitFromPayments(payments);
     }
 
-    private decimal CalculateProfitForTransactions(List<Transaction>? transactionList)
+    private decimal CalculateProfitFromPayments(List<Payment>? paymentList)
     {
-        if (transactionList == null || !transactionList.Any() || products == null) return 0;
+        if (paymentList == null || !paymentList.Any() || transactions == null || products == null) return 0;
 
         decimal totalProfit = 0;
-        foreach (var transaction in transactionList)
+        foreach (var payment in paymentList)
         {
-            foreach (var item in transaction.Items)
+            foreach (var allocation in payment.Allocations)
             {
-                var product = products.FirstOrDefault(p => p.Id == item.ProductId);
-                if (product != null)
+                var transaction = transactions.FirstOrDefault(t => t.Id == allocation.TransactionId);
+                if (transaction != null && transaction.TotalAmount > 0)
                 {
-                    var profit = (item.UnitPrice - product.CostPrice) * item.Quantity;
-                    totalProfit += profit;
+                    decimal transactionProfit = 0;
+                    foreach (var item in transaction.Items)
+                    {
+                        var product = products.FirstOrDefault(p => p.Id == item.ProductId);
+                        if (product != null)
+                        {
+                            transactionProfit += (item.UnitPrice - product.CostPrice) * item.Quantity;
+                        }
+                    }
+                    
+                    var profitShare = (allocation.Amount / transaction.TotalAmount) * transactionProfit;
+                    totalProfit += profitShare;
                 }
             }
         }
@@ -339,7 +336,7 @@ else
 
     private void PrepareChartData()
     {
-        if (transactions == null || products == null) return;
+        if (payments == null || transactions == null || products == null) return;
 
         // Daily profit for last 30 days
         var dailyData = new Dictionary<DateTime, decimal>();
@@ -348,8 +345,8 @@ else
         for (int i = 0; i < 30; i++)
         {
             var date = startDate.AddDays(i);
-            var dayTransactions = transactions.Where(t => t.TransactionDate.Date == date).ToList();
-            dailyData[date] = CalculateProfitForTransactions(dayTransactions);
+            var dayPayments = payments.Where(p => p.PaymentDate.Date == date).ToList();
+            dailyData[date] = CalculateProfitFromPayments(dayPayments);
         }
 
         dailyLabels = dailyData.Keys.Select(d => d.ToString("MM/dd")).ToArray();
@@ -370,10 +367,10 @@ else
         for (int i = 0; i < 12; i++)
         {
             var month = startMonth.AddMonths(i);
-            var monthTransactions = transactions
-                .Where(t => t.TransactionDate.Year == month.Year && t.TransactionDate.Month == month.Month)
+            var monthPayments = payments
+                .Where(p => p.PaymentDate.Year == month.Year && p.PaymentDate.Month == month.Month)
                 .ToList();
-            monthlyData[month] = CalculateProfitForTransactions(monthTransactions);
+            monthlyData[month] = CalculateProfitFromPayments(monthPayments);
         }
 
         monthlyLabels = monthlyData.Keys.Select(d => d.ToString("MMM yyyy")).ToArray();
@@ -389,33 +386,64 @@ else
 
     private void CalculateTopProducts()
     {
-        if (transactions == null || products == null) return;
+        if (payments == null || transactions == null || products == null) return;
 
-        var productSales = transactions
-            .SelectMany(t => t.Items)
-            .GroupBy(i => i.ProductId)
-            .Select(g => 
+        var productStats = new Dictionary<int, TopProductData>();
+
+        // 1. Calculate Quantity (Accrual - physical movement)
+        foreach (var transaction in transactions)
+        {
+            foreach (var item in transaction.Items)
             {
-                var product = products.FirstOrDefault(p => p.Id == g.Key);
-                var quantity = g.Sum(i => i.Quantity);
-                var revenue = g.Sum(i => i.Subtotal);
-                var profit = product != null 
-                    ? g.Sum(i => (i.UnitPrice - product.CostPrice) * i.Quantity)
-                    : 0;
-                
-                return new TopProductData
+                if (!productStats.ContainsKey(item.ProductId))
                 {
-                    ProductId = g.Key,
-                    ProductName = g.First().Product?.Name ?? "Unknown",
-                    Quantity = quantity,
-                    Revenue = revenue,
-                    Profit = profit
-                };
-            })
+                    var product = products.FirstOrDefault(p => p.Id == item.ProductId);
+                    productStats[item.ProductId] = new TopProductData
+                    {
+                        ProductId = item.ProductId,
+                        ProductName = product?.Name ?? "Unknown",
+                        Quantity = 0,
+                        Revenue = 0,
+                        Profit = 0
+                    };
+                }
+                productStats[item.ProductId].Quantity += item.Quantity;
+            }
+        }
+
+        // 2. Calculate Revenue and Profit (Cash Basis)
+        foreach (var payment in payments)
+        {
+            foreach (var allocation in payment.Allocations)
+            {
+                var transaction = transactions.FirstOrDefault(t => t.Id == allocation.TransactionId);
+                if (transaction != null && transaction.TotalAmount > 0)
+                {
+                    var ratio = allocation.Amount / transaction.TotalAmount;
+
+                    foreach (var item in transaction.Items)
+                    {
+                        if (productStats.ContainsKey(item.ProductId))
+                        {
+                            var itemRevenue = item.Subtotal * ratio;
+                            
+                            var product = products.FirstOrDefault(p => p.Id == item.ProductId);
+                            var itemProfit = product != null 
+                                ? (item.UnitPrice - product.CostPrice) * item.Quantity 
+                                : 0;
+                            var profitShare = itemProfit * ratio;
+
+                            productStats[item.ProductId].Revenue += itemRevenue;
+                            productStats[item.ProductId].Profit += profitShare;
+                        }
+                    }
+                }
+            }
+        }
+
+        TopProducts = productStats.Values
             .OrderByDescending(p => p.Profit)
             .ToList();
-
-        TopProducts = productSales;
     }
 
     private class TopProductData

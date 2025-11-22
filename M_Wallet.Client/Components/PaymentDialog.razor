@@ -1,0 +1,101 @@
+@using M_Wallet.Shared
+@using MudBlazor
+@inject HttpClient Http
+@inject ISnackbar Snackbar
+
+<MudDialog>
+    <DialogContent>
+        <MudText Class="mb-4">Recording payment for Order #@TransactionId</MudText>
+        
+        <MudGrid>
+            <MudItem xs="12">
+                <MudNumericField @bind-Value="amount" Label="Payment Amount" Format="F2" Min="0.01m" Max="@BalanceDue" Adornment="Adornment.Start" AdornmentText="LD" Variant="Variant.Outlined" AutoFocus="true" />
+            </MudItem>
+            <MudItem xs="12">
+                <MudSelect @bind-Value="paymentMethod" Label="Payment Method" Variant="Variant.Outlined">
+                    <MudSelectItem Value="@("Cash")">Cash</MudSelectItem>
+                    <MudSelectItem Value="@("Card")">Card</MudSelectItem>
+                    <MudSelectItem Value="@("Transfer")">Transfer</MudSelectItem>
+                    <MudSelectItem Value="@("Check")">Check</MudSelectItem>
+                </MudSelect>
+            </MudItem>
+            <MudItem xs="12">
+                <MudTextField @bind-Value="reference" Label="Reference / Notes" Variant="Variant.Outlined" Lines="2" />
+            </MudItem>
+        </MudGrid>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="Submit">Record Payment</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = default!;
+
+    [Parameter] public int TransactionId { get; set; }
+    [Parameter] public decimal BalanceDue { get; set; }
+    [Parameter] public string? CustomerName { get; set; }
+
+    private decimal amount;
+    private string paymentMethod = "Cash";
+    private string reference = "";
+
+    protected override void OnInitialized()
+    {
+        amount = BalanceDue;
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+
+    private async Task Submit()
+    {
+        if (amount <= 0)
+        {
+            Snackbar.Add("Amount must be greater than 0", Severity.Warning);
+            return;
+        }
+
+        if (amount > BalanceDue)
+        {
+            Snackbar.Add($"Amount cannot exceed balance due (LD {BalanceDue:F2})", Severity.Warning);
+            return;
+        }
+
+        var payment = new Payment
+        {
+            PaymentDate = DateTime.UtcNow,
+            Amount = amount,
+            PaymentMethod = paymentMethod,
+            Reference = reference,
+            CustomerName = CustomerName,
+            Allocations = new List<PaymentAllocation>
+            {
+                new PaymentAllocation
+                {
+                    TransactionId = TransactionId,
+                    Amount = amount
+                }
+            }
+        };
+
+        try
+        {
+            var response = await Http.PostAsJsonAsync("api/payments", payment);
+            if (response.IsSuccessStatusCode)
+            {
+                Snackbar.Add("Payment recorded successfully", Severity.Success);
+                MudDialog.Close(DialogResult.Ok(true));
+            }
+            else
+            {
+                var error = await response.Content.ReadAsStringAsync();
+                Snackbar.Add($"Failed to record payment: {error}", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+        }
+    }
+}

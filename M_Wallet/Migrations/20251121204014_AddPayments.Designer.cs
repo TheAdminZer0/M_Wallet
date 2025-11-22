@@ -3,6 +3,7 @@ using System;
 using M_Wallet.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace M_Wallet.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251121204014_AddPayments")]
+    partial class AddPayments
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -147,59 +150,6 @@ namespace M_Wallet.Migrations
                     b.ToTable("ProductBarcodes");
                 });
 
-            modelBuilder.Entity("M_Wallet.Shared.Purchase", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<DateTime>("PurchaseDate")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("SupplierName")
-                        .HasColumnType("text");
-
-                    b.Property<decimal>("TotalAmount")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("numeric(18,2)");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("Purchases");
-                });
-
-            modelBuilder.Entity("M_Wallet.Shared.PurchaseItem", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<int>("ProductId")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("PurchaseId")
-                        .HasColumnType("integer");
-
-                    b.Property<int>("Quantity")
-                        .HasColumnType("integer");
-
-                    b.Property<decimal>("UnitCost")
-                        .HasPrecision(18, 2)
-                        .HasColumnType("numeric(18,2)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("ProductId");
-
-                    b.HasIndex("PurchaseId");
-
-                    b.ToTable("PurchaseItems");
-                });
-
             modelBuilder.Entity("M_Wallet.Shared.Transaction", b =>
                 {
                     b.Property<int>("Id")
@@ -248,9 +198,6 @@ namespace M_Wallet.Migrations
                     b.Property<int>("TransactionId")
                         .HasColumnType("integer");
 
-                    b.Property<decimal>("UnitCost")
-                        .HasColumnType("numeric");
-
                     b.Property<decimal>("UnitPrice")
                         .HasPrecision(18, 2)
                         .HasColumnType("numeric(18,2)");
@@ -294,25 +241,6 @@ namespace M_Wallet.Migrations
                     b.Navigation("Product");
                 });
 
-            modelBuilder.Entity("M_Wallet.Shared.PurchaseItem", b =>
-                {
-                    b.HasOne("M_Wallet.Shared.Product", "Product")
-                        .WithMany()
-                        .HasForeignKey("ProductId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("M_Wallet.Shared.Purchase", "Purchase")
-                        .WithMany("Items")
-                        .HasForeignKey("PurchaseId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Product");
-
-                    b.Navigation("Purchase");
-                });
-
             modelBuilder.Entity("M_Wallet.Shared.TransactionItem", b =>
                 {
                     b.HasOne("M_Wallet.Shared.Product", "Product")
@@ -340,11 +268,6 @@ namespace M_Wallet.Migrations
             modelBuilder.Entity("M_Wallet.Shared.Product", b =>
                 {
                     b.Navigation("Barcodes");
-                });
-
-            modelBuilder.Entity("M_Wallet.Shared.Purchase", b =>
-                {
-                    b.Navigation("Items");
                 });
 
             modelBuilder.Entity("M_Wallet.Shared.Transaction", b =>
