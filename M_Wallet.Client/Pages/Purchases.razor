@@ -44,6 +44,15 @@
                               Variant="Variant.Outlined" 
                               Margin="Margin.Dense" 
                               Class="mb-4" />
+
+                <MudSelect T="string" Label="Payment Source" @bind-Value="newPurchase.PaidBy" Variant="Variant.Outlined" Margin="Margin.Dense" Class="mb-4">
+                    <MudSelectItem Value="@("Store")">Store Cash</MudSelectItem>
+                    <MudSelectItem Value="@("Credit")">Supplier Credit (Unpaid)</MudSelectItem>
+                    @foreach (var emp in uniqueEmployees)
+                    {
+                        <MudSelectItem Value="@($"Employee: {emp}")">Employee: @emp</MudSelectItem>
+                    }
+                </MudSelect>
                 
                 @if (!newPurchase.Items.Any())
                 {
@@ -150,21 +159,72 @@ else
 {
     <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" OnClick="StartCreate" Class="mb-4">New Purchase</MudButton>
 
-    <MudTable Items="@purchases" Hover="true" Dense="true" Loading="@(purchases == null)">
+    <MudTable Items="@purchases" Hover="true" Dense="true" Loading="@(purchases == null)" OnRowClick="OnRowClick" T="Purchase">
         <HeaderContent>
+            <MudTh Style="width: 50px;"></MudTh>
             <MudTh>ID</MudTh>
             <MudTh>Date</MudTh>
             <MudTh>Supplier</MudTh>
             <MudTh>Items</MudTh>
             <MudTh>Total Amount</MudTh>
+            <MudTh>Actions</MudTh>
         </HeaderContent>
         <RowTemplate>
+            <MudTd>
+                <MudIcon Icon="@(expandedPurchases.Contains(context.Id) ? Icons.Material.Filled.ExpandLess : Icons.Material.Filled.ExpandMore)" />
+            </MudTd>
             <MudTd>#@context.Id</MudTd>
             <MudTd>@context.PurchaseDate.ToLocalTime().ToString("g")</MudTd>
             <MudTd>@(context.SupplierName ?? "-")</MudTd>
             <MudTd>@context.Items.Count</MudTd>
             <MudTd>@context.TotalAmount.ToString("F2")</MudTd>
+            <MudTd>
+                <MudIconButton Icon="@Icons.Material.Filled.Delete" 
+                               Color="Color.Error" 
+                               Size="Size.Small" 
+                               OnClick="@((e) => DeletePurchase(context))" />
+            </MudTd>
         </RowTemplate>
+        <ChildRowContent>
+            @if (expandedPurchases.Contains(context.Id))
+            {
+                <MudTr>
+                    <td colspan="7" class="pa-0">
+                        <MudCard Elevation="0" Class="pa-4 rounded-0" Style="background-color: var(--mud-palette-background-grey); border-left: 4px solid var(--mud-palette-primary); border-bottom: 1px solid var(--mud-palette-lines-default);">
+                            <MudTable Items="@context.Items" 
+                                      Context="itemContext" 
+                                      Dense="true" 
+                                      Hover="true"
+                                      Elevation="0" 
+                                      Breakpoint="Breakpoint.None"
+                                      Class="mud-table-compact mb-0">
+                                <HeaderContent>
+                                    <MudTh Class="pa-1">Product</MudTh>
+                                    <MudTh Class="pa-1">Qty</MudTh>
+                                    <MudTh Class="pa-1">Unit Cost</MudTh>
+                                    <MudTh Class="pa-1">Total</MudTh>
+                                </HeaderContent>
+                                <RowTemplate>
+                                    <MudTd Class="pa-1">
+                                        <div class="d-flex align-center">
+                                            <img src="@GetProductImage(itemContext.Product)" 
+                                                 alt="@itemContext.Product?.Name" 
+                                                 style="width: 24px; height: 24px; object-fit: cover; border-radius: 4px; margin-right: 8px;" />
+                                            @itemContext.Product?.Name
+                                        </div>
+                                    </MudTd>
+                                    <MudTd Class="pa-1">@itemContext.Quantity</MudTd>
+                                    <MudTd Class="pa-1">@itemContext.UnitCost.ToString("F2")</MudTd>
+                                    <MudTd Class="pa-1">
+                                        <b>@itemContext.TotalCost.ToString("F2")</b>
+                                    </MudTd>
+                                </RowTemplate>
+                            </MudTable>
+                        </MudCard>
+                    </td>
+                </MudTr>
+            }
+        </ChildRowContent>
         <PagerContent>
             <MudTablePager />
         </PagerContent>
@@ -252,9 +312,11 @@ else
 @code {
     private List<Purchase>? purchases;
     private List<Product> allProducts = new();
+    private List<string> uniqueEmployees = new();
     private bool isCreating = false;
     private Purchase newPurchase = new();
     private string searchString = "";
+    private HashSet<int> expandedPurchases = new();
     
     // Form inputs
     private Product? selectedProduct;
@@ -272,6 +334,18 @@ else
         {
             purchases = await Http.GetFromJsonAsync<List<Purchase>>("api/purchases");
             allProducts = await Http.GetFromJsonAsync<List<Product>>("api/products") ?? new();
+            
+            // Fetch employees from transactions to populate the list
+            var transactions = await Http.GetFromJsonAsync<List<Transaction>>("api/transactions");
+            if (transactions != null)
+            {
+                uniqueEmployees = transactions
+                    .Select(t => t.EmployeeName)
+                    .Where(e => !string.IsNullOrWhiteSpace(e))
+                    .Distinct()
+                    .OrderBy(e => e)
+                    .ToList();
+            }
         }
         catch (Exception ex)
         {
@@ -368,6 +442,16 @@ else
     {
         newPurchase.TotalAmount = newPurchase.Items.Sum(i => i.TotalCost);
         
+        // Set PaymentStatus based on PaidBy
+        if (newPurchase.PaidBy == "Credit")
+        {
+            newPurchase.PaymentStatus = "Pending";
+        }
+        else
+        {
+            newPurchase.PaymentStatus = "Paid";
+        }
+        
         try
         {
             var response = await Http.PostAsJsonAsync("api/purchases", newPurchase);
@@ -386,6 +470,21 @@ else
         catch (Exception ex)
         {
             Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private void OnRowClick(TableRowClickEventArgs<Purchase> args)
+    {
+        if (args.Item != null)
+        {
+            if (expandedPurchases.Contains(args.Item.Id))
+            {
+                expandedPurchases.Remove(args.Item.Id);
+            }
+            else
+            {
+                expandedPurchases.Add(args.Item.Id);
+            }
         }
     }
 
@@ -422,5 +521,35 @@ else
         
         var options = new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.Small, FullWidth = true };
         dialog = await DialogService.ShowAsync<M_Wallet.Client.Components.ProductDialog>("Create New Product", parameters, options);
+    }
+
+    private async Task DeletePurchase(Purchase purchase)
+    {
+        var confirm = await DialogService.ShowMessageBox(
+            "Delete Purchase", 
+            $"Are you sure you want to delete purchase #{purchase.Id}? This will reverse stock changes.", 
+            yesText: "Delete", cancelText: "Cancel");
+
+        if (confirm == true)
+        {
+            try
+            {
+                var response = await Http.DeleteAsync($"api/purchases/{purchase.Id}");
+                if (response.IsSuccessStatusCode)
+                {
+                    Snackbar.Add("Purchase deleted successfully", Severity.Success);
+                    await LoadData();
+                }
+                else
+                {
+                    var error = await response.Content.ReadAsStringAsync();
+                    Snackbar.Add($"Failed to delete purchase: {error}", Severity.Error);
+                }
+            }
+            catch (Exception ex)
+            {
+                Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+            }
+        }
     }
 }

@@ -92,5 +92,55 @@ namespace M_Wallet.Controllers
                 return BadRequest(ex.Message);
             }
         }
+
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> DeletePurchase(int id)
+        {
+            using var transaction = await _context.Database.BeginTransactionAsync();
+            try
+            {
+                var purchase = await _context.Purchases
+                    .Include(p => p.Items)
+                    .FirstOrDefaultAsync(p => p.Id == id);
+
+                if (purchase == null)
+                {
+                    return NotFound();
+                }
+
+                foreach (var item in purchase.Items)
+                {
+                    var product = await _context.Products.FindAsync(item.ProductId);
+                    if (product != null)
+                    {
+                        // Reverse Weighted Average Cost Calculation
+                        int oldStockQuantity = product.StockQuantity - item.Quantity;
+                        
+                        if (oldStockQuantity > 0)
+                        {
+                            decimal currentTotalValue = product.StockQuantity * product.CostPrice;
+                            decimal purchaseValue = item.Quantity * item.UnitCost;
+                            
+                            product.CostPrice = (currentTotalValue - purchaseValue) / oldStockQuantity;
+                            
+                            if (product.CostPrice < 0) product.CostPrice = 0;
+                        }
+
+                        product.StockQuantity -= item.Quantity;
+                    }
+                }
+
+                _context.Purchases.Remove(purchase);
+                await _context.SaveChangesAsync();
+                await transaction.CommitAsync();
+
+                return NoContent();
+            }
+            catch (Exception ex)
+            {
+                await transaction.RollbackAsync();
+                return BadRequest(ex.Message);
+            }
+        }
     }
 }

@@ -10,5 +10,7 @@ namespace M_Wallet.Shared
         public string? SupplierName { get; set; }
         public decimal TotalAmount { get; set; }
         public List<PurchaseItem> Items { get; set; } = new();
+        public string PaymentStatus { get; set; } = "Paid"; // Paid, Pending (Credit)
+        public string PaidBy { get; set; } = "Store"; // Store, Employee Name
     }
 }

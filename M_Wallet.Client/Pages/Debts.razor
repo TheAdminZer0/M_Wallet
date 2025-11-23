@@ -1,0 +1,209 @@
+@page "/debts"
+@inject HttpClient Http
+@using M_Wallet.Shared
+@using MudBlazor
+
+<PageTitle>Financial Dashboard</PageTitle>
+
+<MudText Typo="Typo.h3" GutterBottom="true">Financial Dashboard</MudText>
+<MudText Class="mb-4">Overview of assets, liabilities, and cash flow.</MudText>
+
+@if (isLoading)
+{
+    <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+}
+else
+{
+    <!-- Assets & Revenue Section -->
+    <MudText Typo="Typo.h5" Class="mt-4 mb-2">Assets & Revenue</MudText>
+    <MudGrid>
+        <MudItem xs="12" sm="6" md="3">
+            <MudPaper Class="pa-4 mud-theme-primary" Elevation="3">
+                <MudText Typo="Typo.subtitle2" Class="white-text">Inventory Value (Cost)</MudText>
+                <MudText Typo="Typo.h5" Class="white-text">@TotalInventoryValue.ToString("N2") LD</MudText>
+                <MudIcon Icon="@Icons.Material.Filled.Inventory" Class="white-text float-right" Size="Size.Large" />
+            </MudPaper>
+        </MudItem>
+        <MudItem xs="12" sm="6" md="3">
+            <MudPaper Class="pa-4 mud-theme-success" Elevation="3">
+                <MudText Typo="Typo.subtitle2" Class="white-text">Total Cash Received</MudText>
+                <MudText Typo="Typo.h5" Class="white-text">@TotalCashReceived.ToString("N2") LD</MudText>
+                <MudIcon Icon="@Icons.Material.Filled.AttachMoney" Class="white-text float-right" Size="Size.Large" />
+            </MudPaper>
+        </MudItem>
+        <MudItem xs="12" sm="6" md="3">
+            <MudPaper Class="pa-4" Elevation="3" Style="background-color: #FF9800; color: white;">
+                <MudText Typo="Typo.subtitle2" Class="white-text">Customer Debt (Receivables)</MudText>
+                <MudText Typo="Typo.h5" Class="white-text">@TotalCustomerDebt.ToString("N2") LD</MudText>
+                <MudIcon Icon="@Icons.Material.Filled.MoneyOff" Class="white-text float-right" Size="Size.Large" />
+            </MudPaper>
+        </MudItem>
+        <MudItem xs="12" sm="6" md="3">
+            <MudPaper Class="pa-4" Elevation="3" Style="background-color: #607D8B; color: white;">
+                <MudText Typo="Typo.subtitle2" Class="white-text">Total Sales Revenue</MudText>
+                <MudText Typo="Typo.h5" Class="white-text">@TotalSalesRevenue.ToString("N2") LD</MudText>
+                <MudIcon Icon="@Icons.Material.Filled.TrendingUp" Class="white-text float-right" Size="Size.Large" />
+            </MudPaper>
+        </MudItem>
+    </MudGrid>
+
+    <!-- Liabilities Section -->
+    <MudText Typo="Typo.h5" Class="mt-8 mb-2">Liabilities (Debts)</MudText>
+    <MudGrid>
+        <MudItem xs="12" sm="6">
+            <MudPaper Class="pa-4 mud-theme-error" Elevation="3">
+                <MudText Typo="Typo.subtitle2" Class="white-text">Total Supplier Debt</MudText>
+                <MudText Typo="Typo.h4" Class="white-text">@TotalSupplierDebt.ToString("N2") LD</MudText>
+            </MudPaper>
+        </MudItem>
+        <MudItem xs="12" sm="6">
+            <MudPaper Class="pa-4 mud-theme-warning" Elevation="3">
+                <MudText Typo="Typo.subtitle2" Class="white-text">Total Employee Debt</MudText>
+                <MudText Typo="Typo.h4" Class="white-text">@TotalEmployeeDebt.ToString("N2") LD</MudText>
+            </MudPaper>
+        </MudItem>
+    </MudGrid>
+
+    <!-- Detailed Lists -->
+    <MudGrid Class="mt-4">
+        <MudItem xs="12" md="6">
+            <MudCard>
+                <MudCardHeader>
+                    <CardHeaderContent>
+                        <MudText Typo="Typo.h6">Supplier Debts (Credit)</MudText>
+                    </CardHeaderContent>
+                </MudCardHeader>
+                <MudCardContent>
+                    @if (SupplierDebts.Any())
+                    {
+                        <MudTable Items="@SupplierDebts" Hover="true" Dense="true">
+                            <HeaderContent>
+                                <MudTh>Supplier</MudTh>
+                                <MudTh>Amount</MudTh>
+                            </HeaderContent>
+                            <RowTemplate>
+                                <MudTd DataLabel="Supplier">@context.Key</MudTd>
+                                <MudTd DataLabel="Amount">@context.Value.ToString("N2")</MudTd>
+                            </RowTemplate>
+                        </MudTable>
+                    }
+                    else
+                    {
+                        <MudText>No supplier debts.</MudText>
+                    }
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+
+        <MudItem xs="12" md="6">
+            <MudCard>
+                <MudCardHeader>
+                    <CardHeaderContent>
+                        <MudText Typo="Typo.h6">Employee Debts (Paid by Employee)</MudText>
+                    </CardHeaderContent>
+                </MudCardHeader>
+                <MudCardContent>
+                    @if (EmployeeDebts.Any())
+                    {
+                        <MudTable Items="@EmployeeDebts" Hover="true" Dense="true">
+                            <HeaderContent>
+                                <MudTh>Employee</MudTh>
+                                <MudTh>Amount</MudTh>
+                            </HeaderContent>
+                            <RowTemplate>
+                                <MudTd DataLabel="Employee">@context.Key</MudTd>
+                                <MudTd DataLabel="Amount">@context.Value.ToString("N2")</MudTd>
+                            </RowTemplate>
+                        </MudTable>
+                    }
+                    else
+                    {
+                        <MudText>No employee debts.</MudText>
+                    }
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+    </MudGrid>
+    
+    <!-- Cash Flow Map -->
+    <MudText Typo="Typo.h5" Class="mt-8 mb-2">Cash Flow Map</MudText>
+    <MudPaper Class="pa-4" Elevation="2">
+        <MudText>
+            <strong>Cash In:</strong> @TotalCashReceived.ToString("N2") LD (from Sales) <br/>
+            <strong>Potential Cash (Debts):</strong> @TotalCustomerDebt.ToString("N2") LD (Owed by Customers) <br/>
+            <strong>Inventory Assets:</strong> @TotalInventoryValue.ToString("N2") LD (Stock Value) <br/>
+            <hr class="my-2"/>
+            <strong>Cash Out (Liabilities):</strong> @(TotalSupplierDebt + TotalEmployeeDebt) LD (Total Debt)
+        </MudText>
+    </MudPaper>
+}
+
+<style>
+    .white-text {
+        color: white !important;
+    }
+    .float-right {
+        float: right;
+    }
+</style>
+
+@code {
+    private bool isLoading = true;
+    private List<Purchase> purchases = new();
+    private List<Product> products = new();
+    private List<Transaction> transactions = new();
+    private List<Payment> payments = new();
+
+    private decimal TotalSupplierDebt => SupplierDebts.Sum(x => x.Value);
+    private decimal TotalEmployeeDebt => EmployeeDebts.Sum(x => x.Value);
+    
+    private decimal TotalInventoryValue => products.Sum(p => p.StockQuantity * p.CostPrice);
+    private decimal TotalSalesRevenue => transactions.Sum(t => t.TotalAmount);
+    private decimal TotalCashReceived => payments.Sum(p => p.Amount);
+    private decimal TotalCustomerDebt => transactions.Sum(t => t.TotalAmount - t.PaymentAllocations.Sum(pa => pa.Amount));
+
+    private Dictionary<string, decimal> SupplierDebts = new();
+    private Dictionary<string, decimal> EmployeeDebts = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var purchasesTask = Http.GetFromJsonAsync<List<Purchase>>("api/purchases");
+            var productsTask = Http.GetFromJsonAsync<List<Product>>("api/products");
+            var transactionsTask = Http.GetFromJsonAsync<List<Transaction>>("api/transactions");
+            var paymentsTask = Http.GetFromJsonAsync<List<Payment>>("api/payments");
+
+            await Task.WhenAll(purchasesTask, productsTask, transactionsTask, paymentsTask);
+
+            purchases = await purchasesTask ?? new();
+            products = await productsTask ?? new();
+            transactions = await transactionsTask ?? new();
+            payments = await paymentsTask ?? new();
+
+            CalculateDebts();
+        }
+        catch (Exception ex)
+        {
+            // Handle error
+            Console.WriteLine(ex.Message);
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void CalculateDebts()
+    {
+        SupplierDebts = purchases
+            .Where(p => p.PaidBy == "Credit" && p.PaymentStatus == "Pending")
+            .GroupBy(p => p.SupplierName ?? "Unknown")
+            .ToDictionary(g => g.Key, g => g.Sum(p => p.TotalAmount));
+
+        EmployeeDebts = purchases
+            .Where(p => p.PaidBy != null && p.PaidBy.StartsWith("Employee: ") && p.PaymentStatus == "Paid") // Paid by employee means store owes them
+            .GroupBy(p => p.PaidBy.Substring("Employee: ".Length))
+            .ToDictionary(g => g.Key, g => g.Sum(p => p.TotalAmount));
+    }
+}
