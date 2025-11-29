@@ -1,0 +1,245 @@
+@page "/payments"
+@inject HttpClient Http
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+@using M_Wallet.Shared
+@using M_Wallet.Client.Components
+@using M_Wallet.Client.Models
+
+<PageTitle>Payments</PageTitle>
+
+<MudText Typo="Typo.h3" GutterBottom="true">Payments</MudText>
+<MudText Class="mb-4">Manage customer payments and outstanding invoices</MudText>
+
+<MudTabs Elevation="2" Rounded="true" ApplyEffectsToContainer="true" PanelClass="pa-6">
+    <MudTabPanel Text="Outstanding Invoices">
+        @if (transactions == null)
+        {
+            <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+        }
+        else
+        {
+            var unpaidTransactions = transactions.Where(t => GetBalanceDue(t) > 0).ToList();
+            
+            @if (!unpaidTransactions.Any())
+            {
+                <MudAlert Severity="Severity.Success">No outstanding invoices! All caught up.</MudAlert>
+            }
+            else
+            {
+                <MudTable Items="@unpaidTransactions" Hover="true" Dense="true" Breakpoint="Breakpoint.None" Filter="new Func<Transaction, bool>(FilterFunc)">
+                    <ToolBarContent>
+                        <MudText Typo="Typo.h6">Unpaid Invoices</MudText>
+                        <MudSpacer />
+                        <MudTextField @bind-Value="searchString" Placeholder="Search" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium" Class="mt-0"></MudTextField>
+                    </ToolBarContent>
+                    <HeaderContent>
+                        @if (IsInvoiceColumnVisible("Order ID")) { <MudTh>Order ID</MudTh> }
+                        @if (IsInvoiceColumnVisible("Date")) { <MudTh>Date</MudTh> }
+                        @if (IsInvoiceColumnVisible("Customer")) { <MudTh>Customer</MudTh> }
+                        @if (IsInvoiceColumnVisible("Total")) { <MudTh>Total</MudTh> }
+                        @if (IsInvoiceColumnVisible("Paid")) { <MudTh>Paid</MudTh> }
+                        @if (IsInvoiceColumnVisible("Balance")) { <MudTh>Balance</MudTh> }
+                        @if (IsInvoiceColumnVisible("Action")) { <MudTh>Action</MudTh> }
+                    </HeaderContent>
+                    <RowTemplate>
+                        @if (IsInvoiceColumnVisible("Order ID")) { <MudTd DataLabel="Order ID">#@context.Id</MudTd> }
+                        @if (IsInvoiceColumnVisible("Date")) { <MudTd DataLabel="Date">@context.TransactionDate.ToLocalTime().ToString("MM/dd/yy")</MudTd> }
+                        @if (IsInvoiceColumnVisible("Customer")) { <MudTd DataLabel="Customer">@(context.CustomerName ?? "Walk-in")</MudTd> }
+                        @if (IsInvoiceColumnVisible("Total")) { <MudTd DataLabel="Total">LD @context.TotalAmount.ToString("F2")</MudTd> }
+                        @if (IsInvoiceColumnVisible("Paid")) { <MudTd DataLabel="Paid">LD @GetPaidAmount(context).ToString("F2")</MudTd> }
+                        @if (IsInvoiceColumnVisible("Balance")) {
+                            <MudTd DataLabel="Balance">
+                                <MudText Color="Color.Error" Class="font-weight-bold">
+                                    LD @GetBalanceDue(context).ToString("F2")
+                                </MudText>
+                            </MudTd>
+                        }
+                        @if (IsInvoiceColumnVisible("Action")) {
+                            <MudTd DataLabel="Action">
+                                <MudButton Variant="Variant.Filled" Color="Color.Success" Size="Size.Small" OnClick="@(() => OpenPaymentDialog(context))">
+                                    Pay
+                                </MudButton>
+                            </MudTd>
+                        }
+                    </RowTemplate>
+                    <PagerContent>
+                        <div class="d-flex align-center justify-space-between px-4 py-2">
+                            <TableColumnToggle Columns="@_invoiceColumns" ColumnsChanged="StateHasChanged" TableName="PaymentInvoices" />
+                            <MudTablePager />
+                        </div>
+                    </PagerContent>
+                </MudTable>
+            }
+        }
+    </MudTabPanel>
+    <MudTabPanel Text="Payment History">
+        @if (payments == null)
+        {
+            <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+        }
+        else
+        {
+            <MudTable Items="@payments" Hover="true" Dense="true" Breakpoint="Breakpoint.None">
+                <HeaderContent>
+                    @if (IsPaymentColumnVisible("Payment ID")) { <MudTh>Payment ID</MudTh> }
+                    @if (IsPaymentColumnVisible("Date")) { <MudTh>Date</MudTh> }
+                    @if (IsPaymentColumnVisible("Method")) { <MudTh>Method</MudTh> }
+                    @if (IsPaymentColumnVisible("Reference")) { <MudTh>Reference</MudTh> }
+                    @if (IsPaymentColumnVisible("Amount")) { <MudTh>Amount</MudTh> }
+                    @if (IsPaymentColumnVisible("Allocations")) { <MudTh>Allocations</MudTh> }
+                    @if (IsPaymentColumnVisible("Actions")) { <MudTh>Actions</MudTh> }
+                </HeaderContent>
+                <RowTemplate>
+                    @if (IsPaymentColumnVisible("Payment ID")) { <MudTd>#@context.Id</MudTd> }
+                    @if (IsPaymentColumnVisible("Date")) { <MudTd>@context.PaymentDate.ToLocalTime().ToString("MM/dd/yy HH:mm")</MudTd> }
+                    @if (IsPaymentColumnVisible("Method")) { <MudTd>@context.PaymentMethod</MudTd> }
+                    @if (IsPaymentColumnVisible("Reference")) { <MudTd>@context.Reference</MudTd> }
+                    @if (IsPaymentColumnVisible("Amount")) {
+                        <MudTd>
+                            <MudText Color="Color.Success" Class="font-weight-bold">
+                                LD @context.Amount.ToString("F2")
+                            </MudText>
+                        </MudTd>
+                    }
+                    @if (IsPaymentColumnVisible("Allocations")) {
+                        <MudTd>
+                            @foreach(var alloc in context.Allocations)
+                            {
+                                <div>Order #@alloc.TransactionId: LD @alloc.Amount.ToString("F2")</div>
+                            }
+                        </MudTd>
+                    }
+                    @if (IsPaymentColumnVisible("Actions")) {
+                        <MudTd>
+                            <MudIconButton Icon="@Icons.Material.Filled.Delete" 
+                                           Color="Color.Error" 
+                                           Size="Size.Small" 
+                                           OnClick="@(() => DeletePayment(context))" />
+                        </MudTd>
+                    }
+                </RowTemplate>
+                <PagerContent>
+                    <div class="d-flex align-center justify-space-between px-4 py-2">
+                        <TableColumnToggle Columns="@_paymentColumns" ColumnsChanged="StateHasChanged" TableName="Payments" />
+                        <MudTablePager />
+                    </div>
+                </PagerContent>
+            </MudTable>
+        }
+    </MudTabPanel>
+</MudTabs>
+
+@code {
+    private List<Transaction>? transactions;
+    private List<Payment>? payments;
+    private string searchString = "";
+
+    private List<ColumnDefinition> _invoiceColumns = new()
+    {
+        new() { Title = "Order ID", IsVisible = true },
+        new() { Title = "Date", IsVisible = true },
+        new() { Title = "Customer", IsVisible = true },
+        new() { Title = "Total", IsVisible = true },
+        new() { Title = "Paid", IsVisible = true },
+        new() { Title = "Balance", IsVisible = true },
+        new() { Title = "Action", IsVisible = true }
+    };
+
+    private List<ColumnDefinition> _paymentColumns = new()
+    {
+        new() { Title = "Payment ID", IsVisible = true },
+        new() { Title = "Date", IsVisible = true },
+        new() { Title = "Method", IsVisible = true },
+        new() { Title = "Reference", IsVisible = true },
+        new() { Title = "Amount", IsVisible = true },
+        new() { Title = "Allocations", IsVisible = true },
+        new() { Title = "Actions", IsVisible = true }
+    };
+
+    private bool IsInvoiceColumnVisible(string title) => _invoiceColumns.FirstOrDefault(c => c.Title == title)?.IsVisible ?? true;
+    private bool IsPaymentColumnVisible(string title) => _paymentColumns.FirstOrDefault(c => c.Title == title)?.IsVisible ?? true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        try
+        {
+            transactions = await Http.GetFromJsonAsync<List<Transaction>>("api/transactions");
+            payments = await Http.GetFromJsonAsync<List<Payment>>("api/payments");
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading data: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private decimal GetPaidAmount(Transaction t)
+    {
+        return t.PaymentAllocations?.Sum(pa => pa.Amount) ?? 0;
+    }
+
+    private decimal GetBalanceDue(Transaction t)
+    {
+        return t.TotalAmount - GetPaidAmount(t);
+    }
+
+    private bool FilterFunc(Transaction t)
+    {
+        if (string.IsNullOrWhiteSpace(searchString)) return true;
+        if (t.CustomerName?.Contains(searchString, StringComparison.OrdinalIgnoreCase) == true) return true;
+        if (t.Id.ToString().Contains(searchString)) return true;
+        return false;
+    }
+
+    private async Task OpenPaymentDialog(Transaction transaction)
+    {
+        var balance = GetBalanceDue(transaction);
+        
+        var parameters = new DialogParameters();
+        parameters.Add("TransactionId", transaction.Id);
+        parameters.Add("BalanceDue", balance);
+        parameters.Add("CustomerName", transaction.CustomerName);
+
+        var dialog = await DialogService.ShowAsync<PaymentDialog>("Record Payment", parameters);
+        var result = await dialog.Result;
+
+        if (result != null && !result.Canceled)
+        {
+            await LoadData();
+        }
+    }
+
+    private async Task DeletePayment(Payment payment)
+    {
+        var confirm = await DialogService.ShowMessageBox(
+            "Delete Payment", 
+            $"Are you sure you want to delete Payment #{payment.Id} of LD {payment.Amount:F2}?", 
+            yesText: "Delete", cancelText: "Cancel");
+
+        if (confirm == true)
+        {
+            try
+            {
+                var response = await Http.DeleteAsync($"api/payments/{payment.Id}");
+                if (response.IsSuccessStatusCode)
+                {
+                    Snackbar.Add("Payment deleted successfully", Severity.Success);
+                    await LoadData();
+                }
+                else
+                {
+                    Snackbar.Add("Failed to delete payment", Severity.Error);
+                }
+            }
+            catch (Exception ex)
+            {
+                Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+            }
+        }
+    }
+}

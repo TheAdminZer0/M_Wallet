@@ -1,6 +1,7 @@
 @page "/customers"
 @using M_Wallet.Shared
 @using M_Wallet.Client.Components
+@using M_Wallet.Client.Models
 @using MudBlazor
 @using System.Text.Json
 @inject HttpClient Http
@@ -9,7 +10,7 @@
 
 <PageTitle>Customers</PageTitle>
 
-<MudTable Items="@customers" Hover="true" Dense="true" Filter="new Func<Customer, bool>(FilterFunc)">
+<MudTable Items="@customers" Hover="true" Dense="true" Breakpoint="Breakpoint.None" Filter="new Func<Customer, bool>(FilterFunc)">
     <ToolBarContent>
         <MudText Typo="Typo.h6">Customers</MudText>
         <MudSpacer />
@@ -18,27 +19,41 @@
         <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" OnClick="AddCustomer" Class="ml-4">Add Customer</MudButton>
     </ToolBarContent>
     <HeaderContent>
-        <MudTh>Name</MudTh>
-        <MudTh>Phone Number</MudTh>
-        <MudTh>Actions</MudTh>
+        @if (IsVisible("Name")) { <MudTh>Name</MudTh> }
+        @if (IsVisible("Phone Number")) { <MudTh>Phone Number</MudTh> }
+        @if (IsVisible("Actions")) { <MudTh>Actions</MudTh> }
     </HeaderContent>
     <RowTemplate>
-        <MudTd DataLabel="Name">@context.Name</MudTd>
-        <MudTd DataLabel="Phone Number">@context.PhoneNumber</MudTd>
-        <MudTd DataLabel="Actions">
-            <MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Primary" Size="Size.Small" OnClick="@(() => EditCustomer(context))" />
-            <MudIconButton Icon="@Icons.Material.Filled.ReceiptLong" Color="Color.Info" Size="Size.Small" OnClick="@(() => ShowStatement(context))" Title="Statement" />
-            <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" Size="Size.Small" OnClick="@(() => DeleteCustomer(context))" />
-        </MudTd>
+        @if (IsVisible("Name")) { <MudTd DataLabel="Name">@context.Name</MudTd> }
+        @if (IsVisible("Phone Number")) { <MudTd DataLabel="Phone Number">@context.PhoneNumber</MudTd> }
+        @if (IsVisible("Actions")) {
+            <MudTd DataLabel="Actions">
+                <MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Primary" Size="Size.Small" OnClick="@(() => EditCustomer(context))" />
+                <MudIconButton Icon="@Icons.Material.Filled.ReceiptLong" Color="Color.Info" Size="Size.Small" OnClick="@(() => ShowStatement(context))" Title="Statement" />
+                <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" Size="Size.Small" OnClick="@(() => DeleteCustomer(context))" />
+            </MudTd>
+        }
     </RowTemplate>
     <PagerContent>
-        <MudTablePager />
+        <div class="d-flex align-center justify-space-between px-4 py-2">
+            <TableColumnToggle Columns="@_columns" ColumnsChanged="StateHasChanged" TableName="Customers" />
+            <MudTablePager />
+        </div>
     </PagerContent>
 </MudTable>
 
 @code {
     private List<Customer> customers = new();
     private string searchString = "";
+
+    private List<ColumnDefinition> _columns = new()
+    {
+        new() { Title = "Name", IsVisible = true },
+        new() { Title = "Phone Number", IsVisible = true },
+        new() { Title = "Actions", IsVisible = true }
+    };
+
+    private bool IsVisible(string title) => _columns.FirstOrDefault(c => c.Title == title)?.IsVisible ?? true;
 
     protected override async Task OnInitializedAsync()
     {

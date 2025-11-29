@@ -1,0 +1,61 @@
+@using M_Wallet.Client.Models
+@using M_Wallet.Client.Services
+@using MudBlazor
+@inject UserPreferencesService UserPreferences
+
+<MudMenu Icon="@Icons.Material.Filled.Settings" Color="Color.Default" Dense="true" AnchorOrigin="Origin.TopLeft" TransformOrigin="Origin.BottomLeft">
+    @foreach (var col in Columns)
+    {
+        <MudMenuItem Style="min-width: 150px;">
+            <MudCheckBox T="bool" 
+                         Value="@col.IsVisible" 
+                         ValueChanged="@((v) => UpdateColumn(col, v))" 
+                         Label="@col.Title" 
+                         Dense="true" 
+                         Color="Color.Primary" />
+        </MudMenuItem>
+    }
+</MudMenu>
+
+@code {
+    [Parameter] public List<ColumnDefinition> Columns { get; set; } = new();
+    [Parameter] public EventCallback ColumnsChanged { get; set; }
+    [Parameter] public string TableName { get; set; } = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!string.IsNullOrEmpty(TableName))
+        {
+            // Ensure preferences are loaded (if not already)
+            if (UserPreferences.Preferences.TableColumns.Count == 0)
+            {
+                 await UserPreferences.InitializeAsync();
+            }
+
+            bool changed = false;
+            foreach (var col in Columns)
+            {
+                var savedVisibility = UserPreferences.IsColumnVisible(TableName, col.Title, col.IsVisible);
+                if (col.IsVisible != savedVisibility)
+                {
+                    col.IsVisible = savedVisibility;
+                    changed = true;
+                }
+            }
+            if (changed)
+            {
+                await ColumnsChanged.InvokeAsync();
+            }
+        }
+    }
+
+    private async Task UpdateColumn(ColumnDefinition col, bool isVisible)
+    {
+        col.IsVisible = isVisible;
+        if (!string.IsNullOrEmpty(TableName))
+        {
+            await UserPreferences.SetColumnVisibility(TableName, col.Title, isVisible);
+        }
+        await ColumnsChanged.InvokeAsync();
+    }
+}

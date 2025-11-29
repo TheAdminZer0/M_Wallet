@@ -88,6 +88,21 @@ public class EmployeesController : ControllerBase
         return NoContent();
     }
 
+    [HttpPut("{id}/preferences")]
+    public async Task<IActionResult> UpdatePreferences(int id, [FromBody] string preferences)
+    {
+        var employee = await _context.Employees.FindAsync(id);
+        if (employee == null)
+        {
+            return NotFound();
+        }
+
+        employee.Preferences = preferences;
+        await _context.SaveChangesAsync();
+
+        return NoContent();
+    }
+
     [HttpDelete("{id}")]
     public async Task<IActionResult> DeleteEmployee(int id)
     {

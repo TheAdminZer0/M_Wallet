@@ -5,6 +5,7 @@
 @inject IJSRuntime JSRuntime
 @inject ReceiptService _receiptService
 @inject CustomAuthenticationStateProvider AuthStateProvider
+@using M_Wallet.Client.Models
 
 <PageTitle>Transactions</PageTitle>
 
@@ -138,32 +139,34 @@ else
                         </ToolBarContent>
                         <HeaderContent>
                             <MudTh Style="width: 50px;"></MudTh>
-                            <MudTh><MudTableSortLabel InitialDirection="SortDirection.Descending" SortBy="new Func<Transaction, object>(x => x.Id)">Order ID</MudTableSortLabel></MudTh>
-                            <MudTh><MudTableSortLabel SortBy="new Func<Transaction, object>(x => x.TransactionDate)">Date</MudTableSortLabel></MudTh>
-                            <MudTh>Items</MudTh>
-                            <MudTh><MudTableSortLabel SortBy="new Func<Transaction, object>(x => x.Items.Sum(i => i.Quantity))">Quantity</MudTableSortLabel></MudTh>
+                            @if (IsTransactionColumnVisible("Order ID")) { <MudTh><MudTableSortLabel InitialDirection="SortDirection.Descending" SortBy="new Func<Transaction, object>(x => x.Id)">Order ID</MudTableSortLabel></MudTh> }
+                            @if (IsTransactionColumnVisible("Date")) { <MudTh><MudTableSortLabel SortBy="new Func<Transaction, object>(x => x.TransactionDate)">Date</MudTableSortLabel></MudTh> }
+                            @if (IsTransactionColumnVisible("Items")) { <MudTh>Items</MudTh> }
+                            @if (IsTransactionColumnVisible("Quantity")) { <MudTh><MudTableSortLabel SortBy="new Func<Transaction, object>(x => x.Items.Sum(i => i.Quantity))">Quantity</MudTableSortLabel></MudTh> }
                             @if (showProfit)
                             {
                                 <MudTh>Cost (LD)</MudTh>
                                 <MudTh>Profit (LD)</MudTh>
                             }
-                            <MudTh><MudTableSortLabel SortBy="new Func<Transaction, object>(x => x.TotalAmount)">Total (LD)</MudTableSortLabel></MudTh>
-                            <MudTh>Status</MudTh>
-                            <MudTh><MudTableSortLabel SortBy="new Func<Transaction, object>(x => x.CustomerName ?? string.Empty)">Customer</MudTableSortLabel></MudTh>
-                            <MudTh><MudTableSortLabel SortBy="new Func<Transaction, object>(x => x.EmployeeName)">Employee</MudTableSortLabel></MudTh>
-                            <MudTh>Actions</MudTh>
+                            @if (IsTransactionColumnVisible("Total")) { <MudTh><MudTableSortLabel SortBy="new Func<Transaction, object>(x => x.TotalAmount)">Total (LD)</MudTableSortLabel></MudTh> }
+                            @if (IsTransactionColumnVisible("Status")) { <MudTh>Status</MudTh> }
+                            @if (IsTransactionColumnVisible("Customer")) { <MudTh><MudTableSortLabel SortBy="new Func<Transaction, object>(x => x.CustomerName ?? string.Empty)">Customer</MudTableSortLabel></MudTh> }
+                            @if (IsTransactionColumnVisible("Employee")) { <MudTh><MudTableSortLabel SortBy="new Func<Transaction, object>(x => x.EmployeeName)">Employee</MudTableSortLabel></MudTh> }
+                            @if (IsTransactionColumnVisible("Actions")) { <MudTh>Actions</MudTh> }
                         </HeaderContent>
                         <RowTemplate>
                             <MudTd DataLabel="">
                                 <MudIcon Icon="@(expandedTransactions.Contains(context.Id) ? Icons.Material.Filled.ExpandLess : Icons.Material.Filled.ExpandMore)"
                                          Size="Size.Small" />
                             </MudTd>
-                            <MudTd DataLabel="Order ID">
-                                <MudChip T="string" Size="Size.Small" Variant="Variant.Text" Color="Color.Primary" OnClick="@((e) => ShowPaymentHistory(context))" Style="cursor: pointer;">#@context.Id</MudChip>
-                            </MudTd>
-                            <MudTd DataLabel="Date">@context.TransactionDate.ToLocalTime().ToString("MM/dd/yy HH:mm")</MudTd>
-                            <MudTd DataLabel="Items">@string.Join(", ", context.Items.Select(i => i.Product?.Name ?? "Unknown").Distinct())</MudTd>
-                            <MudTd DataLabel="Quantity">@context.Items.Sum(i => i.Quantity)</MudTd>
+                            @if (IsTransactionColumnVisible("Order ID")) {
+                                <MudTd DataLabel="Order ID">
+                                    <MudChip T="string" Size="Size.Small" Variant="Variant.Text" Color="Color.Primary" OnClick="@((e) => ShowPaymentHistory(context))" Style="cursor: pointer;">#@context.Id</MudChip>
+                                </MudTd>
+                            }
+                            @if (IsTransactionColumnVisible("Date")) { <MudTd DataLabel="Date">@context.TransactionDate.ToLocalTime().ToString("MM/dd/yy HH:mm")</MudTd> }
+                            @if (IsTransactionColumnVisible("Items")) { <MudTd DataLabel="Items">@string.Join(", ", context.Items.Select(i => i.Product?.Name ?? "Unknown").Distinct())</MudTd> }
+                            @if (IsTransactionColumnVisible("Quantity")) { <MudTd DataLabel="Quantity">@context.Items.Sum(i => i.Quantity)</MudTd> }
                             @if (showProfit)
                             {
                                 <MudTd DataLabel="Cost">
@@ -183,41 +186,47 @@ else
                                     </MudChip>
                                 </MudTd>
                             }
-                            <MudTd DataLabel="Total">
-                                <MudChip T="string" Size="Size.Small" Variant="Variant.Text" Color="Color.Success">
-                                    @context.TotalAmount.ToString("F2")
-                                </MudChip>
-                            </MudTd>
-                            <MudTd DataLabel="Status">
-                                @{
-                                    var paid = context.PaymentAllocations?.Sum(pa => pa.Amount) ?? 0;
-                                    var status = "Unpaid";
-                                    var color = Color.Error;
-                                    if (paid >= context.TotalAmount - 0.01m) // Tolerance for float math
-                                    { 
-                                        status = "Paid"; 
-                                        color = Color.Success; 
+                            @if (IsTransactionColumnVisible("Total")) {
+                                <MudTd DataLabel="Total">
+                                    <MudChip T="string" Size="Size.Small" Variant="Variant.Text" Color="Color.Success">
+                                        @context.TotalAmount.ToString("F2")
+                                    </MudChip>
+                                </MudTd>
+                            }
+                            @if (IsTransactionColumnVisible("Status")) {
+                                <MudTd DataLabel="Status">
+                                    @{
+                                        var paid = context.PaymentAllocations?.Sum(pa => pa.Amount) ?? 0;
+                                        var status = "Unpaid";
+                                        var color = Color.Error;
+                                        if (paid >= context.TotalAmount - 0.01m) // Tolerance for float math
+                                        { 
+                                            status = "Paid"; 
+                                            color = Color.Success; 
+                                        }
+                                        else if (paid > 0) 
+                                        { 
+                                            status = "Partial"; 
+                                            color = Color.Warning; 
+                                        }
                                     }
-                                    else if (paid > 0) 
-                                    { 
-                                        status = "Partial"; 
-                                        color = Color.Warning; 
-                                    }
-                                }
-                                <MudChip T="string" Size="Size.Small" Variant="Variant.Filled" Color="@color" OnClick="@((e) => OpenPaymentDialog(context))" Style="cursor: pointer;">@status</MudChip>
-                            </MudTd>
-                            <MudTd DataLabel="Customer">@(context.CustomerName ?? "Walk-in")</MudTd>
-                            <MudTd DataLabel="Employee">@context.EmployeeName</MudTd>
-                            <MudTd DataLabel="Actions">
-                                <MudMenu Icon="@Icons.Material.Filled.Print" Color="Color.Info" Size="Size.Small" Dense="true">
-                                    <MudMenuItem OnClick="@(() => PrintReceipt(context))">Print Receipt (Thermal)</MudMenuItem>
-                                    <MudMenuItem OnClick="@(() => PrintInvoice(context))">Print Invoice (A4)</MudMenuItem>
-                                </MudMenu>
-                                <MudIconButton Icon="@Icons.Material.Filled.Delete" 
-                                               Color="Color.Error" 
-                                               Size="Size.Small" 
-                                               OnClick="@(() => DeleteTransaction(context))" />
-                            </MudTd>
+                                    <MudChip T="string" Size="Size.Small" Variant="Variant.Filled" Color="@color" OnClick="@((e) => OpenPaymentDialog(context))" Style="cursor: pointer;">@status</MudChip>
+                                </MudTd>
+                            }
+                            @if (IsTransactionColumnVisible("Customer")) { <MudTd DataLabel="Customer">@(context.CustomerName ?? "Walk-in")</MudTd> }
+                            @if (IsTransactionColumnVisible("Employee")) { <MudTd DataLabel="Employee">@context.EmployeeName</MudTd> }
+                            @if (IsTransactionColumnVisible("Actions")) {
+                                <MudTd DataLabel="Actions">
+                                    <MudMenu Icon="@Icons.Material.Filled.Print" Color="Color.Info" Size="Size.Small" Dense="true">
+                                        <MudMenuItem OnClick="@(() => PrintReceipt(context))">Print Receipt (Thermal)</MudMenuItem>
+                                        <MudMenuItem OnClick="@(() => PrintInvoice(context))">Print Invoice (A4)</MudMenuItem>
+                                    </MudMenu>
+                                    <MudIconButton Icon="@Icons.Material.Filled.Delete" 
+                                                   Color="Color.Error" 
+                                                   Size="Size.Small" 
+                                                   OnClick="@(() => DeleteTransaction(context))" />
+                                </MudTd>
+                            }
                         </RowTemplate>
                         <ChildRowContent Context="trans">
                             @if (expandedTransactions.Contains(trans.Id))
@@ -286,7 +295,10 @@ else
                             }
                         </ChildRowContent>
                         <PagerContent>
-                            <MudTablePager />
+                            <div class="d-flex align-center justify-space-between px-4 py-2">
+                                <TableColumnToggle Columns="@_transactionColumns" ColumnsChanged="StateHasChanged" TableName="Transactions" />
+                                <MudTablePager />
+                            </div>
                         </PagerContent>
                     </MudTable>
                 </div>
@@ -314,54 +326,65 @@ else
                         </MudTextField>
                     </ToolBarContent>
                     <HeaderContent>
-                        <MudTh>Payment ID</MudTh>
-                        <MudTh>Realized Profit</MudTh>
-                        <MudTh>Date</MudTh>
-                        <MudTh Class="d-none d-sm-table-cell">Method</MudTh>
-                        <MudTh Class="d-none d-sm-table-cell">Reference</MudTh>
-                        <MudTh>Amount</MudTh>
-                        <MudTh>Allocations</MudTh>
-                        <MudTh>Actions</MudTh>
+                        @if (IsPaymentColumnVisible("Payment ID")) { <MudTh>Payment ID</MudTh> }
+                        @if (IsPaymentColumnVisible("Realized Profit")) { <MudTh>Realized Profit</MudTh> }
+                        @if (IsPaymentColumnVisible("Date")) { <MudTh>Date</MudTh> }
+                        @if (IsPaymentColumnVisible("Method")) { <MudTh Class="d-none d-sm-table-cell">Method</MudTh> }
+                        @if (IsPaymentColumnVisible("Reference")) { <MudTh Class="d-none d-sm-table-cell">Reference</MudTh> }
+                        @if (IsPaymentColumnVisible("Amount")) { <MudTh>Amount</MudTh> }
+                        @if (IsPaymentColumnVisible("Allocations")) { <MudTh>Allocations</MudTh> }
+                        @if (IsPaymentColumnVisible("Actions")) { <MudTh>Actions</MudTh> }
                     </HeaderContent>
                     <RowTemplate>
-                        <MudTd DataLabel="Payment ID">#@context.Id</MudTd>
-                        <MudTd DataLabel="Realized Profit">
-                            @{
-                                var realizedProfit = GetRealizedProfit(context);
-                            }
-                            @if (realizedProfit != 0)
-                            {
-                                <MudChip T="string" Size="Size.Small" Variant="Variant.Filled" Color="@(realizedProfit > 0 ? Color.Success : Color.Error)">
-                                    LD @realizedProfit.ToString("F2")
-                                </MudChip>
-                            }
-                            else
-                            {
-                                <MudText Typo="Typo.body2" Color="Color.Default">-</MudText>
-                            }
-                        </MudTd>
-                        <MudTd DataLabel="Date">@context.PaymentDate.ToLocalTime().ToString("MM/dd/yy HH:mm")</MudTd>
-                        <MudTd DataLabel="Method" Class="d-none d-sm-table-cell">@context.PaymentMethod</MudTd>
-                        <MudTd DataLabel="Reference" Class="d-none d-sm-table-cell">@context.Reference</MudTd>
-                        <MudTd DataLabel="Amount">
-                            <MudText Color="Color.Success" Class="font-weight-bold">
-                                LD @context.Amount.ToString("F2")
-                            </MudText>
-                        </MudTd>
-                        <MudTd DataLabel="Allocations">
-                            <MudText Typo="Typo.body2">
-                                @string.Join(", ", context.Allocations.Select(a => $"#{a.TransactionId}: {a.Amount:F2}"))
-                            </MudText>
-                        </MudTd>
-                        <MudTd DataLabel="Actions">
-                            <MudIconButton Icon="@Icons.Material.Filled.Delete" 
-                                           Color="Color.Error" 
-                                           Size="Size.Small" 
-                                           OnClick="@(() => DeletePayment(context))" />
-                        </MudTd>
+                        @if (IsPaymentColumnVisible("Payment ID")) { <MudTd DataLabel="Payment ID">#@context.Id</MudTd> }
+                        @if (IsPaymentColumnVisible("Realized Profit")) {
+                            <MudTd DataLabel="Realized Profit">
+                                @{
+                                    var realizedProfit = GetRealizedProfit(context);
+                                }
+                                @if (realizedProfit != 0)
+                                {
+                                    <MudChip T="string" Size="Size.Small" Variant="Variant.Filled" Color="@(realizedProfit > 0 ? Color.Success : Color.Error)">
+                                        LD @realizedProfit.ToString("F2")
+                                    </MudChip>
+                                }
+                                else
+                                {
+                                    <MudText Typo="Typo.body2" Color="Color.Default">-</MudText>
+                                }
+                            </MudTd>
+                        }
+                        @if (IsPaymentColumnVisible("Date")) { <MudTd DataLabel="Date">@context.PaymentDate.ToLocalTime().ToString("MM/dd/yy HH:mm")</MudTd> }
+                        @if (IsPaymentColumnVisible("Method")) { <MudTd DataLabel="Method" Class="d-none d-sm-table-cell">@context.PaymentMethod</MudTd> }
+                        @if (IsPaymentColumnVisible("Reference")) { <MudTd DataLabel="Reference" Class="d-none d-sm-table-cell">@context.Reference</MudTd> }
+                        @if (IsPaymentColumnVisible("Amount")) {
+                            <MudTd DataLabel="Amount">
+                                <MudText Color="Color.Success" Class="font-weight-bold">
+                                    LD @context.Amount.ToString("F2")
+                                </MudText>
+                            </MudTd>
+                        }
+                        @if (IsPaymentColumnVisible("Allocations")) {
+                            <MudTd DataLabel="Allocations">
+                                <MudText Typo="Typo.body2">
+                                    @string.Join(", ", context.Allocations.Select(a => $"#{a.TransactionId}: {a.Amount:F2}"))
+                                </MudText>
+                            </MudTd>
+                        }
+                        @if (IsPaymentColumnVisible("Actions")) {
+                            <MudTd DataLabel="Actions">
+                                <MudIconButton Icon="@Icons.Material.Filled.Delete" 
+                                               Color="Color.Error" 
+                                               Size="Size.Small" 
+                                               OnClick="@(() => DeletePayment(context))" />
+                            </MudTd>
+                        }
                     </RowTemplate>
                     <PagerContent>
-                        <MudTablePager />
+                        <div class="d-flex align-center justify-space-between px-4 py-2">
+                            <TableColumnToggle Columns="@_paymentColumns" ColumnsChanged="StateHasChanged" TableName="TransactionPayments" />
+                            <MudTablePager />
+                        </div>
                     </PagerContent>
                 </MudTable>
             }
@@ -377,40 +400,47 @@ else
             }
             else
             {
-                <MudTable Items="@unpaidTransactions" Hover="true" Dense="true" Filter="new Func<Transaction, bool>(SearchFilter)">
+                <MudTable Items="@unpaidTransactions" Hover="true" Dense="true" Breakpoint="Breakpoint.None" Filter="new Func<Transaction, bool>(SearchFilter)">
                     <ToolBarContent>
                         <MudText Typo="Typo.h6">Unpaid Invoices</MudText>
                         <MudSpacer />
                         <MudTextField @bind-Value="searchString" Placeholder="Search" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium" Class="mt-0"></MudTextField>
                     </ToolBarContent>
                     <HeaderContent>
-                        <MudTh>Order ID</MudTh>
-                        <MudTh>Date</MudTh>
-                        <MudTh>Customer</MudTh>
-                        <MudTh>Total</MudTh>
-                        <MudTh>Paid</MudTh>
-                        <MudTh>Balance</MudTh>
-                        <MudTh>Action</MudTh>
+                        @if (IsInvoiceColumnVisible("Order ID")) { <MudTh>Order ID</MudTh> }
+                        @if (IsInvoiceColumnVisible("Date")) { <MudTh>Date</MudTh> }
+                        @if (IsInvoiceColumnVisible("Customer")) { <MudTh>Customer</MudTh> }
+                        @if (IsInvoiceColumnVisible("Total")) { <MudTh>Total</MudTh> }
+                        @if (IsInvoiceColumnVisible("Paid")) { <MudTh>Paid</MudTh> }
+                        @if (IsInvoiceColumnVisible("Balance")) { <MudTh>Balance</MudTh> }
+                        @if (IsInvoiceColumnVisible("Action")) { <MudTh>Action</MudTh> }
                     </HeaderContent>
                     <RowTemplate>
-                        <MudTd DataLabel="Order ID">#@context.Id</MudTd>
-                        <MudTd DataLabel="Date">@context.TransactionDate.ToLocalTime().ToString("MM/dd/yy")</MudTd>
-                        <MudTd DataLabel="Customer">@(context.CustomerName ?? "Walk-in")</MudTd>
-                        <MudTd DataLabel="Total">LD @context.TotalAmount.ToString("F2")</MudTd>
-                        <MudTd DataLabel="Paid">LD @(context.PaymentAllocations?.Sum(pa => pa.Amount).ToString("F2") ?? "0.00")</MudTd>
-                        <MudTd DataLabel="Balance">
-                            <MudText Color="Color.Error" Class="font-weight-bold">
-                                LD @((context.TotalAmount - (context.PaymentAllocations?.Sum(pa => pa.Amount) ?? 0)).ToString("F2"))
-                            </MudText>
-                        </MudTd>
-                        <MudTd DataLabel="Action">
-                            <MudButton Variant="Variant.Filled" Color="Color.Success" Size="Size.Small" OnClick="@(() => OpenPaymentDialog(context))">
-                                Pay
-                            </MudButton>
-                        </MudTd>
+                        @if (IsInvoiceColumnVisible("Order ID")) { <MudTd DataLabel="Order ID">#@context.Id</MudTd> }
+                        @if (IsInvoiceColumnVisible("Date")) { <MudTd DataLabel="Date">@context.TransactionDate.ToLocalTime().ToString("MM/dd/yy")</MudTd> }
+                        @if (IsInvoiceColumnVisible("Customer")) { <MudTd DataLabel="Customer">@(context.CustomerName ?? "Walk-in")</MudTd> }
+                        @if (IsInvoiceColumnVisible("Total")) { <MudTd DataLabel="Total">LD @context.TotalAmount.ToString("F2")</MudTd> }
+                        @if (IsInvoiceColumnVisible("Paid")) { <MudTd DataLabel="Paid">LD @(context.PaymentAllocations?.Sum(pa => pa.Amount).ToString("F2") ?? "0.00")</MudTd> }
+                        @if (IsInvoiceColumnVisible("Balance")) {
+                            <MudTd DataLabel="Balance">
+                                <MudText Color="Color.Error" Class="font-weight-bold">
+                                    LD @((context.TotalAmount - (context.PaymentAllocations?.Sum(pa => pa.Amount) ?? 0)).ToString("F2"))
+                                </MudText>
+                            </MudTd>
+                        }
+                        @if (IsInvoiceColumnVisible("Action")) {
+                            <MudTd DataLabel="Action">
+                                <MudButton Variant="Variant.Filled" Color="Color.Success" Size="Size.Small" OnClick="@(() => OpenPaymentDialog(context))">
+                                    Pay
+                                </MudButton>
+                            </MudTd>
+                        }
                     </RowTemplate>
                     <PagerContent>
-                        <MudTablePager />
+                        <div class="d-flex align-center justify-space-between px-4 py-2">
+                            <TableColumnToggle Columns="@_invoiceColumns" ColumnsChanged="StateHasChanged" TableName="TransactionInvoices" />
+                            <MudTablePager />
+                        </div>
                     </PagerContent>
                 </MudTable>
             }
@@ -427,6 +457,47 @@ else
     private HashSet<int> expandedTransactions = new();
     private bool expandAll = false;
     private bool showProfit = false;
+
+    private List<ColumnDefinition> _transactionColumns = new()
+    {
+        new() { Title = "Order ID", IsVisible = true },
+        new() { Title = "Date", IsVisible = true },
+        new() { Title = "Items", IsVisible = true },
+        new() { Title = "Quantity", IsVisible = true },
+        new() { Title = "Total", IsVisible = true },
+        new() { Title = "Status", IsVisible = true },
+        new() { Title = "Customer", IsVisible = true },
+        new() { Title = "Employee", IsVisible = true },
+        new() { Title = "Actions", IsVisible = true }
+    };
+
+    private List<ColumnDefinition> _paymentColumns = new()
+    {
+        new() { Title = "Payment ID", IsVisible = true },
+        new() { Title = "Realized Profit", IsVisible = true },
+        new() { Title = "Date", IsVisible = true },
+        new() { Title = "Method", IsVisible = true },
+        new() { Title = "Reference", IsVisible = true },
+        new() { Title = "Amount", IsVisible = true },
+        new() { Title = "Allocations", IsVisible = true },
+        new() { Title = "Actions", IsVisible = true }
+    };
+
+    private List<ColumnDefinition> _invoiceColumns = new()
+    {
+        new() { Title = "Order ID", IsVisible = true },
+        new() { Title = "Date", IsVisible = true },
+        new() { Title = "Customer", IsVisible = true },
+        new() { Title = "Total", IsVisible = true },
+        new() { Title = "Paid", IsVisible = true },
+        new() { Title = "Balance", IsVisible = true },
+        new() { Title = "Action", IsVisible = true }
+    };
+
+    private bool IsTransactionColumnVisible(string title) => _transactionColumns.FirstOrDefault(c => c.Title == title)?.IsVisible ?? true;
+    private bool IsPaymentColumnVisible(string title) => _paymentColumns.FirstOrDefault(c => c.Title == title)?.IsVisible ?? true;
+    private bool IsInvoiceColumnVisible(string title) => _invoiceColumns.FirstOrDefault(c => c.Title == title)?.IsVisible ?? true;
+
 
     // Filter variables
     private DateTime? filterFromDate;

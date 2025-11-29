@@ -90,7 +90,7 @@ else
                 <MudCardContent>
                     @if (SupplierDebts.Any())
                     {
-                        <MudTable Items="@SupplierDebts" Hover="true" Dense="true">
+                        <MudTable Items="@SupplierDebts" Hover="true" Dense="true" Breakpoint="Breakpoint.None">
                             <HeaderContent>
                                 <MudTh>Supplier</MudTh>
                                 <MudTh>Amount</MudTh>
@@ -119,7 +119,7 @@ else
                 <MudCardContent>
                     @if (EmployeeDebts.Any())
                     {
-                        <MudTable Items="@EmployeeDebts" Hover="true" Dense="true">
+                        <MudTable Items="@EmployeeDebts" Hover="true" Dense="true" Breakpoint="Breakpoint.None">
                             <HeaderContent>
                                 <MudTh>Employee</MudTh>
                                 <MudTh>Amount</MudTh>

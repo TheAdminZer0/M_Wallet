@@ -6,6 +6,7 @@
 @using Microsoft.AspNetCore.Components.Authorization
 @inject CustomAuthenticationStateProvider AuthStateProvider
 @inject NavigationManager Navigation
+@inject UserPreferencesService UserPreferences
 
 <MudThemeProvider Theme="@_theme" IsDarkMode="_isDarkMode" />
 <MudPopoverProvider />
@@ -59,18 +60,30 @@
         var authState = await AuthStateProvider.GetAuthenticationStateAsync();
         user = authState.User;
         AuthStateProvider.AuthenticationStateChanged += OnAuthenticationStateChanged;
+
+        await UserPreferences.InitializeAsync();
+        _isDarkMode = UserPreferences.Preferences.IsDarkMode;
+        UserPreferences.OnChange += OnPreferencesChanged;
+    }
+
+    private void OnPreferencesChanged()
+    {
+        _isDarkMode = UserPreferences.Preferences.IsDarkMode;
+        StateHasChanged();
     }
 
     private async void OnAuthenticationStateChanged(Task<AuthenticationState> task)
     {
         var authState = await task;
         user = authState.User;
+        await UserPreferences.InitializeAsync();
         StateHasChanged();
     }
 
     public void Dispose()
     {
         AuthStateProvider.AuthenticationStateChanged -= OnAuthenticationStateChanged;
+        UserPreferences.OnChange -= OnPreferencesChanged;
     }
 
     private void DrawerToggle()
@@ -78,9 +91,10 @@
         _drawerOpen = !_drawerOpen;
     }
 
-    private void DarkModeToggle()
+    private async Task DarkModeToggle()
     {
-        _isDarkMode = !_isDarkMode;
+        await UserPreferences.ToggleDarkMode();
+        _isDarkMode = UserPreferences.Preferences.IsDarkMode;
     }
 
     private async Task Logout()

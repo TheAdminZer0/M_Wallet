@@ -17,5 +17,7 @@ namespace M_Wallet.Shared
         public string? Password { get; set; }
 
         public bool IsActive { get; set; } = true;
+
+        public string? Preferences { get; set; } // JSON string for user settings (Dark mode, column visibility, etc.)
     }
 }

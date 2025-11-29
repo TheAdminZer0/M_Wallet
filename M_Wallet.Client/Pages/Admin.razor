@@ -1,6 +1,7 @@
 @page "/admin"
 @using M_Wallet.Shared
 @using M_Wallet.Client.Components
+@using M_Wallet.Client.Models
 @using MudBlazor
 @using Microsoft.AspNetCore.Components.Authorization
 @using System.Security.Claims
@@ -23,50 +24,76 @@
 }
 else
 {
-    <MudTable Items="@employees" Hover="true" Dense="true">
+    <MudTable Items="@employees" Hover="true" Dense="true" Breakpoint="Breakpoint.None">
         <ToolBarContent>
             <MudText Typo="Typo.h6">Employees Management</MudText>
             <MudSpacer />
             <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" OnClick="AddEmployee">Add Employee</MudButton>
         </ToolBarContent>
         <HeaderContent>
-            <MudTh>Name</MudTh>
-            <MudTh>Username</MudTh>
-            <MudTh>Role</MudTh>
-            <MudTh>Passcode Set</MudTh>
-            <MudTh>Status</MudTh>
-            <MudTh>Actions</MudTh>
+            @if (IsVisible("Name")) { <MudTh>Name</MudTh> }
+            @if (IsVisible("Username")) { <MudTh>Username</MudTh> }
+            @if (IsVisible("Role")) { <MudTh>Role</MudTh> }
+            @if (IsVisible("Passcode Set")) { <MudTh>Passcode Set</MudTh> }
+            @if (IsVisible("Status")) { <MudTh>Status</MudTh> }
+            @if (IsVisible("Actions")) { <MudTh>Actions</MudTh> }
         </HeaderContent>
         <RowTemplate>
-            <MudTd DataLabel="Name">@context.Name</MudTd>
-            <MudTd DataLabel="Username">@context.Username</MudTd>
-            <MudTd DataLabel="Role">
-                <MudChip T="string" Color="@(context.Role == "Admin" ? Color.Warning : Color.Info)" Size="Size.Small">@context.Role</MudChip>
-            </MudTd>
-            <MudTd DataLabel="Passcode Set">
-                @if (!string.IsNullOrEmpty(context.Passcode))
-                {
-                    <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Color="Color.Success" />
-                }
-                else
-                {
-                    <MudIcon Icon="@Icons.Material.Filled.Cancel" Color="Color.Error" />
-                }
-            </MudTd>
-            <MudTd DataLabel="Status">
-                <MudChip T="string" Color="@(context.IsActive ? Color.Success : Color.Error)" Size="Size.Small">@(context.IsActive ? "Active" : "Inactive")</MudChip>
-            </MudTd>
-            <MudTd DataLabel="Actions">
-                 <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small" OnClick="@(() => EditEmployee(context))" />
-                 <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" Color="Color.Error" OnClick="@(() => DeleteEmployee(context))" Disabled="@(context.Id == currentAdmin?.Id)" />
-            </MudTd>
+            @if (IsVisible("Name")) { <MudTd DataLabel="Name">@context.Name</MudTd> }
+            @if (IsVisible("Username")) { <MudTd DataLabel="Username">@context.Username</MudTd> }
+            @if (IsVisible("Role")) {
+                <MudTd DataLabel="Role">
+                    <MudChip T="string" Color="@(context.Role == "Admin" ? Color.Warning : Color.Info)" Size="Size.Small">@context.Role</MudChip>
+                </MudTd>
+            }
+            @if (IsVisible("Passcode Set")) {
+                <MudTd DataLabel="Passcode Set">
+                    @if (!string.IsNullOrEmpty(context.Passcode))
+                    {
+                        <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Color="Color.Success" />
+                    }
+                    else
+                    {
+                        <MudIcon Icon="@Icons.Material.Filled.Cancel" Color="Color.Error" />
+                    }
+                </MudTd>
+            }
+            @if (IsVisible("Status")) {
+                <MudTd DataLabel="Status">
+                    <MudChip T="string" Color="@(context.IsActive ? Color.Success : Color.Error)" Size="Size.Small">@(context.IsActive ? "Active" : "Inactive")</MudChip>
+                </MudTd>
+            }
+            @if (IsVisible("Actions")) {
+                <MudTd DataLabel="Actions">
+                     <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small" OnClick="@(() => EditEmployee(context))" />
+                     <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" Color="Color.Error" OnClick="@(() => DeleteEmployee(context))" Disabled="@(context.Id == currentAdmin?.Id)" />
+                </MudTd>
+            }
         </RowTemplate>
+        <PagerContent>
+            <div class="d-flex align-center justify-space-between px-4 py-2">
+                <TableColumnToggle Columns="@_columns" ColumnsChanged="StateHasChanged" TableName="Employees" />
+                <MudTablePager />
+            </div>
+        </PagerContent>
     </MudTable>
 }
 
 @code {
     private Employee? currentAdmin;
     private List<Employee> employees = new();
+
+    private List<ColumnDefinition> _columns = new()
+    {
+        new() { Title = "Name", IsVisible = true },
+        new() { Title = "Username", IsVisible = true },
+        new() { Title = "Role", IsVisible = true },
+        new() { Title = "Passcode Set", IsVisible = true },
+        new() { Title = "Status", IsVisible = true },
+        new() { Title = "Actions", IsVisible = true }
+    };
+
+    private bool IsVisible(string title) => _columns.FirstOrDefault(c => c.Title == title)?.IsVisible ?? true;
 
     protected override async Task OnInitializedAsync()
     {

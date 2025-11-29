@@ -4,6 +4,7 @@
 @inject IDialogService DialogService
 @using M_Wallet.Shared
 @using M_Wallet.Client.Components
+@using M_Wallet.Client.Models
 
 <PageTitle>Purchases & Inventory</PageTitle>
 
@@ -159,31 +160,33 @@ else
 {
     <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" OnClick="StartCreate" Class="mb-4">New Purchase</MudButton>
 
-    <MudTable Items="@purchases" Hover="true" Dense="true" Loading="@(purchases == null)" OnRowClick="OnRowClick" T="Purchase">
+    <MudTable Items="@purchases" Hover="true" Dense="true" Breakpoint="Breakpoint.None" Loading="@(purchases == null)" OnRowClick="OnRowClick" T="Purchase">
         <HeaderContent>
             <MudTh Style="width: 50px;"></MudTh>
-            <MudTh>ID</MudTh>
-            <MudTh>Date</MudTh>
-            <MudTh>Supplier</MudTh>
-            <MudTh>Items</MudTh>
-            <MudTh>Total Amount</MudTh>
-            <MudTh>Actions</MudTh>
+            @if (IsVisible("ID")) { <MudTh>ID</MudTh> }
+            @if (IsVisible("Date")) { <MudTh>Date</MudTh> }
+            @if (IsVisible("Supplier")) { <MudTh>Supplier</MudTh> }
+            @if (IsVisible("Items")) { <MudTh>Items</MudTh> }
+            @if (IsVisible("Total Amount")) { <MudTh>Total Amount</MudTh> }
+            @if (IsVisible("Actions")) { <MudTh>Actions</MudTh> }
         </HeaderContent>
         <RowTemplate>
             <MudTd>
                 <MudIcon Icon="@(expandedPurchases.Contains(context.Id) ? Icons.Material.Filled.ExpandLess : Icons.Material.Filled.ExpandMore)" />
             </MudTd>
-            <MudTd>#@context.Id</MudTd>
-            <MudTd>@context.PurchaseDate.ToLocalTime().ToString("g")</MudTd>
-            <MudTd>@(context.SupplierName ?? "-")</MudTd>
-            <MudTd>@context.Items.Count</MudTd>
-            <MudTd>@context.TotalAmount.ToString("F2")</MudTd>
-            <MudTd>
-                <MudIconButton Icon="@Icons.Material.Filled.Delete" 
-                               Color="Color.Error" 
-                               Size="Size.Small" 
-                               OnClick="@((e) => DeletePurchase(context))" />
-            </MudTd>
+            @if (IsVisible("ID")) { <MudTd>#@context.Id</MudTd> }
+            @if (IsVisible("Date")) { <MudTd>@context.PurchaseDate.ToLocalTime().ToString("g")</MudTd> }
+            @if (IsVisible("Supplier")) { <MudTd>@(context.SupplierName ?? "-")</MudTd> }
+            @if (IsVisible("Items")) { <MudTd>@context.Items.Count</MudTd> }
+            @if (IsVisible("Total Amount")) { <MudTd>@context.TotalAmount.ToString("F2")</MudTd> }
+            @if (IsVisible("Actions")) {
+                <MudTd>
+                    <MudIconButton Icon="@Icons.Material.Filled.Delete" 
+                                   Color="Color.Error" 
+                                   Size="Size.Small" 
+                                   OnClick="@((e) => DeletePurchase(context))" />
+                </MudTd>
+            }
         </RowTemplate>
         <ChildRowContent>
             @if (expandedPurchases.Contains(context.Id))
@@ -226,7 +229,10 @@ else
             }
         </ChildRowContent>
         <PagerContent>
-            <MudTablePager />
+            <div class="d-flex align-center justify-space-between px-4 py-2">
+                <TableColumnToggle Columns="@_columns" ColumnsChanged="StateHasChanged" TableName="Purchases" />
+                <MudTablePager />
+            </div>
         </PagerContent>
     </MudTable>
 }
@@ -318,6 +324,18 @@ else
     private string searchString = "";
     private HashSet<int> expandedPurchases = new();
     
+    private List<ColumnDefinition> _columns = new()
+    {
+        new() { Title = "ID", IsVisible = true },
+        new() { Title = "Date", IsVisible = true },
+        new() { Title = "Supplier", IsVisible = true },
+        new() { Title = "Items", IsVisible = true },
+        new() { Title = "Total Amount", IsVisible = true },
+        new() { Title = "Actions", IsVisible = true }
+    };
+
+    private bool IsVisible(string title) => _columns.FirstOrDefault(c => c.Title == title)?.IsVisible ?? true;
+
     protected override async Task OnInitializedAsync()
     {
         await LoadData();

@@ -35,6 +35,7 @@ builder.Services.AddScoped<HttpClient>(sp =>
 // Add MudBlazor services
 builder.Services.AddMudServices();
 builder.Services.AddScoped<ReceiptService>();
+builder.Services.AddScoped<UserPreferencesService>();
 
 // Add Authentication services
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)

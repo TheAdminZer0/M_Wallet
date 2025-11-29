@@ -4,6 +4,7 @@
 @inject IDialogService DialogService
 @using M_Wallet.Shared
 @using M_Wallet.Client.Components
+@using M_Wallet.Client.Models
 
 <PageTitle>Product Management</PageTitle>
 
@@ -56,86 +57,105 @@ else
                   SortLabel="Sort By"
                   RowStyleFunc="RowStyleFunc">
             <HeaderContent>
-                <MudTh Class="py-1 px-2"><MudTableSortLabel InitialDirection="SortDirection.Ascending" SortBy="new Func<Product, object>(x => x.Name)">Name</MudTableSortLabel></MudTh>
-                <MudTh Class="py-1 px-2">Barcode</MudTh>
-                <MudTh Class="py-1 px-2">Description</MudTh>
-                <MudTh Class="py-1 px-2"><MudTableSortLabel SortBy="new Func<Product, object>(x => x.CostPrice)">Cost (LD)</MudTableSortLabel></MudTh>
-                <MudTh Class="py-1 px-2"><MudTableSortLabel SortBy="new Func<Product, object>(x => x.Price)">Price (LD)</MudTableSortLabel></MudTh>
-                <MudTh Class="py-1 px-4"><MudTableSortLabel SortBy="new Func<Product, object>(x => x.Price - x.CostPrice)">Profit (LD)</MudTableSortLabel></MudTh>
-                <MudTh Class="py-1 px-2"><MudTableSortLabel SortBy="new Func<Product, object>(x => x.TotalSoldQuantity)">Total Sold</MudTableSortLabel></MudTh>
-                <MudTh Class="py-1 px-2"><MudTableSortLabel SortBy="new Func<Product, object>(x => x.StockQuantity)">Stock</MudTableSortLabel></MudTh>
-                <MudTh Class="py-1 px-2"><MudTableSortLabel SortBy="new Func<Product, object>(x => x.IsPinned)">Pinned</MudTableSortLabel></MudTh>
-                <MudTh Class="py-1 px-2">Actions</MudTh>
+                @if (IsVisible("Name")) { <MudTh Class="py-1 px-2"><MudTableSortLabel InitialDirection="SortDirection.Ascending" SortBy="new Func<Product, object>(x => x.Name)">Name</MudTableSortLabel></MudTh> }
+                @if (IsVisible("Barcode")) { <MudTh Class="py-1 px-2">Barcode</MudTh> }
+                @if (IsVisible("Description")) { <MudTh Class="py-1 px-2">Description</MudTh> }
+                @if (IsVisible("Cost")) { <MudTh Class="py-1 px-2"><MudTableSortLabel SortBy="new Func<Product, object>(x => x.CostPrice)">Cost (LD)</MudTableSortLabel></MudTh> }
+                @if (IsVisible("Price")) { <MudTh Class="py-1 px-2"><MudTableSortLabel SortBy="new Func<Product, object>(x => x.Price)">Price (LD)</MudTableSortLabel></MudTh> }
+                @if (IsVisible("Profit")) { <MudTh Class="py-1 px-4"><MudTableSortLabel SortBy="new Func<Product, object>(x => x.Price - x.CostPrice)">Profit (LD)</MudTableSortLabel></MudTh> }
+                @if (IsVisible("Total Sold")) { <MudTh Class="py-1 px-2"><MudTableSortLabel SortBy="new Func<Product, object>(x => x.TotalSoldQuantity)">Total Sold</MudTableSortLabel></MudTh> }
+                @if (IsVisible("Stock")) { <MudTh Class="py-1 px-2"><MudTableSortLabel SortBy="new Func<Product, object>(x => x.StockQuantity)">Stock</MudTableSortLabel></MudTh> }
+                @if (IsVisible("Pinned")) { <MudTh Class="py-1 px-2"><MudTableSortLabel SortBy="new Func<Product, object>(x => x.IsPinned)">Pinned</MudTableSortLabel></MudTh> }
+                @if (IsVisible("Actions")) { <MudTh Class="py-1 px-2">Actions</MudTh> }
             </HeaderContent>
             <RowTemplate>
-                <MudTd Class="py-1 px-2">
-                    <div class="d-flex align-center">
-                        <MudIconButton Icon="@Icons.Material.Filled.Info"
-                                       Color="Color.Default"
-                                       Size="Size.Small"
-                                       Class="mr-2"
-                                       OnClick="@(() => ShowProductDetails(context))" />
-                        @context.Name
-                    </div>
-                </MudTd>
-                <MudTd Class="py-1 px-2">
-                    @if (context.Barcodes.Any())
-                    {
-                        <MudTooltip Text="@string.Join(", ", context.Barcodes.Select(b => b.Barcode))">
-                            <div class="d-flex gap-1 align-center">
-                                <MudChip T="string" Text="@context.Barcodes.First().Barcode" Size="Size.Small" Color="Color.Primary" Variant="Variant.Text" />
-                                @if (context.Barcodes.Count > 1)
-                                {
-                                    <MudChip T="string" Text="@($"+{context.Barcodes.Count - 1}")" Size="Size.Small" Variant="Variant.Outlined" />
-                                }
-                            </div>
-                        </MudTooltip>
-                    }
-                    else
-                    {
-                        <text>-</text>
-                    }
-                </MudTd>
-                <MudTd Class="py-1 px-2">@context.Description</MudTd>
-                <MudTd Class="py-1 px-2">
-                    <MudChip T="string" Size="Size.Small" Variant="Variant.Text">@context.CostPrice.ToString("F2")</MudChip>
-                </MudTd>
-                <MudTd Class="py-1 px-2">
-                    <MudChip T="string" Size="Size.Small" Variant="Variant.Text" Color="Color.Success">@context.Price.ToString("F2")</MudChip>
-                </MudTd>
-                <MudTd Class="py-1 px-4">
-                    @{
-                        var profit = context.Price - context.CostPrice;
-                        var markup = context.CostPrice > 0 ? (profit / context.CostPrice) * 100 : 100;
-                    }
-                    <MudChip T="string" Size="Size.Small" Variant="Variant.Text" Color="@(profit > 0 ? Color.Info : Color.Error)" Title="Markup %">
-                        @profit.ToString("F2") (@markup.ToString("F0")%)
-                    </MudChip>
-                </MudTd>
-                <MudTd Class="py-1 px-2">@context.TotalSoldQuantity</MudTd>
-                <MudTd Class="py-1 px-2">
-                    <MudChip T="string" Size="Size.Small" Variant="Variant.Text" Color="@(context.StockQuantity > 10 ? Color.Success : Color.Warning)">
-                        @context.StockQuantity
-                    </MudChip>
-                </MudTd>
-                <MudTd Class="py-1 px-2">
-                    <MudCheckBox T="bool" Value="@context.IsPinned" ValueChanged="@((bool val) => TogglePin(context, val))" Color="Color.Warning" CheckedIcon="@Icons.Material.Filled.PushPin" UncheckedIcon="@Icons.Material.Outlined.PushPin" Size="Size.Small" />
-                </MudTd>
-                <MudTd Class="py-1 px-2">
-                    <div class="d-flex">
-                        <MudIconButton Icon="@Icons.Material.Filled.Edit"
-                                       Color="Color.Primary"
-                                       Size="Size.Small"
-                                       OnClick="@(() => OpenEditDialog(context))" />
-                        <MudIconButton Icon="@Icons.Material.Filled.Delete"
-                                       Color="Color.Error"
-                                       Size="Size.Small"
-                                       OnClick="@(() => DeleteProduct(context))" />
-                    </div>
-                </MudTd>
+                @if (IsVisible("Name")) {
+                    <MudTd Class="py-1 px-2">
+                        <div class="d-flex align-center">
+                            <MudIconButton Icon="@Icons.Material.Filled.Info"
+                                           Color="Color.Default"
+                                           Size="Size.Small"
+                                           Class="mr-2"
+                                           OnClick="@(() => ShowProductDetails(context))" />
+                            @context.Name
+                        </div>
+                    </MudTd>
+                }
+                @if (IsVisible("Barcode")) {
+                    <MudTd Class="py-1 px-2">
+                        @if (context.Barcodes.Any())
+                        {
+                            <MudTooltip Text="@string.Join(", ", context.Barcodes.Select(b => b.Barcode))">
+                                <div class="d-flex gap-1 align-center">
+                                    <MudChip T="string" Text="@context.Barcodes.First().Barcode" Size="Size.Small" Color="Color.Primary" Variant="Variant.Text" />
+                                    @if (context.Barcodes.Count > 1)
+                                    {
+                                        <MudChip T="string" Text="@($"+{context.Barcodes.Count - 1}")" Size="Size.Small" Variant="Variant.Outlined" />
+                                    }
+                                </div>
+                            </MudTooltip>
+                        }
+                        else
+                        {
+                            <text>-</text>
+                        }
+                    </MudTd>
+                }
+                @if (IsVisible("Description")) { <MudTd Class="py-1 px-2">@context.Description</MudTd> }
+                @if (IsVisible("Cost")) {
+                    <MudTd Class="py-1 px-2">
+                        <MudChip T="string" Size="Size.Small" Variant="Variant.Text">@context.CostPrice.ToString("F2")</MudChip>
+                    </MudTd>
+                }
+                @if (IsVisible("Price")) {
+                    <MudTd Class="py-1 px-2">
+                        <MudChip T="string" Size="Size.Small" Variant="Variant.Text" Color="Color.Success">@context.Price.ToString("F2")</MudChip>
+                    </MudTd>
+                }
+                @if (IsVisible("Profit")) {
+                    <MudTd Class="py-1 px-4">
+                        @{
+                            var profit = context.Price - context.CostPrice;
+                            var markup = context.CostPrice > 0 ? (profit / context.CostPrice) * 100 : 100;
+                        }
+                        <MudChip T="string" Size="Size.Small" Variant="Variant.Text" Color="@(profit > 0 ? Color.Info : Color.Error)" Title="Markup %">
+                            @profit.ToString("F2") (@markup.ToString("F0")%)
+                        </MudChip>
+                    </MudTd>
+                }
+                @if (IsVisible("Total Sold")) { <MudTd Class="py-1 px-2">@context.TotalSoldQuantity</MudTd> }
+                @if (IsVisible("Stock")) {
+                    <MudTd Class="py-1 px-2">
+                        <MudChip T="string" Size="Size.Small" Variant="Variant.Text" Color="@(context.StockQuantity > 10 ? Color.Success : Color.Warning)">
+                            @context.StockQuantity
+                        </MudChip>
+                    </MudTd>
+                }
+                @if (IsVisible("Pinned")) {
+                    <MudTd Class="py-1 px-2">
+                        <MudCheckBox T="bool" Value="@context.IsPinned" ValueChanged="@((bool val) => TogglePin(context, val))" Color="Color.Warning" CheckedIcon="@Icons.Material.Filled.PushPin" UncheckedIcon="@Icons.Material.Outlined.PushPin" Size="Size.Small" />
+                    </MudTd>
+                }
+                @if (IsVisible("Actions")) {
+                    <MudTd Class="py-1 px-2">
+                        <div class="d-flex">
+                            <MudIconButton Icon="@Icons.Material.Filled.Edit"
+                                           Color="Color.Primary"
+                                           Size="Size.Small"
+                                           OnClick="@(() => OpenEditDialog(context))" />
+                            <MudIconButton Icon="@Icons.Material.Filled.Delete"
+                                           Color="Color.Error"
+                                           Size="Size.Small"
+                                           OnClick="@(() => DeleteProduct(context))" />
+                        </div>
+                    </MudTd>
+                }
             </RowTemplate>
             <PagerContent>
-                <MudTablePager />
+                <div class="d-flex align-center justify-space-between px-4 py-2">
+                    <TableColumnToggle Columns="@_columns" ColumnsChanged="StateHasChanged" TableName="Products" />
+                    <MudTablePager />
+                </div>
             </PagerContent>
         </MudTable>
     </div>
@@ -146,6 +166,22 @@ else
     private IDialogReference? currentDialog;
     private IDialogReference? _searchScannerDialog;
     private string searchString = "";
+
+    private List<ColumnDefinition> _columns = new()
+    {
+        new() { Title = "Name", IsVisible = true },
+        new() { Title = "Barcode", IsVisible = true },
+        new() { Title = "Description", IsVisible = true },
+        new() { Title = "Cost", IsVisible = true },
+        new() { Title = "Price", IsVisible = true },
+        new() { Title = "Profit", IsVisible = true },
+        new() { Title = "Total Sold", IsVisible = true },
+        new() { Title = "Stock", IsVisible = true },
+        new() { Title = "Pinned", IsVisible = true },
+        new() { Title = "Actions", IsVisible = true }
+    };
+
+    private bool IsVisible(string title) => _columns.FirstOrDefault(c => c.Title == title)?.IsVisible ?? true;
 
     private bool FilterFunc(Product product)
     {
