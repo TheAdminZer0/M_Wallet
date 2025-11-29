@@ -4,6 +4,9 @@ using M_Wallet.Components;
 using Microsoft.EntityFrameworkCore;
 using M_Wallet.Data;
 using System.Text.Json.Serialization;
+using M_Wallet.Client.Services;
+using Microsoft.AspNetCore.Components.Authorization;
+using Microsoft.AspNetCore.Authentication.Cookies;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -31,6 +34,18 @@ builder.Services.AddScoped<HttpClient>(sp =>
 
 // Add MudBlazor services
 builder.Services.AddMudServices();
+builder.Services.AddScoped<ReceiptService>();
+
+// Add Authentication services
+builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
+    .AddCookie(options =>
+    {
+        options.LoginPath = "/login";
+        options.ExpireTimeSpan = TimeSpan.FromDays(30);
+    });
+builder.Services.AddAuthorization();
+builder.Services.AddScoped<CustomAuthenticationStateProvider>();
+builder.Services.AddScoped<AuthenticationStateProvider>(sp => sp.GetRequiredService<CustomAuthenticationStateProvider>());
 
 // Add services to the container.
 builder.Services.AddRazorComponents()
@@ -53,6 +68,8 @@ else
 app.UseHttpsRedirection();
 
 app.UseAntiforgery();
+app.UseAuthentication();
+app.UseAuthorization();
 
 // Map API controllers
 app.MapControllers();

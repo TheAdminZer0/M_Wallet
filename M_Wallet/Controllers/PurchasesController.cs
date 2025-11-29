@@ -82,6 +82,29 @@ namespace M_Wallet.Controllers
                 }
 
                 await _context.SaveChangesAsync();
+
+                // Log the purchase
+                string employeeName = "Store";
+                if (!string.IsNullOrEmpty(purchase.PaidBy) && purchase.PaidBy.StartsWith("Employee: "))
+                {
+                    employeeName = purchase.PaidBy.Substring("Employee: ".Length);
+                }
+
+                var log = new AuditLog
+                {
+                    Timestamp = DateTime.UtcNow,
+                    Action = "Create",
+                    Entity = "Purchase",
+                    EntityId = purchase.Id.ToString(),
+                    EmployeeName = employeeName,
+                    Description = $"Purchase from {purchase.SupplierName} for {purchase.TotalAmount:F2} LD",
+                    Changes = System.Text.Json.JsonSerializer.Serialize(new { 
+                        Items = purchase.Items.Select(i => new { i.ProductId, i.Quantity, i.UnitCost }) 
+                    })
+                };
+                _context.AuditLogs.Add(log);
+                await _context.SaveChangesAsync();
+
                 await transaction.CommitAsync();
 
                 return CreatedAtAction(nameof(GetPurchases), new { id = purchase.Id }, purchase);
@@ -131,6 +154,20 @@ namespace M_Wallet.Controllers
                 }
 
                 _context.Purchases.Remove(purchase);
+                
+                // Log the deletion
+                var log = new AuditLog
+                {
+                    Timestamp = DateTime.UtcNow,
+                    Action = "Delete",
+                    Entity = "Purchase",
+                    EntityId = purchase.Id.ToString(),
+                    EmployeeName = "System",
+                    Description = $"Deleted purchase #{purchase.Id} from {purchase.SupplierName}",
+                    Changes = "Stock reversed"
+                };
+                _context.AuditLogs.Add(log);
+                
                 await _context.SaveChangesAsync();
                 await transaction.CommitAsync();
 

@@ -4,6 +4,8 @@ public class Transaction
 {
     public int Id { get; set; }
     public DateTime TransactionDate { get; set; } = DateTime.UtcNow;
+    public int? CustomerId { get; set; }
+    public Customer? Customer { get; set; }
     public string? CustomerName { get; set; } // Optional customer tracking
     public decimal TotalAmount { get; set; }
     public string EmployeeName { get; set; } = string.Empty;

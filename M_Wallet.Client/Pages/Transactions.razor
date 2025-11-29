@@ -2,8 +2,9 @@
 @inject HttpClient Http
 @inject ISnackbar Snackbar
 @inject IDialogService DialogService
-@using M_Wallet.Shared
-@using M_Wallet.Client.Components
+@inject IJSRuntime JSRuntime
+@inject ReceiptService _receiptService
+@inject CustomAuthenticationStateProvider AuthStateProvider
 
 <PageTitle>Transactions</PageTitle>
 
@@ -22,6 +23,7 @@ else
                                @bind-Date="filterFromDate" 
                                Variant="Variant.Outlined"
                                Margin="Margin.Dense"
+                               Clearable="true"
                                MaxDate="@DateTime.Today" />
             </MudItem>
                 <MudItem xs="6" sm="4" md="2">
@@ -29,6 +31,7 @@ else
                                    @bind-Date="filterToDate" 
                                    Variant="Variant.Outlined"
                                    Margin="Margin.Dense"
+                                   Clearable="true"
                                    MaxDate="@DateTime.Today" />
                 </MudItem>
                 <MudItem xs="6" sm="4" md="2">
@@ -39,6 +42,7 @@ else
                                      ToStringFunc="@(p => p?.Name)"
                                      Variant="Variant.Outlined"
                                      Margin="Margin.Dense"
+                                     Clearable="true"
                                      ResetValueOnEmptyText="true"
                                      AdornmentIcon="@Icons.Material.Filled.Search" />
                 </MudItem>
@@ -49,6 +53,7 @@ else
                                      SearchFunc="@SearchCustomers"
                                      Variant="Variant.Outlined"
                                      Margin="Margin.Dense"
+                                     Clearable="true"
                                      ResetValueOnEmptyText="true"
                                      AdornmentIcon="@Icons.Material.Filled.Search" />
                 </MudItem>
@@ -59,6 +64,7 @@ else
                                      SearchFunc="@SearchEmployees"
                                      Variant="Variant.Outlined"
                                      Margin="Margin.Dense"
+                                     Clearable="true"
                                      ResetValueOnEmptyText="true"
                                      AdornmentIcon="@Icons.Material.Filled.Search" />
                 </MudItem>
@@ -75,6 +81,15 @@ else
                         <MudIconButton Icon="@(showProfit ? Icons.Material.Filled.VisibilityOff : Icons.Material.Filled.Visibility)" 
                                        Color="@(showProfit ? Color.Primary : Color.Default)" 
                                        OnClick="ToggleProfitVisibility"
+                                       Size="Size.Medium" />
+                    </MudTooltip>
+                </MudItem>
+                <MudItem xs="6" sm="2" md="1" Class="d-flex justify-center align-center">
+                    <MudTooltip Text="View Statement">
+                        <MudIconButton Icon="@Icons.Material.Filled.ReceiptLong" 
+                                       Color="Color.Info" 
+                                       OnClick="ShowCustomerStatement"
+                                       Disabled="@(string.IsNullOrWhiteSpace(filterCustomer) || filterCustomer == "Walk-in")"
                                        Size="Size.Medium" />
                     </MudTooltip>
                 </MudItem>
@@ -194,6 +209,10 @@ else
                             <MudTd DataLabel="Customer">@(context.CustomerName ?? "Walk-in")</MudTd>
                             <MudTd DataLabel="Employee">@context.EmployeeName</MudTd>
                             <MudTd DataLabel="Actions">
+                                <MudMenu Icon="@Icons.Material.Filled.Print" Color="Color.Info" Size="Size.Small" Dense="true">
+                                    <MudMenuItem OnClick="@(() => PrintReceipt(context))">Print Receipt (Thermal)</MudMenuItem>
+                                    <MudMenuItem OnClick="@(() => PrintInvoice(context))">Print Invoice (A4)</MudMenuItem>
+                                </MudMenu>
                                 <MudIconButton Icon="@Icons.Material.Filled.Delete" 
                                                Color="Color.Error" 
                                                Size="Size.Small" 
@@ -541,7 +560,6 @@ else
             
             // Load Payments (we need a way to get all payments, or we can extract them from transactions if the API supports it, 
             // but usually a separate endpoint is better. Let's assume we can get them.)
-            // If api/payments exists and returns List<Payment>:
             try 
             {
                 payments = await Http.GetFromJsonAsync<List<Payment>>("api/payments");
@@ -737,6 +755,18 @@ else
         await DialogService.ShowAsync<ProductDetailsDialog>(product.Name, parameters, options);
     }
 
+    private async Task PrintReceipt(Transaction transaction)
+    {
+        var html = _receiptService.GenerateReceiptHtml(transaction);
+        await JSRuntime.InvokeVoidAsync("printer.printHtml", html);
+    }
+
+    private async Task PrintInvoice(Transaction transaction)
+    {
+        var html = _receiptService.GenerateInvoiceHtml(transaction);
+        await JSRuntime.InvokeVoidAsync("printer.printHtml", html);
+    }
+
     private async Task DeleteTransaction(Transaction transaction)
     {
         bool? result = await DialogService.ShowMessageBox(
@@ -748,7 +778,10 @@ else
         {
             try
             {
-                var response = await Http.DeleteAsync($"api/transactions/{transaction.Id}");
+                var currentUser = await AuthStateProvider.GetCurrentUserAsync();
+                var employeeName = currentUser?.Name ?? "Unknown";
+                var response = await Http.DeleteAsync($"api/transactions/{transaction.Id}?employeeName={Uri.EscapeDataString(employeeName)}");
+                
                 if (response.IsSuccessStatusCode)
                 {
                     Snackbar.Add("Transaction deleted", Severity.Success);
@@ -839,5 +872,56 @@ else
             }
         }
         return totalRealizedProfit;
+    }
+
+    private async Task ShowCustomerStatement()
+    {
+        if (string.IsNullOrWhiteSpace(filterCustomer) || filterCustomer == "Walk-in") return;
+
+        var items = new List<StatementItem>();
+
+        // Debits: Sales (Transactions)
+        var customerTransactions = transactions?
+            .Where(t => t.CustomerName == filterCustomer)
+            .ToList() ?? new List<Transaction>();
+
+        items.AddRange(customerTransactions.Select(t => new StatementItem
+        {
+            Date = t.TransactionDate,
+            Description = $"Invoice #{t.Id}",
+            Amount = -t.TotalAmount // Debt increases (negative balance from customer perspective? Or positive?)
+            // Let's stick to: Positive = Money In (Payment), Negative = Money Out (Purchase/Invoice)
+            // So Invoice is Negative (Owed), Payment is Positive (Paid).
+            // Balance: Negative means they owe us.
+        }));
+
+        // Credits: Payments
+        var customerPayments = payments?
+            .Where(p => p.CustomerName == filterCustomer)
+            .ToList() ?? new List<Payment>();
+
+        items.AddRange(customerPayments.Select(p => new StatementItem
+        {
+            Date = p.PaymentDate,
+            Description = $"Payment #{p.Id} ({p.PaymentMethod})",
+            Amount = p.Amount
+        }));
+
+        // Sort and Calculate Running Balance
+        items = items.OrderBy(i => i.Date).ToList();
+        decimal balance = 0;
+        foreach (var item in items)
+        {
+            balance += item.Amount;
+            item.RunningBalance = balance;
+        }
+
+        var parameters = new DialogParameters();
+        parameters.Add("Items", items.OrderByDescending(i => i.Date).ToList());
+        parameters.Add("Title", $"Statement of Account - {filterCustomer}");
+
+        var options = new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.Medium, FullWidth = true };
+
+        await DialogService.ShowAsync<FinancialStatementDialog>($"Statement - {filterCustomer}", parameters, options);
     }
 }

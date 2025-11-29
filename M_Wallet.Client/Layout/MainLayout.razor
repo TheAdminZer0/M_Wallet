@@ -1,5 +1,11 @@
 ﻿@inherits LayoutComponentBase
+@implements IDisposable
 @inject ISnackbar Snackbar
+@using M_Wallet.Client.Services
+@using System.Security.Claims
+@using Microsoft.AspNetCore.Components.Authorization
+@inject CustomAuthenticationStateProvider AuthStateProvider
+@inject NavigationManager Navigation
 
 <MudThemeProvider Theme="@_theme" IsDarkMode="_isDarkMode" />
 <MudPopoverProvider />
@@ -11,9 +17,16 @@
         <MudText Typo="Typo.h5" Class="ml-3">Application</MudText>
         <MudSpacer />
         <MudIconButton Icon="@(DarkLightModeButtonIcon)" Color="Color.Inherit" OnClick="@DarkModeToggle" />
-        <MudIconButton Icon="@Icons.Material.Filled.MoreVert" Color="Color.Inherit" Edge="Edge.End" OnClick="@saysomethingfunny"  />
+        <MudIconButton Icon="@Icons.Material.Filled.Logout" Color="Color.Inherit" OnClick="@Logout" Title="Logout" />
     </MudAppBar>
     <MudDrawer id="nav-drawer" @bind-Open="_drawerOpen" ClipMode="DrawerClipMode.Always" Elevation="2">
+        @if (user?.Identity?.IsAuthenticated == true)
+        {
+            <div class="d-flex flex-column px-4 pt-4 pb-2" style="border-bottom: 1px solid var(--mud-palette-lines-default);">
+                <MudText Typo="Typo.subtitle1"><b>@user.Identity.Name</b></MudText>
+                <MudText Typo="Typo.body2" Class="mud-text-secondary">@user.Claims.FirstOrDefault(c => c.Type == ClaimTypes.Role)?.Value</MudText>
+            </div>
+        }
         <NavMenu />
     </MudDrawer>
     <MudMainContent Class="pt-16 pa-4">
@@ -32,17 +45,32 @@
     private bool _drawerOpen = true;
     private bool _isDarkMode = true;
     private MudTheme? _theme = null;
+    private ClaimsPrincipal? user;
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
-        base.OnInitialized();
-
         _theme = new()
         {
             PaletteLight = _lightPalette,
             PaletteDark = _darkPalette,
             LayoutProperties = new LayoutProperties()
         };
+
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        user = authState.User;
+        AuthStateProvider.AuthenticationStateChanged += OnAuthenticationStateChanged;
+    }
+
+    private async void OnAuthenticationStateChanged(Task<AuthenticationState> task)
+    {
+        var authState = await task;
+        user = authState.User;
+        StateHasChanged();
+    }
+
+    public void Dispose()
+    {
+        AuthStateProvider.AuthenticationStateChanged -= OnAuthenticationStateChanged;
     }
 
     private void DrawerToggle()
@@ -55,9 +83,10 @@
         _isDarkMode = !_isDarkMode;
     }
 
-    private void saysomethingfunny()
+    private async Task Logout()
     {
-        Snackbar.Add("Something funny!", Severity.Info);
+        await AuthStateProvider.LogoutAsync();
+        Navigation.NavigateTo("/login");
     }
 
     private readonly PaletteLight _lightPalette = new()

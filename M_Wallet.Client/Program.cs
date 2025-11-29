@@ -1,9 +1,15 @@
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
+using Microsoft.AspNetCore.Components.Authorization;
 using MudBlazor.Services;
+using M_Wallet.Client.Services;
 
 var builder = WebAssemblyHostBuilder.CreateDefault(args);
 
 builder.Services.AddMudServices();
+builder.Services.AddAuthorizationCore();
+builder.Services.AddScoped<CustomAuthenticationStateProvider>();
+builder.Services.AddScoped<AuthenticationStateProvider>(sp => sp.GetRequiredService<CustomAuthenticationStateProvider>());
+builder.Services.AddScoped<ReceiptService>();
 
 // Add HttpClient for API calls
 builder.Services.AddScoped(sp => new HttpClient 

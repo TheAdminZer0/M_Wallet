@@ -1,0 +1,266 @@
+@inject IJSRuntime JSRuntime
+@using MudBlazor
+
+<div class="pattern-lock-container" @ref="containerRef">
+    <svg width="200" height="200" viewBox="0 0 300 300" class="pattern-svg">
+        <!-- Preview Line (Dynamic) -->
+        <line id="pattern-preview-line" 
+              stroke="#1976d2" 
+              stroke-width="10" 
+              stroke-linecap="round" 
+              stroke-opacity="0.5"
+              style="display:none; pointer-events:none;" />
+
+        <!-- Lines -->
+        <polyline points="@GetPolylinePoints()" 
+                  fill="none" 
+                  stroke="@(IsError ? "#f44336" : "#1976d2")" 
+                  stroke-width="10" 
+                  stroke-linecap="round" 
+                  stroke-linejoin="round" />
+        
+        <!-- Dots -->
+        @for (int i = 0; i < 9; i++)
+        {
+            var index = i;
+            var x = (i % 3) * 100 + 50;
+            var y = (i / 3) * 100 + 50;
+            var isActive = selectedIndices.Contains(index);
+            
+            <circle cx="@x" cy="@y" r="20" 
+                    fill="@(isActive ? (IsError ? "#f44336" : "#1976d2") : "#e0e0e0")" 
+                    class="pattern-dot" 
+                    data-index="@index" />
+            
+            <!-- Invisible larger hit area -->
+            <circle cx="@x" cy="@y" r="40" 
+                    fill="transparent" 
+                    @onmousedown="@(() => StartDrawing(index))" 
+                    @onmouseenter="@(() => ContinueDrawing(index))"
+                    @ontouchstart="@(() => StartDrawing(index))"
+                    class="pattern-hit-area" 
+                    data-index="@index" />
+        }
+    </svg>
+</div>
+
+<div class="d-flex justify-center mt-2" style="height: 24px;">
+    @if (!string.IsNullOrEmpty(ErrorMessage))
+    {
+        <MudText Color="Color.Error" Typo="Typo.body2">@ErrorMessage</MudText>
+    }
+</div>
+
+<style>
+    .pattern-lock-container {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        user-select: none;
+        touch-action: none; /* Prevent scrolling while drawing */
+    }
+    .pattern-dot {
+        transition: fill 0.2s;
+    }
+    .pattern-hit-area {
+        cursor: pointer;
+    }
+</style>
+
+@code {
+    [Parameter] public EventCallback<string> OnPatternComplete { get; set; }
+
+    private List<int> selectedIndices = new();
+    private bool isDrawing = false;
+    private ElementReference containerRef;
+    private bool IsError = false;
+    private string ErrorMessage = "";
+
+    public async Task ShowError(string message)
+    {
+        IsError = true;
+        ErrorMessage = message;
+        StateHasChanged();
+        
+        await Task.Delay(1000);
+        
+        IsError = false;
+        ErrorMessage = "";
+        selectedIndices.Clear();
+        StateHasChanged();
+    }
+
+    private async Task StartDrawing(int index)
+    {
+        if (IsError) return;
+        isDrawing = true;
+        selectedIndices.Clear();
+        selectedIndices.Add(index);
+        await JSRuntime.InvokeVoidAsync("window.updatePatternLockDot", containerRef, index);
+    }
+
+    private async Task ContinueDrawing(int index)
+    {
+        if (isDrawing && !selectedIndices.Contains(index))
+        {
+            // Check for "knight's move" or skipping dots? 
+            // For simplicity, we just connect. 
+            // A real pattern lock fills in the middle dot if you skip over it (e.g. 0 to 2 fills 1).
+            // Let's implement simple direct connection for now.
+            
+            // Optional: Handle middle dot logic
+            var last = selectedIndices.Last();
+            var diff = Math.Abs(index - last);
+            
+            // Row check: same row, diff is 2 (skipped 1)
+            if (last / 3 == index / 3 && diff == 2)
+            {
+                var mid = (last + index) / 2;
+                if (!selectedIndices.Contains(mid)) 
+                {
+                    selectedIndices.Add(mid);
+                    // We don't strictly need to update JS for the mid dot as the user is already at 'index'
+                }
+            }
+            // Col check: same col, diff is 6 (skipped 3)
+            else if (last % 3 == index % 3 && diff == 6)
+            {
+                var mid = (last + index) / 2;
+                if (!selectedIndices.Contains(mid)) selectedIndices.Add(mid);
+            }
+            // Diagonal check: 0-8 (mid 4), 2-6 (mid 4)
+            else if (diff == 8 || (diff == 4 && last != 4 && index != 4 && last % 2 == 0)) // 0-8 or 2-6
+            {
+                 var mid = (last + index) / 2;
+                 if (!selectedIndices.Contains(mid)) selectedIndices.Add(mid);
+            }
+
+            selectedIndices.Add(index);
+            await JSRuntime.InvokeVoidAsync("window.updatePatternLockDot", containerRef, index);
+        }
+    }
+
+    [JSInvokable]
+    public async Task StopDrawing()
+    {
+        if (isDrawing)
+        {
+            isDrawing = false;
+            await JSRuntime.InvokeVoidAsync("window.clearPatternLockPreview", containerRef);
+
+            if (selectedIndices.Count > 0)
+            {
+                var pattern = string.Join("", selectedIndices);
+                await OnPatternComplete.InvokeAsync(pattern);
+                
+                if (!IsError)
+                {
+                    // Reset after a short delay to show the pattern
+                    await Task.Delay(500);
+                    selectedIndices.Clear();
+                    StateHasChanged();
+                }
+            }
+        }
+    }
+
+    private string GetPolylinePoints()
+    {
+        if (selectedIndices.Count < 2) return "";
+        
+        var points = new List<string>();
+        foreach (var index in selectedIndices)
+        {
+            var x = (index % 3) * 100 + 50;
+            var y = (index / 3) * 100 + 50;
+            points.Add($"{x},{y}");
+        }
+        return string.Join(" ", points);
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            var dotNetRef = DotNetObjectReference.Create(this);
+            await JSRuntime.InvokeVoidAsync("eval", @"
+                window.initPatternLock = (dotNetHelper, container) => {
+                    let lastDot = -1;
+                    const previewLine = container.querySelector('#pattern-preview-line');
+
+                    container.setLastDot = (index) => {
+                        lastDot = index;
+                    };
+                    
+                    container.clearPreview = () => {
+                        lastDot = -1;
+                        if (previewLine) previewLine.style.display = 'none';
+                    };
+
+                    const updatePreview = (clientX, clientY) => {
+                        if (lastDot === -1 || !previewLine) return;
+                        
+                        const rect = container.getBoundingClientRect();
+                        const scaleX = 300 / rect.width;
+                        const scaleY = 300 / rect.height;
+                        
+                        const x = (clientX - rect.left) * scaleX;
+                        const y = (clientY - rect.top) * scaleY;
+                        
+                        const startX = (lastDot % 3) * 100 + 50;
+                        const startY = Math.floor(lastDot / 3) * 100 + 50;
+                        
+                        previewLine.setAttribute('x1', startX);
+                        previewLine.setAttribute('y1', startY);
+                        previewLine.setAttribute('x2', x);
+                        previewLine.setAttribute('y2', y);
+                        previewLine.style.display = 'block';
+                    };
+
+                    const handleMove = (e) => {
+                        const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+                        const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+                        
+                        const element = document.elementFromPoint(clientX, clientY);
+                        if (element && element.dataset.index) {
+                            const idx = parseInt(element.dataset.index);
+                            if (idx !== lastDot) {
+                                dotNetHelper.invokeMethodAsync('OnDotEnter', idx);
+                            }
+                        }
+                        
+                        updatePreview(clientX, clientY);
+                    };
+                    
+                    const handleEnd = () => {
+                        dotNetHelper.invokeMethodAsync('StopDrawing');
+                    };
+
+                    container.addEventListener('touchmove', (e) => { e.preventDefault(); handleMove(e); }, { passive: false });
+                    container.addEventListener('touchend', handleEnd);
+                    
+                    window.addEventListener('mousemove', (e) => {
+                        if (e.buttons === 1) handleMove(e);
+                    });
+                    window.addEventListener('mouseup', handleEnd);
+                };
+
+                window.updatePatternLockDot = (container, index) => {
+                    if (container && container.setLastDot) container.setLastDot(index);
+                };
+                window.clearPatternLockPreview = (container) => {
+                    if (container && container.clearPreview) container.clearPreview();
+                };
+            ");
+            
+            await JSRuntime.InvokeVoidAsync("initPatternLock", dotNetRef, containerRef);
+        }
+    }
+
+    [JSInvokable]
+    public async Task OnDotEnter(int index)
+    {
+        await ContinueDrawing(index);
+        StateHasChanged();
+    }
+}

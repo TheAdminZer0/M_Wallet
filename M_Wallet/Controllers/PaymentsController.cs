@@ -36,6 +36,12 @@ public class PaymentsController : ControllerBase
             return BadRequest("Payment amount must be greater than zero.");
         }
 
+        // Ensure UTC date for PostgreSQL
+        if (payment.PaymentDate.Kind != DateTimeKind.Utc)
+        {
+            payment.PaymentDate = payment.PaymentDate.ToUniversalTime();
+        }
+
         // If allocations are provided, validate them
         if (payment.Allocations != null && payment.Allocations.Any())
         {
@@ -58,6 +64,23 @@ public class PaymentsController : ControllerBase
         }
 
         _context.Payments.Add(payment);
+        await _context.SaveChangesAsync();
+
+        // Log the payment
+        var log = new AuditLog
+        {
+            Timestamp = DateTime.UtcNow,
+            Action = "Payment",
+            Entity = "Payment",
+            EntityId = payment.Id.ToString(),
+            EmployeeName = payment.EmployeeName ?? "Unknown",
+            Description = $"Received payment of {payment.Amount:F2} LD via {payment.PaymentMethod}",
+            Changes = System.Text.Json.JsonSerializer.Serialize(new { 
+                Customer = payment.CustomerName,
+                Allocations = (payment.Allocations ?? new List<PaymentAllocation>()).Select(a => new { a.TransactionId, a.Amount }) 
+            })
+        };
+        _context.AuditLogs.Add(log);
         await _context.SaveChangesAsync();
 
         return CreatedAtAction(nameof(GetPayments), new { id = payment.Id }, payment);

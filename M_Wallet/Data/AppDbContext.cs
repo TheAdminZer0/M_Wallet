@@ -17,10 +17,19 @@ public class AppDbContext : DbContext
     public DbSet<PaymentAllocation> PaymentAllocations { get; set; }
     public DbSet<Purchase> Purchases { get; set; }
     public DbSet<PurchaseItem> PurchaseItems { get; set; }
+    public DbSet<Customer> Customers { get; set; }
+    public DbSet<Employee> Employees { get; set; }
+    public DbSet<AuditLog> AuditLogs { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
+
+        modelBuilder.Entity<Customer>(entity =>
+        {
+            entity.Property(c => c.Name).IsRequired();
+            entity.HasIndex(c => c.Name);
+        });
 
         modelBuilder.Entity<Product>(entity =>
         {
@@ -65,5 +74,27 @@ public class AppDbContext : DbContext
         {
             entity.Property(pi => pi.UnitCost).HasPrecision(18, 2);
         });
+
+        modelBuilder.Entity<Employee>().HasData(
+            new Employee 
+            { 
+                Id = 1, 
+                Name = "Aziz", 
+                Passcode = "630125874", 
+                Role = "Admin", 
+                Username = "aziz",
+                Password = "123", // In a real app, hash this!
+                IsActive = true 
+            },
+            new Employee
+            {
+                Id = 2,
+                Name = "POS Terminal",
+                Role = "System",
+                Username = "pos",
+                Password = "pos",
+                IsActive = true
+            }
+        );
     }
 }

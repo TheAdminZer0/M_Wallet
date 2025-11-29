@@ -84,6 +84,28 @@ public class ProductsController : ControllerBase
         product.CreatedAt = DateTime.UtcNow;
         product.Barcodes = NormalizeBarcodes(product.Barcodes);
         _context.Products.Add(product);
+        
+        // Log creation
+        var log = new AuditLog
+        {
+            Timestamp = DateTime.UtcNow,
+            Action = "Create",
+            Entity = "Product",
+            EntityId = product.Id.ToString(), // Note: Id might be 0 here until saved, but EF usually handles it if we save first or use generated value. 
+            // Actually, let's save first to get the ID.
+            EmployeeName = "System",
+            Description = $"Created product: {product.Name}",
+            Changes = System.Text.Json.JsonSerializer.Serialize(product)
+        };
+        
+        // Wait, I need to save first to get the ID if it's identity.
+        // But if I add log to context, it will be saved in same transaction if I call SaveChanges once.
+        // However, product.Id is temporary until saved.
+        // Let's save product first.
+        await _context.SaveChangesAsync();
+        
+        log.EntityId = product.Id.ToString();
+        _context.AuditLogs.Add(log);
         await _context.SaveChangesAsync();
         
         return CreatedAtAction(nameof(GetProduct), new { id = product.Id }, product);
@@ -138,6 +160,19 @@ public class ProductsController : ControllerBase
 
         try
         {
+            // Log update
+            var log = new AuditLog
+            {
+                Timestamp = DateTime.UtcNow,
+                Action = "Update",
+                Entity = "Product",
+                EntityId = id.ToString(),
+                EmployeeName = "System",
+                Description = $"Updated product: {product.Name}",
+                Changes = $"Price: {product.Price}, Stock: {product.StockQuantity}"
+            };
+            _context.AuditLogs.Add(log);
+
             await _context.SaveChangesAsync();
         }
         catch (DbUpdateConcurrencyException)
@@ -164,6 +199,20 @@ public class ProductsController : ControllerBase
         }
 
         _context.Products.Remove(product);
+
+        // Log deletion
+        var log = new AuditLog
+        {
+            Timestamp = DateTime.UtcNow,
+            Action = "Delete",
+            Entity = "Product",
+            EntityId = id.ToString(),
+            EmployeeName = "System",
+            Description = $"Deleted product: {product.Name}",
+            Changes = ""
+        };
+        _context.AuditLogs.Add(log);
+
         await _context.SaveChangesAsync();
 
         return NoContent();

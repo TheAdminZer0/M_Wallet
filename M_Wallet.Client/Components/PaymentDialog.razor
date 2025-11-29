@@ -1,7 +1,11 @@
 @using M_Wallet.Shared
 @using MudBlazor
+@using M_Wallet.Client.Services
+@using M_Wallet.Client.Components
+@using System.Net.Http.Json
 @inject HttpClient Http
 @inject ISnackbar Snackbar
+@inject CustomAuthenticationStateProvider AuthStateProvider
 
 <MudDialog>
     <DialogContent>
@@ -20,13 +24,28 @@
                 </MudSelect>
             </MudItem>
             <MudItem xs="12">
+                @if (isSystemUser)
+                {
+                    <MudText Typo="Typo.caption" Class="mb-1">Enter Pattern to Authorize</MudText>
+                    <PatternLock OnPatternComplete="VerifyPattern" />
+                    @if (!string.IsNullOrEmpty(employeeName))
+                    {
+                        <MudText Color="Color.Success" Class="mt-2">Authorized by: @employeeName</MudText>
+                    }
+                }
+                else
+                {
+                    <MudTextField @bind-Value="employeeName" Label="Employee Name" Variant="Variant.Outlined" Required="true" ReadOnly="@(currentEmployee != null)" />
+                }
+            </MudItem>
+            <MudItem xs="12">
                 <MudTextField @bind-Value="reference" Label="Reference / Notes" Variant="Variant.Outlined" Lines="2" />
             </MudItem>
         </MudGrid>
     </DialogContent>
     <DialogActions>
         <MudButton OnClick="Cancel">Cancel</MudButton>
-        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="Submit">Record Payment</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="Submit" Disabled="@string.IsNullOrWhiteSpace(employeeName)">Record Payment</MudButton>
     </DialogActions>
 </MudDialog>
 
@@ -40,10 +59,42 @@
     private decimal amount;
     private string paymentMethod = "Cash";
     private string reference = "";
+    private string employeeName = "";
+    private Employee? currentEmployee;
+    private bool isSystemUser => currentEmployee?.Role == "System";
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
         amount = BalanceDue;
+        currentEmployee = await AuthStateProvider.GetCurrentUserAsync();
+        if (currentEmployee != null && !isSystemUser)
+        {
+            employeeName = currentEmployee.Name;
+        }
+    }
+
+    private async Task VerifyPattern(string pattern)
+    {
+        try
+        {
+            var response = await Http.GetAsync($"api/employees/verify/{pattern}");
+            if (response.IsSuccessStatusCode)
+            {
+                var emp = await response.Content.ReadFromJsonAsync<Employee>();
+                if (emp != null)
+                {
+                    employeeName = emp.Name;
+                }
+            }
+            else
+            {
+                Snackbar.Add("Invalid Pattern", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+        }
     }
 
     private void Cancel() => MudDialog.Cancel();
@@ -53,6 +104,12 @@
         if (amount <= 0)
         {
             Snackbar.Add("Amount must be greater than 0", Severity.Warning);
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(employeeName))
+        {
+            Snackbar.Add("Employee name is required", Severity.Warning);
             return;
         }
 
@@ -69,6 +126,7 @@
             PaymentMethod = paymentMethod,
             Reference = reference,
             CustomerName = CustomerName,
+            EmployeeName = employeeName,
             Allocations = new List<PaymentAllocation>
             {
                 new PaymentAllocation

@@ -46,7 +46,7 @@
                               Class="mb-4" />
 
                 <MudSelect T="string" Label="Payment Source" @bind-Value="newPurchase.PaidBy" Variant="Variant.Outlined" Margin="Margin.Dense" Class="mb-4">
-                    <MudSelectItem Value="@("Store")">Store Cash</MudSelectItem>
+                    <MudSelectItem Value="@("Store")">The Foundry (Store Cash)</MudSelectItem>
                     <MudSelectItem Value="@("Credit")">Supplier Credit (Unpaid)</MudSelectItem>
                     @foreach (var emp in uniqueEmployees)
                     {
@@ -318,11 +318,6 @@ else
     private string searchString = "";
     private HashSet<int> expandedPurchases = new();
     
-    // Form inputs
-    private Product? selectedProduct;
-    private int quantity = 1;
-    private decimal costPrice = 0;
-
     protected override async Task OnInitializedAsync()
     {
         await LoadData();
@@ -506,7 +501,7 @@ else
                     if (createdProduct != null)
                     {
                         allProducts.Add(createdProduct);
-                        selectedProduct = createdProduct; // Auto-select the new product
+                        SelectProduct(createdProduct); // Auto-select the new product
                         Snackbar.Add("Product created!", Severity.Success);
                     }
                     dialog?.Close();

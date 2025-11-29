@@ -3,6 +3,7 @@ using System;
 using M_Wallet.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace M_Wallet.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251128220130_AddAuditLogs")]
+    partial class AddAuditLogs
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -58,85 +61,6 @@ namespace M_Wallet.Migrations
                     b.ToTable("AuditLogs");
                 });
 
-            modelBuilder.Entity("M_Wallet.Shared.Customer", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("PhoneNumber")
-                        .HasColumnType("text");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("Name");
-
-                    b.ToTable("Customers");
-                });
-
-            modelBuilder.Entity("M_Wallet.Shared.Employee", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("boolean");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("Passcode")
-                        .HasColumnType("text");
-
-                    b.Property<string>("Password")
-                        .HasColumnType("text");
-
-                    b.Property<string>("Role")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("Username")
-                        .HasColumnType("text");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("Employees");
-
-                    b.HasData(
-                        new
-                        {
-                            Id = 1,
-                            IsActive = true,
-                            Name = "Aziz",
-                            Passcode = "630125874",
-                            Password = "123",
-                            Role = "Admin",
-                            Username = "aziz"
-                        },
-                        new
-                        {
-                            Id = 2,
-                            IsActive = true,
-                            Name = "POS Terminal",
-                            Password = "pos",
-                            Role = "System",
-                            Username = "pos"
-                        });
-                });
-
             modelBuilder.Entity("M_Wallet.Shared.Payment", b =>
                 {
                     b.Property<int>("Id")
@@ -149,9 +73,6 @@ namespace M_Wallet.Migrations
                         .HasColumnType("numeric");
 
                     b.Property<string>("CustomerName")
-                        .HasColumnType("text");
-
-                    b.Property<string>("EmployeeName")
                         .HasColumnType("text");
 
                     b.Property<DateTime>("PaymentDate")
@@ -334,9 +255,6 @@ namespace M_Wallet.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
-                    b.Property<int?>("CustomerId")
-                        .HasColumnType("integer");
-
                     b.Property<string>("CustomerName")
                         .HasColumnType("text");
 
@@ -352,8 +270,6 @@ namespace M_Wallet.Migrations
                         .HasColumnType("timestamp with time zone");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("CustomerId");
 
                     b.ToTable("Transactions");
                 });
@@ -442,15 +358,6 @@ namespace M_Wallet.Migrations
                     b.Navigation("Product");
 
                     b.Navigation("Purchase");
-                });
-
-            modelBuilder.Entity("M_Wallet.Shared.Transaction", b =>
-                {
-                    b.HasOne("M_Wallet.Shared.Customer", "Customer")
-                        .WithMany()
-                        .HasForeignKey("CustomerId");
-
-                    b.Navigation("Customer");
                 });
 
             modelBuilder.Entity("M_Wallet.Shared.TransactionItem", b =>

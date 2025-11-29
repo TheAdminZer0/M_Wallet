@@ -11,6 +11,7 @@ public class Payment
     public string? PaymentMethod { get; set; } // Cash, Card, Transfer
     public string? Reference { get; set; } // Notes
     public string? CustomerName { get; set; } // Snapshot of customer name at time of payment
+    public string? EmployeeName { get; set; } // Who collected the payment
     
     public List<PaymentAllocation> Allocations { get; set; } = new();
 }

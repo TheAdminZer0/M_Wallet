@@ -1,0 +1,186 @@
+@page "/admin"
+@using M_Wallet.Shared
+@using M_Wallet.Client.Components
+@using MudBlazor
+@using Microsoft.AspNetCore.Components.Authorization
+@using System.Security.Claims
+@inject HttpClient Http
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+@inject AuthenticationStateProvider AuthStateProvider
+
+<PageTitle>Admin</PageTitle>
+
+@if (currentAdmin == null)
+{
+    <MudContainer MaxWidth="MaxWidth.Small" Class="mt-16">
+        <MudPaper Class="pa-8 d-flex flex-column align-center">
+            <MudText Typo="Typo.h5" Class="mb-4">Admin Access Required</MudText>
+            <MudText Typo="Typo.body2" Class="mb-4">Please enter your admin pattern.</MudText>
+            <PatternLock OnPatternComplete="VerifyAdminPattern" />
+        </MudPaper>
+    </MudContainer>
+}
+else
+{
+    <MudTable Items="@employees" Hover="true" Dense="true">
+        <ToolBarContent>
+            <MudText Typo="Typo.h6">Employees Management</MudText>
+            <MudSpacer />
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" OnClick="AddEmployee">Add Employee</MudButton>
+        </ToolBarContent>
+        <HeaderContent>
+            <MudTh>Name</MudTh>
+            <MudTh>Username</MudTh>
+            <MudTh>Role</MudTh>
+            <MudTh>Passcode Set</MudTh>
+            <MudTh>Status</MudTh>
+            <MudTh>Actions</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd DataLabel="Name">@context.Name</MudTd>
+            <MudTd DataLabel="Username">@context.Username</MudTd>
+            <MudTd DataLabel="Role">
+                <MudChip T="string" Color="@(context.Role == "Admin" ? Color.Warning : Color.Info)" Size="Size.Small">@context.Role</MudChip>
+            </MudTd>
+            <MudTd DataLabel="Passcode Set">
+                @if (!string.IsNullOrEmpty(context.Passcode))
+                {
+                    <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Color="Color.Success" />
+                }
+                else
+                {
+                    <MudIcon Icon="@Icons.Material.Filled.Cancel" Color="Color.Error" />
+                }
+            </MudTd>
+            <MudTd DataLabel="Status">
+                <MudChip T="string" Color="@(context.IsActive ? Color.Success : Color.Error)" Size="Size.Small">@(context.IsActive ? "Active" : "Inactive")</MudChip>
+            </MudTd>
+            <MudTd DataLabel="Actions">
+                 <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small" OnClick="@(() => EditEmployee(context))" />
+                 <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" Color="Color.Error" OnClick="@(() => DeleteEmployee(context))" Disabled="@(context.Id == currentAdmin?.Id)" />
+            </MudTd>
+        </RowTemplate>
+    </MudTable>
+}
+
+@code {
+    private Employee? currentAdmin;
+    private List<Employee> employees = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        if (user.Identity?.IsAuthenticated == true && user.IsInRole("Admin"))
+        {
+            var idClaim = user.FindFirst("Id");
+            int.TryParse(idClaim?.Value, out int id);
+
+            currentAdmin = new Employee 
+            { 
+                Id = id,
+                Name = user.Identity.Name ?? "Admin",
+                Role = "Admin"
+            };
+            await LoadEmployees();
+        }
+    }
+
+    private async Task DeleteEmployee(Employee employee)
+    {
+        var confirm = await DialogService.ShowMessageBox(
+            "Delete Employee", 
+            $"Are you sure you want to delete {employee.Name}?", 
+            yesText: "Delete", cancelText: "Cancel");
+            
+        if (confirm == true)
+        {
+            try
+            {
+                var response = await Http.DeleteAsync($"api/employees/{employee.Id}");
+                if (response.IsSuccessStatusCode)
+                {
+                    Snackbar.Add("Employee deleted", Severity.Success);
+                    await LoadEmployees();
+                }
+                else
+                {
+                    Snackbar.Add("Failed to delete employee", Severity.Error);
+                }
+            }
+            catch (Exception ex)
+            {
+                Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+            }
+        }
+    }
+
+    private async Task VerifyAdminPattern(string pattern)
+    {
+        try
+        {
+            var response = await Http.GetAsync($"api/employees/verify/{pattern}");
+            if (response.IsSuccessStatusCode)
+            {
+                var employee = await response.Content.ReadFromJsonAsync<Employee>();
+                if (employee?.Role == "Admin")
+                {
+                    currentAdmin = employee;
+                    await LoadEmployees();
+                }
+                else
+                {
+                    Snackbar.Add("Access Denied: Admin privileges required.", Severity.Error);
+                }
+            }
+            else
+            {
+                Snackbar.Add("Invalid passcode pattern", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Login error: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task LoadEmployees()
+    {
+        try
+        {
+            employees = await Http.GetFromJsonAsync<List<Employee>>("api/employees") ?? new();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading employees: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task AddEmployee()
+    {
+        var options = new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.Small, FullWidth = true };
+        var parameters = new DialogParameters { ["IsAdminMode"] = true };
+        var dialog = await DialogService.ShowAsync<AddEmployeeDialog>("Add Employee", parameters, options);
+        var result = await dialog.Result;
+
+        if (result != null && !result.Canceled)
+        {
+            await LoadEmployees();
+        }
+    }
+
+    private async Task EditEmployee(Employee employee)
+    {
+        var parameters = new DialogParameters { ["Employee"] = employee, ["IsAdminMode"] = true };
+        var options = new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.Small, FullWidth = true };
+        var dialog = await DialogService.ShowAsync<AddEmployeeDialog>("Edit Employee", parameters, options);
+        var result = await dialog.Result;
+
+        if (result != null && !result.Canceled)
+        {
+            await LoadEmployees();
+        }
+    }
+}

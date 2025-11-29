@@ -1,0 +1,115 @@
+@using M_Wallet.Shared
+@using M_Wallet.Client.Services
+@using MudBlazor
+@inject ReceiptService ReceiptService
+@inject IJSRuntime JSRuntime
+
+<MudDialog>
+    <TitleContent>
+        <MudText Typo="Typo.h6">@Title</MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudGrid Class="mb-2">
+            <MudItem xs="12" sm="4">
+                <MudDatePicker Label="From" @bind-Date="_dateFrom" Variant="Variant.Outlined" Margin="Margin.Dense" Clearable="true" MaxDate="@DateTime.Today" />
+            </MudItem>
+            <MudItem xs="12" sm="4">
+                <MudDatePicker Label="To" @bind-Date="_dateTo" Variant="Variant.Outlined" Margin="Margin.Dense" Clearable="true" MaxDate="@DateTime.Today" />
+            </MudItem>
+            <MudItem xs="12" sm="4">
+                <MudTextField @bind-Value="searchString" Placeholder="Search (Fuzzy)" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium" Class="mt-0" Immediate="true"></MudTextField>
+            </MudItem>
+        </MudGrid>
+
+        <MudTable Items="@FilteredItems" Hover="true" Dense="true" FixedHeader="true" Height="400px">
+            <HeaderContent>
+                <MudTh>Date</MudTh>
+                <MudTh>Description</MudTh>
+                <MudTh Style="text-align: right">Change</MudTh>
+                <MudTh Style="text-align: right">Balance</MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd DataLabel="Date">@context.Date.ToLocalTime().ToString("g")</MudTd>
+                <MudTd DataLabel="Description">@context.Description</MudTd>
+                <MudTd DataLabel="Change" Style="@GetColor(context.Amount)">@context.Amount.ToString("N2")</MudTd>
+                <MudTd DataLabel="Balance" Style="text-align: right; font-weight: bold;">@context.RunningBalance.ToString("N2")</MudTd>
+            </RowTemplate>
+            <PagerContent>
+                <MudTablePager PageSizeOptions="new int[]{10, 25, 50, 100}" />
+            </PagerContent>
+        </MudTable>
+    </DialogContent>
+    <DialogActions>
+        <MudText Typo="Typo.h6" Class="mr-auto ml-4">Final Balance: @FinalBalance.ToString("N2") LD</MudText>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Print" OnClick="PrintStatement">Print / PDF</MudButton>
+        <MudButton OnClick="Cancel">Close</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = default!;
+
+    [Parameter] public List<StatementItem> Items { get; set; } = new();
+    [Parameter] public string Title { get; set; } = "";
+
+    private string searchString = "";
+    private DateTime? _dateFrom;
+    private DateTime? _dateTo;
+
+    private void Cancel() => MudDialog.Cancel();
+
+    private async Task PrintStatement()
+    {
+        // Extract customer name from Title "Statement - CustomerName"
+        var customerName = Title.Replace("Statement - ", "");
+        
+        var html = ReceiptService.GenerateStatementHtml(customerName, _dateFrom, _dateTo, FilteredItems.ToList());
+        await JSRuntime.InvokeVoidAsync("printer.printHtml", html);
+    }
+
+    private string GetColor(decimal amount)
+    {
+        if (amount > 0) return "text-align: right; color: var(--mud-palette-success);";
+        if (amount < 0) return "text-align: right; color: var(--mud-palette-error);";
+        return "text-align: right;";
+    }
+
+    private IEnumerable<StatementItem> FilteredItems
+    {
+        get
+        {
+            var items = Items.AsEnumerable();
+
+            if (_dateFrom.HasValue)
+                items = items.Where(i => i.Date.Date >= _dateFrom.Value.Date);
+            
+            if (_dateTo.HasValue)
+                items = items.Where(i => i.Date.Date <= _dateTo.Value.Date);
+
+            if (!string.IsNullOrWhiteSpace(searchString))
+            {
+                var terms = searchString.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+                items = items.Where(item => 
+                {
+                    foreach (var term in terms)
+                    {
+                        bool containsTerm = false;
+                        if (item.Description.Contains(term, StringComparison.OrdinalIgnoreCase))
+                            containsTerm = true;
+                        else if (item.Amount.ToString().Contains(term))
+                            containsTerm = true;
+                        else if (item.Date.ToString().Contains(term))
+                            containsTerm = true;
+                        
+                        if (!containsTerm) return false;
+                    }
+                    return true;
+                });
+            }
+            
+            return items;
+        }
+    }
+
+    private decimal FinalBalance => FilteredItems.FirstOrDefault()?.RunningBalance ?? 0;
+}

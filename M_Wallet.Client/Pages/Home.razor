@@ -1,15 +1,73 @@
 ﻿@page "/"
 @using M_Wallet.Client.Components
 @using System.Text.Json
+@using M_Wallet.Client.Services
+@using M_Wallet.Shared
+@using M_Wallet.Shared.Models
 @inject HttpClient Http
 @inject ISnackbar Snackbar
 @inject IJSRuntime JSRuntime
 @inject IDialogService DialogService
 @inject NavigationManager NavigationManager
-
-
+@inject ReceiptService _receiptService
+@inject CustomAuthenticationStateProvider AuthStateProvider
 
 <PageTitle>POS - Point of Sale</PageTitle>
+
+<MudOverlay Visible="showSuccessOverlay" DarkBackground="true" Absolute="false" ZIndex="2000" OnClick="@(() => showSuccessOverlay = false)">
+    <MudCard Class="pa-8 d-flex flex-column align-center justify-center gap-4" Style="width: 400px; max-width: 90vw; position: relative;">
+        <MudIconButton Icon="@Icons.Material.Filled.Close" 
+                       OnClick="@(() => showSuccessOverlay = false)" 
+                       Color="Color.Default" 
+                       Size="Size.Small" 
+                       Style="position: absolute; top: 8px; right: 8px;" />
+
+        <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Color="Color.Success" Style="font-size: 5rem;" />
+        <MudText Typo="Typo.h4" Color="Color.Success" Align="Align.Center"><b>Sale Complete!</b></MudText>
+        
+        <div class="d-flex flex-column align-center my-4">
+            <MudText Typo="Typo.h3"><b>LD @(lastSuccessfulTransaction?.TotalAmount.ToString("F2") ?? "0.00")</b></MudText>
+            <MudText Typo="Typo.caption">Total Amount</MudText>
+        </div>
+
+        <MudDivider Class="w-100 my-2" />
+
+        <div class="w-100 px-4">
+            <div class="d-flex justify-space-between mb-1">
+                <MudText Typo="Typo.body2" Color="Color.Secondary">Date:</MudText>
+                <MudText Typo="Typo.body2">@lastSuccessfulTransaction?.TransactionDate.ToLocalTime().ToString("g")</MudText>
+            </div>
+            <div class="d-flex justify-space-between mb-1">
+                <MudText Typo="Typo.body2" Color="Color.Secondary">Employee:</MudText>
+                <MudText Typo="Typo.body2">@lastSuccessfulTransaction?.EmployeeName</MudText>
+            </div>
+            @if (!string.IsNullOrEmpty(lastSuccessfulTransaction?.CustomerName))
+            {
+                <div class="d-flex justify-space-between mb-1">
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">Customer:</MudText>
+                    <MudText Typo="Typo.body2">@lastSuccessfulTransaction?.CustomerName</MudText>
+                </div>
+            }
+            <div class="d-flex justify-space-between mb-1">
+                <MudText Typo="Typo.body2" Color="Color.Secondary">Payment:</MudText>
+                <MudText Typo="Typo.body2">@lastPaymentMethod</MudText>
+            </div>
+        </div>
+
+        @if (lastTransactionPaidAmount > (lastSuccessfulTransaction?.TotalAmount ?? 0))
+        {
+            <MudDivider Class="w-100 my-2" />
+            <div class="d-flex justify-space-between w-100 px-4">
+                <MudText>Paid:</MudText>
+                <MudText><b>LD @lastTransactionPaidAmount.ToString("F2")</b></MudText>
+            </div>
+            <div class="d-flex justify-space-between w-100 px-4">
+                <MudText Color="Color.Success"><b>Change:</b></MudText>
+                <MudText Color="Color.Success"><b>LD @((lastTransactionPaidAmount - (lastSuccessfulTransaction?.TotalAmount ?? 0)).ToString("F2"))</b></MudText>
+            </div>
+        }
+    </MudCard>
+</MudOverlay>
 
 <MudGrid Spacing="2">
     <!-- Main Product Area -->
@@ -133,22 +191,54 @@
 
                 <MudDivider Class="my-4" />
                 
-                <MudTextField @bind-Value="customerName" 
-                              Label="Customer Name (Optional)" 
-                              Variant="Variant.Outlined" 
-                              Margin="Margin.Dense"
-                              Class="mb-2" />
-                <MudTextField @bind-Value="employeeName" 
-                              Label="Employee Name" 
-                              Variant="Variant.Outlined" 
-                              Margin="Margin.Dense"
-                              Required="true"
-                              Class="mb-3" />
+                <div class="d-flex justify-end mb-2">
+                     <MudButton Variant="Variant.Text" 
+                                Size="Size.Small" 
+                                Color="@(selectedDate?.Date == DateTime.Today ? Color.Default : Color.Warning)"
+                                OnClick="@(() => showDatePicker = !showDatePicker)"
+                                StartIcon="@Icons.Material.Filled.CalendarMonth">
+                        @(selectedDate?.Date == DateTime.Today ? "Backdate Sale" : $"Date: {selectedDate:MM/dd/yyyy}")
+                     </MudButton>
+                </div>
+
+                @if (showDatePicker)
+                {
+                    <MudDatePicker Label="Transaction Date" 
+                                   @bind-Date="selectedDate" 
+                                   MaxDate="@DateTime.Today"
+                                   Variant="Variant.Outlined"
+                                   Margin="Margin.Dense"
+                                   Class="mb-2"
+                                   Adornment="Adornment.End"
+                                   AdornmentIcon="@Icons.Material.Filled.Event" />
+                }
+
+                <MudAutocomplete T="string"
+                                 Label="Customer Name (Optional)"
+                                 @bind-Value="customerName"
+                                 SearchFunc="@SearchCustomers"
+                                 Variant="Variant.Outlined"
+                                 Margin="Margin.Dense"
+                                 Class="mb-2"
+                                 Clearable="true"
+                                 CoerceValue="false"
+                                 AdornmentIcon="@Icons.Material.Filled.Search" />
 
                 <MudSelect T="string" Label="Payment Status" @bind-Value="paymentStatus" Variant="Variant.Outlined" Margin="Margin.Dense" Class="mb-2">
                     <MudSelectItem Value="@("Paid")">Paid Now</MudSelectItem>
                     <MudSelectItem Value="@("Unpaid")">Pay Later (Credit)</MudSelectItem>
                 </MudSelect>
+
+                <div class="d-flex align-center gap-4 mb-2">
+                    <MudCheckBox @bind-Value="printReceipt" Label="Print / طباعة" Color="Color.Primary" Dense="true" />
+                    @if (printReceipt)
+                    {
+                        <MudRadioGroup @bind-Value="printFormat" Class="d-flex gap-4">
+                            <MudRadio Value="@("A4")" Color="Color.Primary" Dense="true">A4</MudRadio>
+                            <MudRadio Value="@("Thermal")" Color="Color.Primary" Dense="true">Thermal</MudRadio>
+                        </MudRadioGroup>
+                    }
+                </div>
 
                 @if (paymentStatus == "Paid")
                 {
@@ -175,15 +265,25 @@
                     </MudText>
                 </div>
 
-                <MudButton Variant="Variant.Filled" 
-                           Color="Color.Success" 
-                           FullWidth="true"
-                           Size="Size.Large"
-                           StartIcon="@Icons.Material.Filled.Payment"
-                           OnClick="CompleteCheckout"
-                           Disabled="@(string.IsNullOrWhiteSpace(employeeName) || isProcessing)">
-                    @(isProcessing ? "Processing..." : "Complete Sale")
-                </MudButton>
+                @if (currentEmployee?.Role == "System")
+                {
+                     <MudPaper Class="pa-2 mb-3 d-flex flex-column align-center" Elevation="0" Style="background-color: transparent;">
+                        <MudText Typo="Typo.caption" Class="mb-1">Enter Pattern to Complete Sale</MudText>
+                        <PatternLock @ref="patternLock" OnPatternComplete="VerifyPatternAndComplete" />
+                    </MudPaper>
+                }
+                else
+                {
+                    <MudButton Variant="Variant.Filled" 
+                               Color="Color.Success" 
+                               FullWidth="true"
+                               Size="Size.Large"
+                               StartIcon="@Icons.Material.Filled.Payment"
+                               OnClick="@(() => CompleteCheckout(null))"
+                               Disabled="@(isProcessing)">
+                        @(isProcessing ? "Processing..." : "Complete Sale")
+                    </MudButton>
+                }
 
                 <MudButton Variant="Variant.Text" 
                            Color="Color.Error" 
@@ -202,14 +302,27 @@
 @code {
 
     private List<Product>? products;
+    private List<M_Wallet.Shared.Customer> customers = new();
     private List<TransactionItem> cartItems = new();
     private string searchString = "";
+    
+    // Success Overlay State
+    private bool showSuccessOverlay = false;
+    private Transaction? lastSuccessfulTransaction;
+    private decimal lastTransactionPaidAmount;
+    private string lastPaymentMethod = "";
+
+    private DateTime? selectedDate = DateTime.Today;
+    private bool showDatePicker = false;
     private string customerName = "";
-    private string employeeName = "";
+    private Employee? currentEmployee;
     private bool isProcessing = false;
+    private bool printReceipt = false;
+    private string printFormat = "A4";
     private TransactionItem? editingItem = null;
     private string editingPriceValue = "";
     private MudTextField<string>? priceInputRef;
+    private PatternLock? patternLock;
 
     private string paymentStatus = "Paid";
     private string paymentMethod = "Cash";
@@ -217,7 +330,15 @@
 
     protected override async Task OnInitializedAsync()
     {
+        currentEmployee = await AuthStateProvider.GetCurrentUserAsync();
+        if (currentEmployee == null)
+        {
+             NavigationManager.NavigateTo("/login");
+             return;
+        }
+
         await LoadProducts();
+        await LoadCustomers();
         
         var uri = NavigationManager.ToAbsoluteUri(NavigationManager.Uri);
         var query = uri.Query;
@@ -248,6 +369,28 @@
         {
             // Snackbar.Add($"Error loading products: {ex.Message}", Severity.Error);
         }
+    }
+
+    private async Task LoadCustomers()
+    {
+        try
+        {
+            customers = await Http.GetFromJsonAsync<List<Customer>>("api/customers") ?? new();
+        }
+        catch (Exception)
+        {
+            // Ignore errors
+        }
+    }
+
+    private Task<IEnumerable<string>> SearchCustomers(string value, CancellationToken token)
+    {
+        if (string.IsNullOrEmpty(value))
+            return Task.FromResult(customers.Select(x => x.Name));
+            
+        return Task.FromResult(customers
+            .Where(x => x.Name.Contains(value, StringComparison.InvariantCultureIgnoreCase))
+            .Select(x => x.Name));
     }
 
     /// <summary>
@@ -452,17 +595,54 @@
         return cartItems.Sum(i => i.Subtotal);
     }
 
-    private async Task CompleteCheckout()
+    private async Task VerifyPatternAndComplete(string pattern)
     {
+        try
+        {
+            var response = await Http.GetAsync($"api/employees/verify/{pattern}");
+            if (response.IsSuccessStatusCode)
+            {
+                var employee = await response.Content.ReadFromJsonAsync<Employee>();
+                await CompleteCheckout(employee);
+            }
+            else
+            {
+                if (patternLock != null)
+                {
+                    await patternLock.ShowError("Invalid Pattern");
+                }
+                else
+                {
+                    Snackbar.Add("Invalid passcode pattern", Severity.Error);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            if (patternLock != null)
+            {
+                await patternLock.ShowError("Error verifying");
+            }
+            else
+            {
+                Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+            }
+        }
+    }
+
+    private async Task CompleteCheckout(Employee? employee = null)
+    {
+        var transactionEmployee = employee ?? currentEmployee;
+
         if (!cartItems.Any())
         {
             // Snackbar.Add("Cart is empty", Severity.Warning);
             return;
         }
 
-        if (string.IsNullOrWhiteSpace(employeeName))
+        if (transactionEmployee == null)
         {
-            // Snackbar.Add("Employee name is required", Severity.Warning);
+            Snackbar.Add("Employee login required", Severity.Warning);
             return;
         }
 
@@ -470,10 +650,15 @@
 
         try
         {
+            var transactionDate = selectedDate.HasValue 
+                ? selectedDate.Value.Date.Add(DateTime.Now.TimeOfDay).ToUniversalTime()
+                : DateTime.UtcNow;
+
             var transaction = new Transaction
             {
+                TransactionDate = transactionDate,
                 CustomerName = string.IsNullOrWhiteSpace(customerName) ? null : customerName,
-                EmployeeName = employeeName,
+                EmployeeName = transactionEmployee!.Name,
                 Items = cartItems.Select(ci => new TransactionItem
                 {
                     ProductId = ci.ProductId,
@@ -493,31 +678,89 @@
                 var result = await response.Content.ReadFromJsonAsync<JsonElement>();
                 var transactionId = result.GetProperty("id").GetInt32();
                 var total = CalculateTotal();
+                var paidAmount = amountPaid > 0 ? amountPaid : total;
 
                 if (paymentStatus == "Paid")
                 {
                     var payment = new Payment
                     {
-                        PaymentDate = DateTime.UtcNow,
-                        Amount = amountPaid > 0 ? amountPaid : total, // Use entered amount or full total
+                        PaymentDate = transactionDate,
+                        Amount = paidAmount,
                         PaymentMethod = paymentMethod,
                         CustomerName = customerName,
+                        EmployeeName = transactionEmployee!.Name,
                         Allocations = new List<PaymentAllocation>
                         {
                             new PaymentAllocation
                             {
                                 TransactionId = transactionId,
-                                Amount = amountPaid > 0 ? amountPaid : total
+                                Amount = paidAmount
                             }
                         }
                     };
                     
-                    await Http.PostAsJsonAsync("api/payments", payment);
+                    var paymentResponse = await Http.PostAsJsonAsync("api/payments", payment);
+                    if (!paymentResponse.IsSuccessStatusCode)
+                    {
+                        var paymentError = await paymentResponse.Content.ReadAsStringAsync();
+                        Snackbar.Add($"Transaction created but payment failed: {paymentError}", Severity.Error);
+                    }
                 }
+
+                if (printReceipt)
+                {
+                    var printTransaction = new Transaction
+                    {
+                        Id = transactionId,
+                        TransactionDate = transactionDate,
+                        CustomerName = customerName,
+                        EmployeeName = transactionEmployee!.Name,
+                        TotalAmount = total,
+                        Items = cartItems.Select(ci => new TransactionItem
+                        {
+                            Product = ci.Product,
+                            Quantity = ci.Quantity,
+                            UnitPrice = ci.UnitPrice,
+                            Subtotal = ci.Subtotal
+                        }).ToList(),
+                        PaymentAllocations = new List<PaymentAllocation> 
+                        { 
+                            new PaymentAllocation { Amount = paidAmount } 
+                        }
+                    };
+
+                    string html;
+                    if (printFormat == "A4")
+                    {
+                        html = _receiptService.GenerateInvoiceHtml(printTransaction);
+                    }
+                    else
+                    {
+                        html = _receiptService.GenerateReceiptHtml(printTransaction);
+                    }
+                    await JSRuntime.InvokeVoidAsync("printer.printHtml", html);
+                }
+
+                // Show Success Overlay
+                lastSuccessfulTransaction = new Transaction 
+                { 
+                    TotalAmount = total,
+                    CustomerName = customerName,
+                    EmployeeName = transactionEmployee!.Name,
+                    TransactionDate = transactionDate
+                };
+                lastTransactionPaidAmount = paidAmount;
+                lastPaymentMethod = paymentMethod;
+                showSuccessOverlay = true;
+                StateHasChanged();
+                
+                // Delay hiding
+                await Task.Delay(3000);
+                showSuccessOverlay = false;
 
                 // Snackbar.Add($"Sale completed! Total: LD {total:F2}", Severity.Success);
                 ClearCart();
-                employeeName = "";
+                
                 paymentStatus = "Paid"; // Reset defaults
                 paymentMethod = "Cash";
                 amountPaid = 0;

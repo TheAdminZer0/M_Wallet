@@ -1,7 +1,9 @@
 @page "/debts"
 @inject HttpClient Http
+@inject IDialogService DialogService
 @using M_Wallet.Shared
 @using MudBlazor
+@using M_Wallet.Client.Components
 
 <PageTitle>Financial Dashboard</PageTitle>
 
@@ -19,16 +21,28 @@ else
     <MudGrid>
         <MudItem xs="12" sm="6" md="3">
             <MudPaper Class="pa-4 mud-theme-primary" Elevation="3">
-                <MudText Typo="Typo.subtitle2" Class="white-text">Inventory Value (Cost)</MudText>
+                <div class="d-flex justify-space-between align-center">
+                    <MudText Typo="Typo.subtitle2" Class="white-text">Inventory Value (Cost)</MudText>
+                    <MudIconButton Icon="@Icons.Material.Filled.History" Size="Size.Small" Class="white-text" OnClick="ShowInventoryStatement" />
+                </div>
                 <MudText Typo="Typo.h5" Class="white-text">@TotalInventoryValue.ToString("N2") LD</MudText>
                 <MudIcon Icon="@Icons.Material.Filled.Inventory" Class="white-text float-right" Size="Size.Large" />
             </MudPaper>
         </MudItem>
         <MudItem xs="12" sm="6" md="3">
             <MudPaper Class="pa-4 mud-theme-success" Elevation="3">
-                <MudText Typo="Typo.subtitle2" Class="white-text">Total Cash Received</MudText>
+                <div class="d-flex justify-space-between align-center">
+                    <MudText Typo="Typo.subtitle2" Class="white-text">The Foundry</MudText>
+                    <MudIconButton Icon="@Icons.Material.Filled.History" Size="Size.Small" Class="white-text" OnClick="ShowFoundryStatement" />
+                </div>
                 <MudText Typo="Typo.h5" Class="white-text">@TotalCashReceived.ToString("N2") LD</MudText>
-                <MudIcon Icon="@Icons.Material.Filled.AttachMoney" Class="white-text float-right" Size="Size.Large" />
+                <MudText Typo="Typo.caption" Class="white-text d-block">Cost Recouped: @TotalRecoupedCost.ToString("N2") LD</MudText>
+                <MudText Typo="Typo.caption" Class="white-text d-block">Net Profit: @TotalRealizedProfit.ToString("N2") LD</MudText>
+                @if (TotalUnallocatedCash > 0)
+                {
+                    <MudText Typo="Typo.caption" Class="white-text d-block">Unallocated: @TotalUnallocatedCash.ToString("N2") LD</MudText>
+                }
+                <MudIcon Icon="@Icons.Material.Filled.AttachMoney" Class="white-text float-right" Size="Size.Large" Style="margin-top: -40px;" />
             </MudPaper>
         </MudItem>
         <MudItem xs="12" sm="6" md="3">
@@ -162,6 +176,10 @@ else
     private decimal TotalCashReceived => payments.Sum(p => p.Amount);
     private decimal TotalCustomerDebt => transactions.Sum(t => t.TotalAmount - t.PaymentAllocations.Sum(pa => pa.Amount));
 
+    private decimal TotalRecoupedCost;
+    private decimal TotalRealizedProfit;
+    private decimal TotalUnallocatedCash;
+
     private Dictionary<string, decimal> SupplierDebts = new();
     private Dictionary<string, decimal> EmployeeDebts = new();
 
@@ -182,6 +200,7 @@ else
             payments = await paymentsTask ?? new();
 
             CalculateDebts();
+            CalculateFoundryBreakdown();
         }
         catch (Exception ex)
         {
@@ -205,5 +224,170 @@ else
             .Where(p => p.PaidBy != null && p.PaidBy.StartsWith("Employee: ") && p.PaymentStatus == "Paid") // Paid by employee means store owes them
             .GroupBy(p => p.PaidBy.Substring("Employee: ".Length))
             .ToDictionary(g => g.Key, g => g.Sum(p => p.TotalAmount));
+    }
+
+    private void CalculateFoundryBreakdown()
+    {
+        TotalRecoupedCost = 0;
+        TotalRealizedProfit = 0;
+        TotalUnallocatedCash = 0;
+
+        foreach (var payment in payments)
+        {
+            decimal allocatedAmount = 0;
+
+            if (payment.Allocations != null)
+            {
+                foreach (var allocation in payment.Allocations)
+                {
+                    allocatedAmount += allocation.Amount;
+
+                    // Find the transaction for this allocation
+                    // Note: The allocation object from API should have the Transaction populated if we used Include properly.
+                    // If not, we might need to look it up in the 'transactions' list.
+                    // Based on PaymentsController, it includes Transaction and Items.
+                    
+                    var transaction = allocation.Transaction;
+                    
+                    // Fallback to lookup if navigation property is null (though controller sends it)
+                    if (transaction == null)
+                    {
+                        transaction = transactions.FirstOrDefault(t => t.Id == allocation.TransactionId);
+                    }
+
+                    if (transaction != null && transaction.Items != null && transaction.Items.Any())
+                    {
+                        decimal transactionTotalRevenue = transaction.Items.Sum(i => i.Subtotal); // Or i.Quantity * i.UnitPrice
+                        decimal transactionTotalCost = transaction.Items.Sum(i => i.Quantity * i.UnitCost);
+
+                        if (transactionTotalRevenue > 0)
+                        {
+                            decimal costRatio = transactionTotalCost / transactionTotalRevenue;
+                            // Clamp ratio to 1 (in case cost > revenue, i.e., loss)
+                            // If loss, then all payment goes to cost recoup until cost is met? 
+                            // Or just proportional?
+                            // Let's stick to proportional for now. If I sold for 100 (Cost 120), and got paid 50.
+                            // Cost Ratio = 1.2. 
+                            // Recouped = 50 * 1.2 = 60? No, can't recoup more than paid.
+                            // If Cost > Revenue, then Profit is negative.
+                            // Realized Profit = 50 * (1 - 1.2) = -10.
+                            // Recouped Cost = 60.
+                            // Net = 50. Correct.
+                            
+                            TotalRecoupedCost += allocation.Amount * costRatio;
+                            TotalRealizedProfit += allocation.Amount * (1 - costRatio);
+                        }
+                        else
+                        {
+                            // Revenue is 0. Weird case. Treat as profit? Or unallocated?
+                            // If revenue is 0, we can't divide.
+                            TotalUnallocatedCash += allocation.Amount;
+                        }
+                    }
+                    else
+                    {
+                        // Transaction not found or has no items
+                        TotalUnallocatedCash += allocation.Amount;
+                    }
+                }
+            }
+
+            // Add any unallocated amount from this payment
+            if (payment.Amount > allocatedAmount)
+            {
+                TotalUnallocatedCash += (payment.Amount - allocatedAmount);
+            }
+        }
+    }
+
+    private async Task ShowFoundryStatement()
+    {
+        var items = new List<StatementItem>();
+        
+        // Inflow: Payments
+        items.AddRange(payments.Select(p => new StatementItem 
+        { 
+            Date = p.PaymentDate, 
+            Description = $"Payment Received ({p.PaymentMethod}) - {p.Reference}", 
+            Amount = p.Amount 
+        }));
+
+        // Outflow: Purchases paid by Store
+        items.AddRange(purchases
+            .Where(p => p.PaymentStatus == "Paid" && (p.PaidBy == "Store" || string.IsNullOrEmpty(p.PaidBy)))
+            .Select(p => new StatementItem 
+            { 
+                Date = p.PurchaseDate, 
+                Description = $"Purchase - {p.SupplierName}", 
+                Amount = -p.TotalAmount 
+            }));
+
+        await ShowStatement("The Foundry Statement", items);
+    }
+
+    private async Task ShowInventoryStatement()
+    {
+        var items = new List<StatementItem>();
+
+        // Inflow: Purchases (Stock In)
+        items.AddRange(purchases.Select(p => new StatementItem 
+        { 
+            Date = p.PurchaseDate, 
+            Description = $"Stock In - {p.SupplierName}", 
+            Amount = p.TotalAmount // Assuming Cost Value
+        }));
+
+        // Outflow: Sales (Stock Out)
+        foreach(var t in transactions)
+        {
+            // Calculate total cost of items in transaction
+            var cost = t.Items.Sum(i => i.Quantity * i.UnitCost);
+            if (cost > 0)
+            {
+                items.Add(new StatementItem
+                {
+                    Date = t.TransactionDate,
+                    Description = $"Sale #{t.Id}",
+                    Amount = -cost
+                });
+            }
+        }
+
+        // Reconciliation: Add adjustment for manual stock changes, price updates, or initial stock
+        decimal ledgerBalance = items.Sum(i => i.Amount);
+        decimal actualInventoryValue = TotalInventoryValue;
+        decimal discrepancy = actualInventoryValue - ledgerBalance;
+
+        if (discrepancy != 0)
+        {
+            items.Add(new StatementItem
+            {
+                Date = DateTime.Now,
+                Description = "Manual Adjustments / Unrecorded Stock",
+                Amount = discrepancy
+            });
+        }
+
+        await ShowStatement("Inventory Value Statement", items);
+    }
+
+    private async Task ShowStatement(string title, List<StatementItem> items)
+    {
+        items = items.OrderBy(i => i.Date).ToList();
+        
+        decimal balance = 0;
+        foreach(var item in items)
+        {
+            balance += item.Amount;
+            item.RunningBalance = balance;
+        }
+        
+        var parameters = new DialogParameters();
+        parameters.Add("Items", items.OrderByDescending(i => i.Date).ToList());
+        parameters.Add("Title", title);
+
+        var options = new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.Medium, FullWidth = true };
+
+        await DialogService.ShowAsync<FinancialStatementDialog>(title, parameters, options);
     }
 }

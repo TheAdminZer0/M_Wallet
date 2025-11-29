@@ -58,8 +58,19 @@ public class TransactionsController : ControllerBase
     {
         try
         {
-            transaction.TransactionDate = DateTime.UtcNow;
+            // If date is not provided (default), use current time. 
+            // Otherwise use the provided date (converted to UTC for consistency)
+            if (transaction.TransactionDate == default)
+            {
+                transaction.TransactionDate = DateTime.UtcNow;
+            }
+            else
+            {
+                transaction.TransactionDate = transaction.TransactionDate.ToUniversalTime();
+            }
             
+            var productNames = new List<string>();
+
             // Validate and update stock for each item
             foreach (var item in transaction.Items)
             {
@@ -69,6 +80,8 @@ public class TransactionsController : ControllerBase
                 {
                     return BadRequest($"Product with ID {item.ProductId} not found");
                 }
+
+                productNames.Add(product.Name);
                 
                 if (product.StockQuantity < item.Quantity)
                 {
@@ -87,7 +100,56 @@ public class TransactionsController : ControllerBase
             
             transaction.TotalAmount = transaction.Items.Sum(i => i.Subtotal);
 
+            // Handle Customer Creation/Linking
+            if (!string.IsNullOrWhiteSpace(transaction.CustomerName))
+            {
+                var customerName = transaction.CustomerName.Trim();
+                var existingCustomer = await _context.Customers
+                    .FirstOrDefaultAsync(c => c.Name.ToLower() == customerName.ToLower());
+
+                if (existingCustomer != null)
+                {
+                    transaction.CustomerId = existingCustomer.Id;
+                    // Ensure the name matches exactly the existing record to avoid case discrepancies
+                    transaction.CustomerName = existingCustomer.Name; 
+                }
+                else
+                {
+                    var newCustomer = new Customer
+                    {
+                        Name = customerName,
+                        CreatedAt = DateTime.UtcNow
+                    };
+                    _context.Customers.Add(newCustomer);
+                    await _context.SaveChangesAsync(); // Save to generate ID
+                    
+                    transaction.CustomerId = newCustomer.Id;
+                    transaction.CustomerName = newCustomer.Name;
+                }
+            }
+
             _context.Transactions.Add(transaction);
+            await _context.SaveChangesAsync();
+
+            // Log the sale
+            var itemDetails = string.Join(", ", productNames);
+            var customerDisplay = string.IsNullOrWhiteSpace(transaction.CustomerName) ? "Walk-in" : transaction.CustomerName;
+            var dateDisplay = transaction.TransactionDate.ToString("yyyy-MM-dd");
+
+            var log = new AuditLog
+            {
+                Timestamp = DateTime.UtcNow,
+                Action = "Sale",
+                Entity = "Transaction",
+                EntityId = transaction.Id.ToString(),
+                EmployeeName = transaction.EmployeeName,
+                Description = $"Date: {dateDisplay} | Customer: {customerDisplay} | Items: {itemDetails} | Total: {transaction.TotalAmount:F2} LD",
+                Changes = System.Text.Json.JsonSerializer.Serialize(new { 
+                    Customer = transaction.CustomerName,
+                    Items = transaction.Items.Select(i => new { i.ProductId, i.Quantity, i.UnitPrice }) 
+                })
+            };
+            _context.AuditLogs.Add(log);
             await _context.SaveChangesAsync();
 
             // Return a simple response without circular references
@@ -106,7 +168,7 @@ public class TransactionsController : ControllerBase
     }
 
     [HttpDelete("{id}")]
-    public async Task<IActionResult> DeleteTransaction(int id)
+    public async Task<IActionResult> DeleteTransaction(int id, [FromQuery] string? employeeName = null)
     {
         var transaction = await _context.Transactions
             .Include(t => t.Items)
@@ -137,6 +199,19 @@ public class TransactionsController : ControllerBase
         // 3. Remove Transaction (Items will cascade delete if configured, but let's be safe)
         _context.TransactionItems.RemoveRange(transaction.Items);
         _context.Transactions.Remove(transaction);
+
+        // Log the deletion
+        var log = new AuditLog
+        {
+            Timestamp = DateTime.UtcNow,
+            Action = "Delete",
+            Entity = "Transaction",
+            EntityId = transaction.Id.ToString(),
+            EmployeeName = !string.IsNullOrEmpty(employeeName) ? employeeName : "System",
+            Description = $"Deleted transaction #{transaction.Id} for {transaction.TotalAmount:F2} LD",
+            Changes = "Stock restored"
+        };
+        _context.AuditLogs.Add(log);
 
         await _context.SaveChangesAsync();
 

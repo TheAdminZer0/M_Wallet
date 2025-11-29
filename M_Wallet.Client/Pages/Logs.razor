@@ -1,0 +1,87 @@
+@page "/logs"
+@inject HttpClient Http
+@using M_Wallet.Shared
+@using MudBlazor
+
+<PageTitle>Audit Logs</PageTitle>
+
+<MudText Typo="Typo.h3" GutterBottom="true">Audit Logs</MudText>
+<MudText Class="mb-4">Track all system activities and employee actions.</MudText>
+
+<MudTable Items="@logs" Dense="true" Hover="true" Bordered="true" Striped="true" Filter="new Func<AuditLog,bool>(FilterFunc1)" Loading="@isLoading">
+    <ToolBarContent>
+        <MudText Typo="Typo.h6">System Logs</MudText>
+        <MudSpacer />
+        <MudTextField @bind-Value="searchString" Placeholder="Search logs..." Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium" Class="mt-0"></MudTextField>
+    </ToolBarContent>
+    <HeaderContent>
+        <MudTh>Time</MudTh>
+        <MudTh>Action</MudTh>
+        <MudTh>Entity</MudTh>
+        <MudTh>Employee</MudTh>
+        <MudTh>Description</MudTh>
+    </HeaderContent>
+    <RowTemplate>
+        <MudTd DataLabel="Time">@context.Timestamp.ToLocalTime().ToString("g")</MudTd>
+        <MudTd DataLabel="Action">
+            <MudChip T="string" Color="@GetColor(context.Action)" Size="Size.Small">@context.Action</MudChip>
+        </MudTd>
+        <MudTd DataLabel="Entity">@context.Entity</MudTd>
+        <MudTd DataLabel="Employee">@context.EmployeeName</MudTd>
+        <MudTd DataLabel="Description">@context.Description</MudTd>
+    </RowTemplate>
+    <PagerContent>
+        <MudTablePager />
+    </PagerContent>
+</MudTable>
+
+@code {
+    private List<AuditLog> logs = new();
+    private string searchString = "";
+    private bool isLoading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            logs = await Http.GetFromJsonAsync<List<AuditLog>>("api/logs") ?? new();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine(ex.Message);
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private bool FilterFunc1(AuditLog element) => FilterFunc(element, searchString);
+
+    private bool FilterFunc(AuditLog element, string searchString)
+    {
+        if (string.IsNullOrWhiteSpace(searchString))
+            return true;
+        if (element.Action.Contains(searchString, StringComparison.OrdinalIgnoreCase))
+            return true;
+        if (element.Entity.Contains(searchString, StringComparison.OrdinalIgnoreCase))
+            return true;
+        if (element.EmployeeName != null && element.EmployeeName.Contains(searchString, StringComparison.OrdinalIgnoreCase))
+            return true;
+        if (element.Description != null && element.Description.Contains(searchString, StringComparison.OrdinalIgnoreCase))
+            return true;
+        return false;
+    }
+
+    private Color GetColor(string action)
+    {
+        return action switch
+        {
+            "Create" => Color.Success,
+            "Update" => Color.Warning,
+            "Delete" => Color.Error,
+            "Sale" => Color.Primary,
+            _ => Color.Default
+        };
+    }
+}
