@@ -10,6 +10,8 @@ public class Payment
     public decimal Amount { get; set; }
     public string? PaymentMethod { get; set; } // Cash, Card, Transfer
     public string? Reference { get; set; } // Notes
+    public int? PersonId { get; set; }
+    public Person? Person { get; set; }
     public string? CustomerName { get; set; } // Snapshot of customer name at time of payment
     public string? EmployeeName { get; set; } // Who collected the payment
     

@@ -1,0 +1,302 @@
+@page "/users"
+@using M_Wallet.Shared
+@using M_Wallet.Client.Components
+@using M_Wallet.Client.Models
+@using MudBlazor
+@inject HttpClient Http
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+@inject AuthenticationStateProvider AuthStateProvider
+
+<PageTitle>Users</PageTitle>
+
+<MudTabs Elevation="2" Rounded="true" ApplyEffectsToContainer="true" PanelClass="pa-6">
+    <MudTabPanel Text="Customers" Icon="@Icons.Material.Filled.People">
+        <MudTable Items="@GetUsersByRole("Customer")" Hover="true" Dense="true" Filter="new Func<Person, bool>(FilterFunc)">
+            <ToolBarContent>
+                <MudText Typo="Typo.h6">Customers</MudText>
+                <MudSpacer />
+                <MudTextField @bind-Value="searchString" Placeholder="Search" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium" Class="mt-0"></MudTextField>
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" OnClick="@(() => AddUser("Customer"))" Class="ml-4">Add Customer</MudButton>
+            </ToolBarContent>
+            <HeaderContent>
+                <MudTh>Name</MudTh>
+                <MudTh>Phone Number</MudTh>
+                <MudTh>Actions</MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd DataLabel="Name">@context.Name</MudTd>
+                <MudTd DataLabel="Phone Number">@context.PhoneNumber</MudTd>
+                <MudTd DataLabel="Actions">
+                    <MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Primary" Size="Size.Small" OnClick="@(() => EditUser(context))" />
+                    <MudIconButton Icon="@Icons.Material.Filled.ReceiptLong" Color="Color.Info" Size="Size.Small" OnClick="@(() => ShowStatement(context))" Title="Statement" />
+                    <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" Size="Size.Small" OnClick="@(() => DeleteUser(context))" />
+                </MudTd>
+            </RowTemplate>
+            <PagerContent>
+                <MudTablePager />
+            </PagerContent>
+        </MudTable>
+    </MudTabPanel>
+
+    <MudTabPanel Text="Drivers" Icon="@Icons.Material.Filled.LocalShipping">
+        <MudTable Items="@GetUsersByRole("Driver")" Hover="true" Dense="true" Filter="new Func<Person, bool>(FilterFunc)">
+            <ToolBarContent>
+                <MudText Typo="Typo.h6">Drivers</MudText>
+                <MudSpacer />
+                <MudTextField @bind-Value="searchString" Placeholder="Search" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium" Class="mt-0"></MudTextField>
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" OnClick="@(() => AddUser("Driver"))" Class="ml-4">Add Driver</MudButton>
+            </ToolBarContent>
+            <HeaderContent>
+                <MudTh>Name</MudTh>
+                <MudTh>Phone Number</MudTh>
+                <MudTh>Deliveries</MudTh>
+                <MudTh>Actions</MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd DataLabel="Name">@context.Name</MudTd>
+                <MudTd DataLabel="Phone Number">@context.PhoneNumber</MudTd>
+                <MudTd DataLabel="Deliveries">
+                    <MudChip T="string" Color="Color.Success" Size="Size.Small">@context.CompletedDeliveries</MudChip>
+                </MudTd>
+                <MudTd DataLabel="Actions">
+                    <MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Primary" Size="Size.Small" OnClick="@(() => EditUser(context))" />
+                    <MudIconButton Icon="@Icons.Material.Filled.ReceiptLong" Color="Color.Info" Size="Size.Small" OnClick="@(() => ShowStatement(context))" Title="Statement" />
+                    <MudIconButton Icon="@Icons.Material.Filled.LocalShipping" Color="Color.Warning" Size="Size.Small" OnClick="@(() => ShowDeliveries(context))" Title="Deliveries" />
+                    <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" Size="Size.Small" OnClick="@(() => DeleteUser(context))" />
+                </MudTd>
+            </RowTemplate>
+            <PagerContent>
+                <MudTablePager />
+            </PagerContent>
+        </MudTable>
+    </MudTabPanel>
+
+    <MudTabPanel Text="System" Icon="@Icons.Material.Filled.Computer">
+        @if (isAdminVerified)
+        {
+            <MudTable Items="@GetUsersByRole("System")" Hover="true" Dense="true" Filter="new Func<Person, bool>(FilterFunc)">
+                <ToolBarContent>
+                    <MudText Typo="Typo.h6">System Accounts</MudText>
+                    <MudSpacer />
+                    <MudTextField @bind-Value="searchString" Placeholder="Search" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium" Class="mt-0"></MudTextField>
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" OnClick="@(() => AddUser("System"))" Class="ml-4">Add System User</MudButton>
+                </ToolBarContent>
+                <HeaderContent>
+                    <MudTh>Name</MudTh>
+                    <MudTh>Role</MudTh>
+                    <MudTh>Username</MudTh>
+                    <MudTh>Actions</MudTh>
+                </HeaderContent>
+                <RowTemplate Context="systemContext">
+                    <MudTd DataLabel="Name">@systemContext.Name</MudTd>
+                    <MudTd DataLabel="Role">@systemContext.Role</MudTd>
+                    <MudTd DataLabel="Username">@systemContext.Username</MudTd>
+                    <MudTd DataLabel="Actions">
+                        <MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Primary" Size="Size.Small" OnClick="@(() => EditUser(systemContext))" />
+                        <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" Size="Size.Small" OnClick="@(() => DeleteUser(systemContext))" />
+                    </MudTd>
+                </RowTemplate>
+                <PagerContent>
+                    <MudTablePager />
+                </PagerContent>
+            </MudTable>
+        }
+        else
+        {
+            <MudPaper Class="pa-8 d-flex flex-column align-center justify-center" Elevation="0">
+                <MudIcon Icon="@Icons.Material.Filled.Lock" Size="Size.Large" Color="Color.Warning" Class="mb-4" />
+                <MudText Typo="Typo.h5" Class="mb-4">Admin Access Required</MudText>
+                <MudText Class="mb-6">Please enter Admin Pattern to view system accounts.</MudText>
+                <PatternLock OnPatternComplete="VerifyAdminPattern" />
+            </MudPaper>
+        }
+    </MudTabPanel>
+
+    <MudTabPanel Text="Employees" Icon="@Icons.Material.Filled.Badge">
+        @if (isAdminVerified)
+        {
+            <MudTable Items="@GetUsersByRole("Employee")" Hover="true" Dense="true" Filter="new Func<Person, bool>(FilterFunc)">
+                <ToolBarContent>
+                    <MudText Typo="Typo.h6">Employees</MudText>
+                    <MudSpacer />
+                    <MudTextField @bind-Value="searchString" Placeholder="Search" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium" Class="mt-0"></MudTextField>
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" OnClick="@(() => AddUser("Employee"))" Class="ml-4">Add Employee</MudButton>
+                </ToolBarContent>
+                <HeaderContent>
+                    <MudTh>Name</MudTh>
+                    <MudTh>Role</MudTh>
+                    <MudTh>Username</MudTh>
+                    <MudTh>Passcode</MudTh>
+                    <MudTh>Actions</MudTh>
+                </HeaderContent>
+                <RowTemplate Context="employeeContext">
+                    <MudTd DataLabel="Name">@employeeContext.Name</MudTd>
+                    <MudTd DataLabel="Role">@employeeContext.Role</MudTd>
+                    <MudTd DataLabel="Username">@employeeContext.Username</MudTd>
+                    <MudTd DataLabel="Passcode">@employeeContext.Passcode</MudTd>
+                    <MudTd DataLabel="Actions">
+                        <MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Primary" Size="Size.Small" OnClick="@(() => EditUser(employeeContext))" />
+                        <MudIconButton Icon="@Icons.Material.Filled.ReceiptLong" Color="Color.Info" Size="Size.Small" OnClick="@(() => ShowStatement(employeeContext))" Title="Statement" />
+                        <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" Size="Size.Small" OnClick="@(() => DeleteUser(employeeContext))" />
+                    </MudTd>
+                </RowTemplate>
+                <PagerContent>
+                    <MudTablePager />
+                </PagerContent>
+            </MudTable>
+        }
+        else
+        {
+            <MudPaper Class="pa-8 d-flex flex-column align-center justify-center" Elevation="0">
+                <MudIcon Icon="@Icons.Material.Filled.Lock" Size="Size.Large" Color="Color.Warning" Class="mb-4" />
+                <MudText Typo="Typo.h5" Class="mb-4">Admin Access Required</MudText>
+                <MudText Class="mb-6">Please enter Admin Pattern to view employees.</MudText>
+                <PatternLock OnPatternComplete="VerifyAdminPattern" />
+            </MudPaper>
+        }
+    </MudTabPanel>
+</MudTabs>
+
+@code {
+    private List<Person> users = new();
+    private string searchString = "";
+    private bool isAdminVerified = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadUsers();
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+        if (user.IsInRole("Admin"))
+        {
+            isAdminVerified = true;
+        }
+    }
+
+    private async Task VerifyAdminPattern(string pattern)
+    {
+        try
+        {
+            var response = await Http.GetAsync($"api/people/verify/{pattern}");
+            if (response.IsSuccessStatusCode)
+            {
+                var person = await response.Content.ReadFromJsonAsync<Person>();
+                if (person != null && person.Role == "Admin")
+                {
+                    isAdminVerified = true;
+                    Snackbar.Add("Access Granted", Severity.Success);
+                }
+                else
+                {
+                    Snackbar.Add("Access Denied: Not an Admin", Severity.Error);
+                }
+            }
+            else
+            {
+                Snackbar.Add("Invalid Pattern", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task LoadUsers()
+    {
+        try
+        {
+            users = await Http.GetFromJsonAsync<List<Person>>("api/people") ?? new();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading users: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private IEnumerable<Person> GetUsersByRole(string role)
+    {
+        if (role == "Employee")
+        {
+            return users.Where(u => u.Role == "Employee" || u.Role == "Admin");
+        }
+        return users.Where(u => u.Role == role);
+    }
+
+    private bool FilterFunc(Person user)
+    {
+        if (string.IsNullOrWhiteSpace(searchString))
+            return true;
+        if (user.Name.Contains(searchString, StringComparison.OrdinalIgnoreCase))
+            return true;
+        if (user.PhoneNumber != null && user.PhoneNumber.Contains(searchString))
+            return true;
+        return false;
+    }
+
+    private async Task AddUser(string role)
+    {
+        var parameters = new DialogParameters { ["Role"] = role };
+        var dialog = DialogService.Show<UserDialog>($"Add {role}", parameters);
+        var result = await dialog.Result;
+
+        if (!result.Canceled)
+        {
+            await LoadUsers();
+        }
+    }
+
+    private async Task EditUser(Person user)
+    {
+        var parameters = new DialogParameters { ["User"] = user, ["Role"] = user.Role };
+        var dialog = DialogService.Show<UserDialog>($"Edit {user.Role}", parameters);
+        var result = await dialog.Result;
+
+        if (!result.Canceled)
+        {
+            await LoadUsers();
+        }
+    }
+
+    private async Task DeleteUser(Person user)
+    {
+        bool? result = await DialogService.ShowMessageBox(
+            "Delete User", 
+            $"Are you sure you want to delete {user.Name}?", 
+            yesText: "Delete", cancelText: "Cancel");
+
+        if (result == true)
+        {
+            var response = await Http.DeleteAsync($"api/people/{user.Id}");
+            if (response.IsSuccessStatusCode)
+            {
+                Snackbar.Add("User deleted", Severity.Success);
+                await LoadUsers();
+            }
+            else
+            {
+                Snackbar.Add("Error deleting user", Severity.Error);
+            }
+        }
+    }
+
+    private async Task ShowStatement(Person user)
+    {
+        try
+        {
+            var items = await Http.GetFromJsonAsync<List<StatementItem>>($"api/people/{user.Id}/statement");
+            var parameters = new DialogParameters { ["Items"] = items, ["Title"] = $"Statement - {user.Name}" };
+            DialogService.Show<FinancialStatementDialog>($"Statement: {user.Name}", parameters, new DialogOptions { MaxWidth = MaxWidth.Large, FullWidth = true });
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading statement: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private void ShowDeliveries(Person user)
+    {
+        Snackbar.Add("Delivery stats coming soon!", Severity.Info);
+    }
+}

@@ -91,11 +91,13 @@ public class ProductsController : ControllerBase
             Timestamp = DateTime.UtcNow,
             Action = "Create",
             Entity = "Product",
-            EntityId = product.Id.ToString(), // Note: Id might be 0 here until saved, but EF usually handles it if we save first or use generated value. 
-            // Actually, let's save first to get the ID.
+            EntityId = product.Id.ToString(),
             EmployeeName = "System",
             Description = $"Created product: {product.Name}",
-            Changes = System.Text.Json.JsonSerializer.Serialize(product)
+            Changes = System.Text.Json.JsonSerializer.Serialize(product, new System.Text.Json.JsonSerializerOptions 
+            { 
+                ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles 
+            })
         };
         
         // Wait, I need to save first to get the ID if it's identity.

@@ -60,7 +60,7 @@
     private string paymentMethod = "Cash";
     private string reference = "";
     private string employeeName = "";
-    private Employee? currentEmployee;
+    private Person? currentEmployee;
     private bool isSystemUser => currentEmployee?.Role == "System";
 
     protected override async Task OnInitializedAsync()
@@ -77,10 +77,10 @@
     {
         try
         {
-            var response = await Http.GetAsync($"api/employees/verify/{pattern}");
+            var response = await Http.GetAsync($"api/people/verify/{pattern}");
             if (response.IsSuccessStatusCode)
             {
-                var emp = await response.Content.ReadFromJsonAsync<Employee>();
+                var emp = await response.Content.ReadFromJsonAsync<Person>();
                 if (emp != null)
                 {
                     employeeName = emp.Name;

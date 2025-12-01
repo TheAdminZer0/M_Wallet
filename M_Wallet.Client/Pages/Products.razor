@@ -14,7 +14,10 @@
 }
 else if (!products.Any())
 {
-    <MudAlert Severity="Severity.Info">No products found. Add your first product to get started!</MudAlert>
+    <div class="d-flex flex-column align-center gap-4 mt-4">
+        <MudAlert Severity="Severity.Info">No products found. Add your first product to get started!</MudAlert>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" OnClick="OpenAddDialog">Add First Product</MudButton>
+    </div>
 }
 else
 {

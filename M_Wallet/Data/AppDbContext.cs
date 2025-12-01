@@ -17,18 +17,17 @@ public class AppDbContext : DbContext
     public DbSet<PaymentAllocation> PaymentAllocations { get; set; }
     public DbSet<Purchase> Purchases { get; set; }
     public DbSet<PurchaseItem> PurchaseItems { get; set; }
-    public DbSet<Customer> Customers { get; set; }
-    public DbSet<Employee> Employees { get; set; }
+    public DbSet<Person> People { get; set; }
     public DbSet<AuditLog> AuditLogs { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
 
-        modelBuilder.Entity<Customer>(entity =>
+        modelBuilder.Entity<Person>(entity =>
         {
-            entity.Property(c => c.Name).IsRequired();
-            entity.HasIndex(c => c.Name);
+            entity.Property(p => p.Name).IsRequired();
+            entity.HasIndex(p => p.Name);
         });
 
         modelBuilder.Entity<Product>(entity =>
@@ -75,8 +74,8 @@ public class AppDbContext : DbContext
             entity.Property(pi => pi.UnitCost).HasPrecision(18, 2);
         });
 
-        modelBuilder.Entity<Employee>().HasData(
-            new Employee 
+        modelBuilder.Entity<Person>().HasData(
+            new Person 
             { 
                 Id = 1, 
                 Name = "Aziz", 
@@ -84,16 +83,18 @@ public class AppDbContext : DbContext
                 Role = "Admin", 
                 Username = "aziz",
                 Password = "123", // In a real app, hash this!
-                IsActive = true 
+                IsActive = true,
+                CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc)
             },
-            new Employee
+            new Person
             {
                 Id = 2,
                 Name = "POS Terminal",
                 Role = "System",
                 Username = "pos",
                 Password = "pos",
-                IsActive = true
+                IsActive = true,
+                CreatedAt = new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc)
             }
         );
     }

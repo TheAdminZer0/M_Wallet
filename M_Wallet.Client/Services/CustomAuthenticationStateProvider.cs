@@ -40,17 +40,17 @@ public class CustomAuthenticationStateProvider : AuthenticationStateProvider
 
         try
         {
-            var employee = JsonSerializer.Deserialize<Employee>(userJson);
-            if (employee == null)
+            var person = JsonSerializer.Deserialize<Person>(userJson);
+            if (person == null)
             {
                 return new AuthenticationState(new ClaimsPrincipal(new ClaimsIdentity()));
             }
 
             var claims = new List<Claim>
             {
-                new Claim(ClaimTypes.Name, employee.Name),
-                new Claim(ClaimTypes.Role, employee.Role),
-                new Claim("Id", employee.Id.ToString())
+                new Claim(ClaimTypes.Name, person.Name),
+                new Claim(ClaimTypes.Role, person.Role),
+                new Claim("Id", person.Id.ToString())
             };
 
             var identity = new ClaimsIdentity(claims, "CustomAuth");
@@ -68,14 +68,14 @@ public class CustomAuthenticationStateProvider : AuthenticationStateProvider
     {
         try
         {
-            var response = await _httpClient.PostAsJsonAsync("api/employees/login", new LoginRequest { Username = username, Password = password });
+            var response = await _httpClient.PostAsJsonAsync("api/people/login", new LoginRequest { Username = username, Password = password });
 
             if (response.IsSuccessStatusCode)
             {
-                var employee = await response.Content.ReadFromJsonAsync<Employee>();
-                if (employee != null)
+                var person = await response.Content.ReadFromJsonAsync<Person>();
+                if (person != null)
                 {
-                    var userJson = JsonSerializer.Serialize(employee);
+                    var userJson = JsonSerializer.Serialize(person);
                     await _jsRuntime.InvokeVoidAsync("localStorage.setItem", _userKey, userJson);
                     NotifyAuthenticationStateChanged(GetAuthenticationStateAsync());
                     return true;
@@ -96,13 +96,26 @@ public class CustomAuthenticationStateProvider : AuthenticationStateProvider
         NotifyAuthenticationStateChanged(GetAuthenticationStateAsync());
     }
     
-    public async Task<Employee?> GetCurrentUserAsync()
+    public async Task<Person?> GetCurrentUserAsync()
     {
+        string? userJson = null;
         try
         {
-             var userJson = await _jsRuntime.InvokeAsync<string>("localStorage.getItem", _userKey);
-             if (string.IsNullOrEmpty(userJson)) return null;
-             return JsonSerializer.Deserialize<Employee>(userJson);
+            userJson = await _jsRuntime.InvokeAsync<string>("localStorage.getItem", _userKey);
+        }
+        catch
+        {
+            return null;
+        }
+
+        if (string.IsNullOrEmpty(userJson))
+        {
+            return null;
+        }
+
+        try
+        {
+            return JsonSerializer.Deserialize<Person>(userJson);
         }
         catch
         {

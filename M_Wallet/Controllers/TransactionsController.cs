@@ -42,13 +42,13 @@ public class TransactionsController : ControllerBase
         return transaction;
     }
 
-    [HttpGet("customer/{customerName}")]
-    public async Task<ActionResult<IEnumerable<Transaction>>> GetCustomerTransactions(string customerName)
+    [HttpGet("person/{personId}")]
+    public async Task<ActionResult<IEnumerable<Transaction>>> GetPersonTransactions(int personId)
     {
         return await _context.Transactions
             .Include(t => t.Items)
             .ThenInclude(i => i.Product)
-            .Where(t => t.CustomerName == customerName)
+            .Where(t => t.PersonId == personId)
             .OrderByDescending(t => t.TransactionDate)
             .ToListAsync();
     }
@@ -104,26 +104,27 @@ public class TransactionsController : ControllerBase
             if (!string.IsNullOrWhiteSpace(transaction.CustomerName))
             {
                 var customerName = transaction.CustomerName.Trim();
-                var existingCustomer = await _context.Customers
-                    .FirstOrDefaultAsync(c => c.Name.ToLower() == customerName.ToLower());
+                var existingCustomer = await _context.People
+                    .FirstOrDefaultAsync(c => c.Name.ToLower() == customerName.ToLower() && c.Role == "Customer");
 
                 if (existingCustomer != null)
                 {
-                    transaction.CustomerId = existingCustomer.Id;
+                    transaction.PersonId = existingCustomer.Id;
                     // Ensure the name matches exactly the existing record to avoid case discrepancies
                     transaction.CustomerName = existingCustomer.Name; 
                 }
                 else
                 {
-                    var newCustomer = new Customer
+                    var newCustomer = new Person
                     {
                         Name = customerName,
+                        Role = "Customer",
                         CreatedAt = DateTime.UtcNow
                     };
-                    _context.Customers.Add(newCustomer);
+                    _context.People.Add(newCustomer);
                     await _context.SaveChangesAsync(); // Save to generate ID
                     
-                    transaction.CustomerId = newCustomer.Id;
+                    transaction.PersonId = newCustomer.Id;
                     transaction.CustomerName = newCustomer.Name;
                 }
             }

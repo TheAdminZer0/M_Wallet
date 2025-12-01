@@ -1,0 +1,113 @@
+@using M_Wallet.Shared
+@using MudBlazor
+
+<MudDialog>
+    <DialogContent>
+        <MudForm @ref="form" @bind-IsValid="@success">
+            <MudTextField T="string" Label="Name" @bind-Value="User.Name" Required="true" RequiredError="Name is required!" />
+            
+            @if (Role == "Customer" || Role == "Driver")
+            {
+                <MudTextField T="string" Label="Phone Number" @bind-Value="User.PhoneNumber" />
+            }
+
+            @if (Role == "Employee" || Role == "Admin" || Role == "Driver" || Role == "System")
+            {
+                <MudTextField T="string" Label="Username" @bind-Value="User.Username" Required="true" RequiredError="Username is required!" />
+                <MudTextField T="string" Label="Password" @bind-Value="User.Password" InputType="InputType.Password" />
+                @if (Role != "System")
+                {
+                    <MudText Class="mt-4 mb-2">Passcode (Pattern)</MudText>
+                    @if (!string.IsNullOrEmpty(User.Passcode))
+                    {
+                        <MudAlert Severity="Severity.Success" Dense="true" Class="mb-2">Passcode is set</MudAlert>
+                    }
+                    else
+                    {
+                        <MudAlert Severity="Severity.Warning" Dense="true" Class="mb-2">No passcode set</MudAlert>
+                    }
+                    <div class="d-flex justify-center">
+                        <PatternLock OnPatternComplete="SetPasscode" />
+                    </div>
+                    <MudText Typo="Typo.caption" Align="Align.Center" Class="d-block mt-1">Draw pattern to set passcode</MudText>
+                }
+            }
+            
+            <MudSelect T="string" Label="Role" @bind-Value="User.Role" AnchorOrigin="Origin.BottomCenter">
+                <MudSelectItem Value="@("Customer")" />
+                <MudSelectItem Value="@("Driver")" />
+                <MudSelectItem Value="@("Employee")" />
+                <MudSelectItem Value="@("Admin")" />
+                <MudSelectItem Value="@("System")" />
+            </MudSelect>
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton Color="Color.Primary" OnClick="Submit">Save</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; }
+
+    [Parameter] public Person User { get; set; } = new();
+    [Parameter] public string Role { get; set; } = "Customer";
+
+    private MudForm form;
+    private bool success;
+
+    [Inject] ISnackbar Snackbar { get; set; }
+
+    protected override void OnInitialized()
+    {
+        if (User.Id == 0)
+        {
+            User.Role = Role;
+        }
+    }
+
+    private async Task Submit()
+    {
+        await form.Validate();
+
+        if (success)
+        {
+            try
+            {
+                HttpResponseMessage response;
+                if (User.Id == 0)
+                {
+                    response = await Http.PostAsJsonAsync("api/people", User);
+                }
+                else
+                {
+                    response = await Http.PutAsJsonAsync($"api/people/{User.Id}", User);
+                }
+
+                if (response.IsSuccessStatusCode)
+                {
+                    MudDialog.Close(DialogResult.Ok(true));
+                }
+                else
+                {
+                    // Handle error
+                }
+            }
+            catch
+            {
+                // Handle error
+            }
+        }
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+
+    private void SetPasscode(string pattern)
+    {
+        User.Passcode = pattern;
+        Snackbar.Add("Passcode set successfully", Severity.Success);
+        StateHasChanged();
+    }
+}
+@inject HttpClient Http

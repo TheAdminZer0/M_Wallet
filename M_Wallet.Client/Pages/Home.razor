@@ -302,7 +302,7 @@
 @code {
 
     private List<Product>? products;
-    private List<M_Wallet.Shared.Customer> customers = new();
+    private List<Person> customers = new();
     private List<TransactionItem> cartItems = new();
     private string searchString = "";
     
@@ -315,7 +315,7 @@
     private DateTime? selectedDate = DateTime.Today;
     private bool showDatePicker = false;
     private string customerName = "";
-    private Employee? currentEmployee;
+    private Person? currentEmployee;
     private bool isProcessing = false;
     private bool printReceipt = false;
     private string printFormat = "A4";
@@ -375,7 +375,7 @@
     {
         try
         {
-            customers = await Http.GetFromJsonAsync<List<Customer>>("api/customers") ?? new();
+            customers = await Http.GetFromJsonAsync<List<Person>>("api/people?role=Customer") ?? new();
         }
         catch (Exception)
         {
@@ -599,10 +599,10 @@
     {
         try
         {
-            var response = await Http.GetAsync($"api/employees/verify/{pattern}");
+            var response = await Http.GetAsync($"api/people/verify/{pattern}");
             if (response.IsSuccessStatusCode)
             {
-                var employee = await response.Content.ReadFromJsonAsync<Employee>();
+                var employee = await response.Content.ReadFromJsonAsync<Person>();
                 await CompleteCheckout(employee);
             }
             else
@@ -630,7 +630,7 @@
         }
     }
 
-    private async Task CompleteCheckout(Employee? employee = null)
+    private async Task CompleteCheckout(Person? employee = null)
     {
         var transactionEmployee = employee ?? currentEmployee;
 
