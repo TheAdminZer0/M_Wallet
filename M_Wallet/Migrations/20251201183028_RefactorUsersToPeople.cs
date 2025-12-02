@@ -12,6 +12,40 @@ namespace M_Wallet.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
+            migrationBuilder.CreateTable(
+                name: "People",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    Name = table.Column<string>(type: "text", nullable: false),
+                    Role = table.Column<string>(type: "text", nullable: false),
+                    PhoneNumber = table.Column<string>(type: "text", nullable: true),
+                    Username = table.Column<string>(type: "text", nullable: true),
+                    Password = table.Column<string>(type: "text", nullable: true),
+                    Passcode = table.Column<string>(type: "text", nullable: true),
+                    IsActive = table.Column<bool>(type: "boolean", nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    Preferences = table.Column<string>(type: "text", nullable: true),
+                    CompletedDeliveries = table.Column<int>(type: "integer", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_People", x => x.Id);
+                });
+
+            // Copy Customers to People to preserve FK relationships
+            migrationBuilder.Sql(@"
+                INSERT INTO ""People"" (""Id"", ""Name"", ""PhoneNumber"", ""Role"", ""IsActive"", ""CreatedAt"", ""CompletedDeliveries"")
+                SELECT ""Id"", ""Name"", ""PhoneNumber"", 'Customer', true, ""CreatedAt"", 0
+                FROM ""Customers"";
+            ");
+
+            // Reset sequence for People.Id
+            migrationBuilder.Sql(@"
+                SELECT setval(pg_get_serial_sequence('""People""', 'Id'), COALESCE(MAX(""Id""), 0) + 1, false) FROM ""People"";
+            ");
+
             migrationBuilder.DropForeignKey(
                 name: "FK_Transactions_Customers_CustomerId",
                 table: "Transactions");
@@ -48,27 +82,7 @@ namespace M_Wallet.Migrations
                 table: "Employee",
                 column: "Id");
 
-            migrationBuilder.CreateTable(
-                name: "People",
-                columns: table => new
-                {
-                    Id = table.Column<int>(type: "integer", nullable: false)
-                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
-                    Name = table.Column<string>(type: "text", nullable: false),
-                    Role = table.Column<string>(type: "text", nullable: false),
-                    PhoneNumber = table.Column<string>(type: "text", nullable: true),
-                    Username = table.Column<string>(type: "text", nullable: true),
-                    Password = table.Column<string>(type: "text", nullable: true),
-                    Passcode = table.Column<string>(type: "text", nullable: true),
-                    IsActive = table.Column<bool>(type: "boolean", nullable: false),
-                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
-                    Preferences = table.Column<string>(type: "text", nullable: true),
-                    CompletedDeliveries = table.Column<int>(type: "integer", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_People", x => x.Id);
-                });
+            // People table creation moved to top
 
             migrationBuilder.CreateIndex(
                 name: "IX_Payments_PersonId",

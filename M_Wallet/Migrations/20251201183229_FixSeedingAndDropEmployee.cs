@@ -17,14 +17,13 @@ namespace M_Wallet.Migrations
             migrationBuilder.DropTable(
                 name: "Employee");
 
-            migrationBuilder.InsertData(
-                table: "People",
-                columns: new[] { "Id", "CompletedDeliveries", "CreatedAt", "IsActive", "Name", "Passcode", "Password", "PhoneNumber", "Preferences", "Role", "Username" },
-                values: new object[,]
-                {
-                    { 1, 0, new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc), true, "Aziz", "630125874", "123", null, null, "Admin", "aziz" },
-                    { 2, 0, new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc), true, "POS Terminal", null, "pos", null, null, "System", "pos" }
-                });
+            // Use raw SQL to insert seeded users to avoid PK conflicts with existing Customers
+            migrationBuilder.Sql(@"
+                INSERT INTO ""People"" (""Name"", ""Role"", ""Username"", ""Password"", ""Passcode"", ""IsActive"", ""CreatedAt"", ""CompletedDeliveries"")
+                VALUES 
+                ('Aziz', 'Admin', 'aziz', '123', '630125874', true, '2024-01-01 00:00:00+00', 0),
+                ('POS Terminal', 'System', 'pos', 'pos', NULL, true, '2024-01-01 00:00:00+00', 0);
+            ");
         }
 
         /// <inheritdoc />
