@@ -1,19 +1,54 @@
-﻿<MudNavMenu>
-    <MudNavLink Href="" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Home">POS</MudNavLink>
-    
-    <MudNavLink Href="transactions" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Receipt">Transactions</MudNavLink>
-    
-    <MudNavLink Href="stats" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.BarChart">Statistics</MudNavLink>
-    
-    <MudNavLink Href="products" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Inventory">Products</MudNavLink>
-    
-    <MudNavLink Href="purchases" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.ShoppingCart">Purchases</MudNavLink>
-    
-    <MudNavLink Href="debts" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.MoneyOff">Debts & Balance</MudNavLink>
+﻿@using M_Wallet.Client.Services
+@inject UserPreferencesService UserPreferences
+@inject CustomAuthenticationStateProvider AuthStateProvider
+@inject NavigationManager Navigation
+@implements IDisposable
 
-    <MudNavLink Href="users" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.People">Users</MudNavLink>
-
-    <MudNavLink Href="logs" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.History">History & Logs</MudNavLink>
+<MudNavMenu>
+    @foreach (var item in UserPreferences.AvailableRoutes)
+    {
+        <div class="d-flex align-center">
+            <MudNavLink Href="@item.Href" Match="@item.Match" Icon="@item.Icon" Class="flex-grow-1">@item.Title</MudNavLink>
+            <MudIconButton Icon="@(UserPreferences.IsRouteFavorite(item.Href) ? Icons.Material.Filled.Star : Icons.Material.Filled.StarBorder)"
+                           Color="@(UserPreferences.IsRouteFavorite(item.Href) ? Color.Primary : Color.Default)"
+                           OnClick="@(() => ToggleFavorite(item.Href))"
+                           Size="Size.Small"
+                           Class="mr-2" />
+        </div>
+    }
+    <MudDivider Class="my-2" />
+    <MudNavLink OnClick="ToggleDarkMode" Icon="@(UserPreferences.Preferences.IsDarkMode ? Icons.Material.Filled.LightMode : Icons.Material.Filled.DarkMode)">
+        @(UserPreferences.Preferences.IsDarkMode ? "Light Mode" : "Dark Mode")
+    </MudNavLink>
+    <MudNavLink OnClick="Logout" Icon="@Icons.Material.Filled.Logout" IconColor="Color.Error">Logout</MudNavLink>
 </MudNavMenu>
+
+@code {
+    protected override void OnInitialized()
+    {
+        UserPreferences.OnChange += StateHasChanged;
+    }
+
+    public void Dispose()
+    {
+        UserPreferences.OnChange -= StateHasChanged;
+    }
+
+    private async Task ToggleFavorite(string href)
+    {
+        await UserPreferences.ToggleFavoriteRoute(href);
+    }
+
+    private async Task ToggleDarkMode()
+    {
+        await UserPreferences.ToggleDarkMode();
+    }
+
+    private async Task Logout()
+    {
+        await AuthStateProvider.LogoutAsync();
+        Navigation.NavigateTo("/login");
+    }
+}
 
 

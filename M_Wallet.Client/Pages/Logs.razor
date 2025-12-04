@@ -24,7 +24,7 @@
         @if (IsVisible("Description")) { <MudTh>Description</MudTh> }
     </HeaderContent>
     <RowTemplate>
-        @if (IsVisible("Time")) { <MudTd DataLabel="Time">@context.Timestamp.ToLocalTime().ToString("g")</MudTd> }
+        @if (IsVisible("Time")) { <MudTd DataLabel="Time" Style="white-space: nowrap;">@context.Timestamp.ToLocalTime().ToString("yyyy/MM/dd hh:mm tt")</MudTd> }
         @if (IsVisible("Action")) {
             <MudTd DataLabel="Action">
                 <MudChip T="string" Color="@GetColor(context.Action)" Size="Size.Small">@context.Action</MudChip>

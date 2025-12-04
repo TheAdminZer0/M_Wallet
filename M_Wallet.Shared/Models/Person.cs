@@ -26,5 +26,11 @@ namespace M_Wallet.Shared
 
         // Driver specific
         public int CompletedDeliveries { get; set; } = 0;
+
+        [System.ComponentModel.DataAnnotations.Schema.NotMapped]
+        public decimal Balance { get; set; }
+
+        [System.ComponentModel.DataAnnotations.Schema.NotMapped]
+        public DateTime? LastTransactionDate { get; set; }
     }
 }

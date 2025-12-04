@@ -22,7 +22,7 @@
                     <MudTh>Actions</MudTh>
                 </HeaderContent>
                 <RowTemplate>
-                    <MudTd>@(context.Payment?.PaymentDate.ToLocalTime().ToString("g") ?? "-")</MudTd>
+                    <MudTd Style="white-space: nowrap;">@(context.Payment?.PaymentDate.ToLocalTime().ToString("g") ?? "-")</MudTd>
                     <MudTd>
                         <div class="d-flex align-center">
                             <MudText>@context.Amount.ToString("F2")</MudText>
@@ -36,7 +36,7 @@
                     </MudTd>
                     <MudTd>@(context.Payment?.PaymentMethod ?? "-")</MudTd>
                     <MudTd>@(context.Payment?.Reference ?? "-")</MudTd>
-                    <MudTd>
+                    <MudTd Style="white-space: nowrap;">
                         <MudIconButton Icon="@Icons.Material.Filled.Delete" 
                                        Color="Color.Error" 
                                        Size="Size.Small" 

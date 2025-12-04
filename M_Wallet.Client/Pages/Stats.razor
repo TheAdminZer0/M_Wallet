@@ -349,7 +349,7 @@ else
             dailyData[date] = CalculateProfitFromPayments(dayPayments);
         }
 
-        dailyLabels = dailyData.Keys.Select(d => d.ToString("MM/dd")).ToArray();
+        dailyLabels = dailyData.Keys.Select(d => d.ToString("yyyy/MM/dd")).ToArray();
         dailyProfitSeries = new List<ChartSeries>
         {
             new ChartSeries 

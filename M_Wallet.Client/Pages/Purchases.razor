@@ -175,12 +175,12 @@ else
                 <MudIcon Icon="@(expandedPurchases.Contains(context.Id) ? Icons.Material.Filled.ExpandLess : Icons.Material.Filled.ExpandMore)" />
             </MudTd>
             @if (IsVisible("ID")) { <MudTd>#@context.Id</MudTd> }
-            @if (IsVisible("Date")) { <MudTd>@context.PurchaseDate.ToLocalTime().ToString("g")</MudTd> }
+            @if (IsVisible("Date")) { <MudTd Style="white-space: nowrap;">@context.PurchaseDate.ToLocalTime().ToString("yyyy/MM/dd hh:mm tt")</MudTd> }
             @if (IsVisible("Supplier")) { <MudTd>@(context.SupplierName ?? "-")</MudTd> }
             @if (IsVisible("Items")) { <MudTd>@context.Items.Count</MudTd> }
             @if (IsVisible("Total Amount")) { <MudTd>@context.TotalAmount.ToString("F2")</MudTd> }
             @if (IsVisible("Actions")) {
-                <MudTd>
+                <MudTd Style="white-space: nowrap;">
                     <MudIconButton Icon="@Icons.Material.Filled.Delete" 
                                    Color="Color.Error" 
                                    Size="Size.Small" 

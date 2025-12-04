@@ -104,7 +104,7 @@ namespace M_Wallet.Client.Services
     .company-info h1 { margin: 0 0 5px 0; color: #2c3e50; font-size: 32px; font-weight: 800; letter-spacing: -1px; }
     .company-info p { margin: 2px 0; color: #666; font-size: 14px; }
     
-    .invoice-details { text-align: left; }
+    .invoice-details { text-align: right; }
     .invoice-details h2 { margin: 0 0 10px 0; color: #34495e; font-size: 24px; font-weight: 700; }
     .invoice-meta { font-size: 14px; color: #555; line-height: 1.5; }
     
@@ -146,17 +146,25 @@ namespace M_Wallet.Client.Services
             
             // Header
             sb.Append("<div class='header'>");
-            sb.Append("<div class='company-info'>");
-            sb.Append("<h1>Draidy - دريدي</h1>");
-            sb.Append("<p>العنوان هنا</p>");
-            sb.Append("<p>هاتف: +218 00 0000000</p>");
-            sb.Append("</div>");
+            
+            // Invoice Details (Right)
             sb.Append("<div class='invoice-details'>");
             sb.Append("<h2>فاتورة مبيعات</h2>");
             sb.Append($"<div class='invoice-meta'><div><strong>رقم الفاتورة:</strong> #{transaction.Id}</div>");
             sb.Append($"<div><strong>التاريخ:</strong> {transaction.TransactionDate.ToLocalTime():yyyy/MM/dd}</div>");
-            sb.Append($"<div><strong>الوقت:</strong> {transaction.TransactionDate.ToLocalTime():hh:mm tt}</div></div>");
+            sb.Append($"<div><strong>الوقت:</strong> {transaction.TransactionDate.ToLocalTime():hh:mm tt}".Replace("PM", "م").Replace("AM", "ص") + "</div></div>");
             sb.Append("</div>");
+
+            // Company Info (Left)
+            sb.Append("<div class='company-info' style='text-align: left; direction: ltr; display: flex; align-items: center; gap: 15px;'>");
+            sb.Append("<img src='/logo.png' alt='Logo' style='max-width: 80px; height: auto; filter: invert(1);' />");
+            sb.Append("<div>");
+            sb.Append("<h1 style='margin:0; font-size: 24px;'>Draidy - دريدي</h1>");
+            sb.Append("<p style='margin:0;'>العنوان هنا</p>");
+            sb.Append("<p style='margin:0;'>هاتف: +218 00 0000000</p>");
+            sb.Append("</div>");
+            sb.Append("</div>");
+
             sb.Append("</div>");
 
             // Bill To
@@ -223,7 +231,7 @@ namespace M_Wallet.Client.Services
     .company-info h1 { margin: 0 0 5px 0; color: #2c3e50; font-size: 32px; font-weight: 800; letter-spacing: -1px; }
     .company-info p { margin: 2px 0; color: #666; font-size: 14px; }
     
-    .statement-details { text-align: left; }
+    .statement-details { text-align: right; }
     .statement-details h2 { margin: 0 0 10px 0; color: #34495e; font-size: 24px; font-weight: 700; }
     .statement-meta { font-size: 14px; color: #555; line-height: 1.5; }
     
@@ -261,10 +269,8 @@ namespace M_Wallet.Client.Services
             
             // Header
             sb.Append("<div class='header'>");
-            sb.Append("<div class='company-info'>");
-            sb.Append("<h1>Draidy - دريدي</h1>");
-            sb.Append("<p>كشف حساب عميل</p>");
-            sb.Append("</div>");
+
+            // Statement Details (Right)
             sb.Append("<div class='statement-details'>");
             sb.Append("<h2>كشف حساب</h2>");
             sb.Append($"<div class='statement-meta'><div><strong>تاريخ الطباعة:</strong> {DateTime.Now:yyyy/MM/dd}</div>");
@@ -276,6 +282,16 @@ namespace M_Wallet.Client.Services
             }
             sb.Append("</div>");
             sb.Append("</div>");
+
+            // Company Info (Left)
+            sb.Append("<div class='company-info' style='text-align: left; direction: ltr; display: flex; align-items: center; gap: 15px;'>");
+            sb.Append("<img src='/logo.png' alt='Logo' style='max-width: 80px; height: auto; filter: invert(1);' />");
+            sb.Append("<div>");
+            sb.Append("<h1 style='margin:0; font-size: 24px;'>Draidy - دريدي</h1>");
+            sb.Append("<p style='margin:0;'>كشف حساب عميل</p>");
+            sb.Append("</div>");
+            sb.Append("</div>");
+
             sb.Append("</div>");
 
             // Customer Info
@@ -292,7 +308,7 @@ namespace M_Wallet.Client.Services
             {
                 var amountClass = item.Amount >= 0 ? "amount-pos" : "amount-neg";
                 sb.Append("<tr>");
-                sb.Append($"<td>{item.Date.ToLocalTime():yyyy/MM/dd hh:mm tt}</td>");
+                sb.Append($"<td>{item.Date.ToLocalTime():yyyy/MM/dd hh:mm tt}".Replace("PM", "م").Replace("AM", "ص") + "</td>");
                 sb.Append($"<td>{item.Description}</td>");
                 sb.Append($"<td class='{amountClass}' dir='ltr'>{item.Amount:N2}</td>");
                 sb.Append($"<td dir='ltr'><strong>{item.RunningBalance:N2}</strong></td>");

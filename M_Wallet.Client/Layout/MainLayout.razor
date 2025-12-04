@@ -4,9 +4,16 @@
 @using M_Wallet.Client.Services
 @using System.Security.Claims
 @using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.Components.Routing
 @inject CustomAuthenticationStateProvider AuthStateProvider
 @inject NavigationManager Navigation
 @inject UserPreferencesService UserPreferences
+
+<style>
+    .remove-focus-bg:focus {
+        background-color: transparent !important;
+    }
+</style>
 
 <MudThemeProvider Theme="@_theme" IsDarkMode="_isDarkMode" />
 <MudPopoverProvider />
@@ -15,15 +22,29 @@
 <MudLayout>
     <MudAppBar Elevation="1">
         <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" Edge="Edge.Start" OnClick="@((e) => DrawerToggle())" />
-        <MudText Typo="Typo.h5" Class="ml-3">Application</MudText>
+        
+        <div class="d-flex ml-4 gap-2">
+            @foreach (var route in UserPreferences.Preferences.FavoriteRoutes)
+            {
+                var item = UserPreferences.AvailableRoutes.FirstOrDefault(r => r.Href == route);
+                if (item != null)
+                {
+                    <MudTooltip Text="@item.Title">
+                        <MudIconButton Icon="@item.Icon" Color="@(IsActive(item.Href) ? Color.Primary : Color.Inherit)" OnClick="@(() => Navigation.NavigateTo(item.Href))" Class="remove-focus-bg" />
+                    </MudTooltip>
+                }
+            }
+        </div>
+
         <MudSpacer />
-        <MudIconButton Icon="@(DarkLightModeButtonIcon)" Color="Color.Inherit" OnClick="@DarkModeToggle" />
-        <MudIconButton Icon="@Icons.Material.Filled.Logout" Color="Color.Inherit" OnClick="@Logout" Title="Logout" />
     </MudAppBar>
     <MudDrawer id="nav-drawer" @bind-Open="_drawerOpen" ClipMode="DrawerClipMode.Always" Elevation="2">
+        <div class="d-flex justify-center py-1">
+             <img src="logo.png" style="@LogoStyle" height="70" />
+        </div>
         @if (user?.Identity?.IsAuthenticated == true)
         {
-            <div class="d-flex flex-column px-4 pt-4 pb-2" style="border-bottom: 1px solid var(--mud-palette-lines-default);">
+            <div class="d-flex flex-column px-4 pt-0 pb-2" style="border-bottom: 1px solid var(--mud-palette-lines-default);">
                 <MudText Typo="Typo.subtitle1"><b>@user.Identity.Name</b></MudText>
                 <MudText Typo="Typo.body2" Class="mud-text-secondary">@user.Claims.FirstOrDefault(c => c.Type == ClaimTypes.Role)?.Value</MudText>
             </div>
@@ -60,6 +81,7 @@
         var authState = await AuthStateProvider.GetAuthenticationStateAsync();
         user = authState.User;
         AuthStateProvider.AuthenticationStateChanged += OnAuthenticationStateChanged;
+        Navigation.LocationChanged += OnLocationChanged;
 
         await UserPreferences.InitializeAsync();
         _isDarkMode = UserPreferences.Preferences.IsDarkMode;
@@ -69,6 +91,11 @@
     private void OnPreferencesChanged()
     {
         _isDarkMode = UserPreferences.Preferences.IsDarkMode;
+        StateHasChanged();
+    }
+
+    private void OnLocationChanged(object? sender, LocationChangedEventArgs e)
+    {
         StateHasChanged();
     }
 
@@ -84,6 +111,14 @@
     {
         AuthStateProvider.AuthenticationStateChanged -= OnAuthenticationStateChanged;
         UserPreferences.OnChange -= OnPreferencesChanged;
+        Navigation.LocationChanged -= OnLocationChanged;
+    }
+
+    private bool IsActive(string href)
+    {
+        var currentUri = new Uri(Navigation.Uri);
+        var targetUri = Navigation.ToAbsoluteUri(href);
+        return currentUri.AbsolutePath.Equals(targetUri.AbsolutePath, StringComparison.OrdinalIgnoreCase);
     }
 
     private void DrawerToggle()
@@ -158,6 +193,10 @@
         true => Icons.Material.Rounded.AutoMode,
         false => Icons.Material.Outlined.DarkMode,
     };
+
+    public string LogoStyle => UserPreferences.Preferences.IsDarkMode
+        ? "filter: brightness(0) invert(48%) sepia(13%) saturate(3207%) hue-rotate(208deg) brightness(95%) contrast(94%);" // White -> Purple
+        : "filter: invert(1) contrast(40%);"; // White -> Black
 }
 
 

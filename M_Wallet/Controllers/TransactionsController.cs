@@ -135,7 +135,7 @@ public class TransactionsController : ControllerBase
             // Log the sale
             var itemDetails = string.Join(", ", productNames);
             var customerDisplay = string.IsNullOrWhiteSpace(transaction.CustomerName) ? "Walk-in" : transaction.CustomerName;
-            var dateDisplay = transaction.TransactionDate.ToString("yyyy-MM-dd");
+            var dateDisplay = transaction.TransactionDate.ToString("yyyy/MM/dd");
 
             var log = new AuditLog
             {

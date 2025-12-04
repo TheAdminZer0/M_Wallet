@@ -44,7 +44,7 @@
                     </HeaderContent>
                     <RowTemplate>
                         @if (IsInvoiceColumnVisible("Order ID")) { <MudTd DataLabel="Order ID">#@context.Id</MudTd> }
-                        @if (IsInvoiceColumnVisible("Date")) { <MudTd DataLabel="Date">@context.TransactionDate.ToLocalTime().ToString("MM/dd/yy")</MudTd> }
+                        @if (IsInvoiceColumnVisible("Date")) { <MudTd DataLabel="Date" Style="white-space: nowrap;">@context.TransactionDate.ToLocalTime().ToString("yyyy/MM/dd")</MudTd> }
                         @if (IsInvoiceColumnVisible("Customer")) { <MudTd DataLabel="Customer">@(context.CustomerName ?? "Walk-in")</MudTd> }
                         @if (IsInvoiceColumnVisible("Total")) { <MudTd DataLabel="Total">LD @context.TotalAmount.ToString("F2")</MudTd> }
                         @if (IsInvoiceColumnVisible("Paid")) { <MudTd DataLabel="Paid">LD @GetPaidAmount(context).ToString("F2")</MudTd> }
@@ -56,7 +56,7 @@
                             </MudTd>
                         }
                         @if (IsInvoiceColumnVisible("Action")) {
-                            <MudTd DataLabel="Action">
+                            <MudTd DataLabel="Action" Style="white-space: nowrap;">
                                 <MudButton Variant="Variant.Filled" Color="Color.Success" Size="Size.Small" OnClick="@(() => OpenPaymentDialog(context))">
                                     Pay
                                 </MudButton>
@@ -92,7 +92,7 @@
                 </HeaderContent>
                 <RowTemplate>
                     @if (IsPaymentColumnVisible("Payment ID")) { <MudTd>#@context.Id</MudTd> }
-                    @if (IsPaymentColumnVisible("Date")) { <MudTd>@context.PaymentDate.ToLocalTime().ToString("MM/dd/yy HH:mm")</MudTd> }
+                    @if (IsPaymentColumnVisible("Date")) { <MudTd Style="white-space: nowrap;">@context.PaymentDate.ToLocalTime().ToString("yyyy/MM/dd hh:mm tt")</MudTd> }
                     @if (IsPaymentColumnVisible("Method")) { <MudTd>@context.PaymentMethod</MudTd> }
                     @if (IsPaymentColumnVisible("Reference")) { <MudTd>@context.Reference</MudTd> }
                     @if (IsPaymentColumnVisible("Amount")) {
@@ -111,7 +111,7 @@
                         </MudTd>
                     }
                     @if (IsPaymentColumnVisible("Actions")) {
-                        <MudTd>
+                        <MudTd Style="white-space: nowrap;">
                             <MudIconButton Icon="@Icons.Material.Filled.Delete" 
                                            Color="Color.Error" 
                                            Size="Size.Small" 

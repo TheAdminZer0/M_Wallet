@@ -35,7 +35,50 @@ public class PeopleController : ControllerBase
             }
         }
         
-        return await query.OrderBy(p => p.Name).ToListAsync();
+        var people = await query.OrderBy(p => p.Name).ToListAsync();
+
+        var personIds = people.Select(p => p.Id).ToList();
+
+        var transactions = await _context.Transactions
+            .Where(t => t.PersonId.HasValue && personIds.Contains(t.PersonId.Value))
+            .GroupBy(t => t.PersonId)
+            .Select(g => new { PersonId = g.Key, Total = g.Sum(t => t.TotalAmount), LastDate = g.Max(t => t.TransactionDate) })
+            .ToListAsync();
+
+        var payments = await _context.Payments
+            .Where(p => p.PersonId.HasValue && personIds.Contains(p.PersonId.Value))
+            .GroupBy(p => p.PersonId)
+            .Select(g => new { PersonId = g.Key, Total = g.Sum(p => p.Amount), LastDate = g.Max(p => p.PaymentDate) })
+            .ToListAsync();
+
+        foreach (var person in people)
+        {
+            var t = transactions.FirstOrDefault(x => x.PersonId == person.Id);
+            var p = payments.FirstOrDefault(x => x.PersonId == person.Id);
+
+            decimal totalTransactions = t?.Total ?? 0;
+            decimal totalPayments = p?.Total ?? 0;
+            
+            person.Balance = totalPayments - totalTransactions;
+            
+            DateTime? lastT = t?.LastDate;
+            DateTime? lastP = p?.LastDate;
+
+            if (lastT.HasValue && lastP.HasValue)
+            {
+                person.LastTransactionDate = lastT > lastP ? lastT : lastP;
+            }
+            else if (lastT.HasValue)
+            {
+                person.LastTransactionDate = lastT;
+            }
+            else if (lastP.HasValue)
+            {
+                person.LastTransactionDate = lastP;
+            }
+        }
+        
+        return people;
     }
 
     [HttpGet("{id}")]
@@ -95,6 +138,21 @@ public class PeopleController : ControllerBase
                 throw;
             }
         }
+
+        return NoContent();
+    }
+
+    [HttpPut("{id}/preferences")]
+    public async Task<IActionResult> UpdatePreferences(int id, [FromBody] string preferences)
+    {
+        var person = await _context.People.FindAsync(id);
+        if (person == null)
+        {
+            return NotFound();
+        }
+
+        person.Preferences = preferences;
+        await _context.SaveChangesAsync();
 
         return NoContent();
     }

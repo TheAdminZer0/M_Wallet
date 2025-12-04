@@ -4,5 +4,6 @@ namespace M_Wallet.Client.Models
     {
         public bool IsDarkMode { get; set; }
         public Dictionary<string, Dictionary<string, bool>> TableColumns { get; set; } = new();
+        public List<string> FavoriteRoutes { get; set; } = new();
     }
 }

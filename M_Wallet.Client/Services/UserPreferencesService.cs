@@ -3,9 +3,19 @@ using System.Text.Json;
 using M_Wallet.Client.Models;
 using Microsoft.AspNetCore.Components.Authorization;
 using M_Wallet.Shared;
+using MudBlazor;
+using Microsoft.AspNetCore.Components.Routing;
 
 namespace M_Wallet.Client.Services
 {
+    public class NavItem
+    {
+        public string Title { get; set; } = "";
+        public string Href { get; set; } = "";
+        public string Icon { get; set; } = "";
+        public NavLinkMatch Match { get; set; } = NavLinkMatch.Prefix;
+    }
+
     public class UserPreferencesService
     {
         private readonly HttpClient _http;
@@ -14,6 +24,18 @@ namespace M_Wallet.Client.Services
         private int? _currentUserId;
 
         public event Action? OnChange;
+
+        public List<NavItem> AvailableRoutes { get; } = new()
+        {
+            new() { Title = "POS", Href = "", Icon = Icons.Material.Filled.Home, Match = NavLinkMatch.All },
+            new() { Title = "Transactions", Href = "transactions", Icon = Icons.Material.Filled.Receipt },
+            new() { Title = "Statistics", Href = "stats", Icon = Icons.Material.Filled.BarChart },
+            new() { Title = "Products", Href = "products", Icon = Icons.Material.Filled.Inventory },
+            new() { Title = "Purchases", Href = "purchases", Icon = Icons.Material.Filled.ShoppingCart },
+            new() { Title = "Debts & Balance", Href = "debts", Icon = Icons.Material.Filled.MoneyOff },
+            new() { Title = "Users", Href = "users", Icon = Icons.Material.Filled.People },
+            new() { Title = "History & Logs", Href = "logs", Icon = Icons.Material.Filled.History },
+        };
 
         public UserPreferencesService(HttpClient http, AuthenticationStateProvider authStateProvider)
         {
@@ -51,13 +73,11 @@ namespace M_Wallet.Client.Services
 
             try
             {
-                // Fetch all employees to find the current one (Optimization: Add GET /api/employees/{id} later)
-                var employees = await _http.GetFromJsonAsync<List<Employee>>("api/employees");
-                var employee = employees?.FirstOrDefault(e => e.Id == _currentUserId);
+                var person = await _http.GetFromJsonAsync<Person>($"api/people/{_currentUserId}");
                 
-                if (employee?.Preferences != null)
+                if (person?.Preferences != null)
                 {
-                    _preferences = JsonSerializer.Deserialize<UserPreferences>(employee.Preferences) ?? new UserPreferences();
+                    _preferences = JsonSerializer.Deserialize<UserPreferences>(person.Preferences) ?? new UserPreferences();
                 }
                 else
                 {
@@ -80,7 +100,7 @@ namespace M_Wallet.Client.Services
             try
             {
                 var json = JsonSerializer.Serialize(_preferences);
-                var response = await _http.PutAsJsonAsync($"api/employees/{_currentUserId}/preferences", json);
+                var response = await _http.PutAsJsonAsync($"api/people/{_currentUserId}/preferences", json);
                 if (!response.IsSuccessStatusCode)
                 {
                     Console.WriteLine("Failed to save preferences");
@@ -97,6 +117,25 @@ namespace M_Wallet.Client.Services
             _preferences.IsDarkMode = !_preferences.IsDarkMode;
             NotifyStateChanged();
             await SavePreferences();
+        }
+
+        public async Task ToggleFavoriteRoute(string route)
+        {
+            if (_preferences.FavoriteRoutes.Contains(route))
+            {
+                _preferences.FavoriteRoutes.Remove(route);
+            }
+            else
+            {
+                _preferences.FavoriteRoutes.Add(route);
+            }
+            NotifyStateChanged();
+            await SavePreferences();
+        }
+
+        public bool IsRouteFavorite(string route)
+        {
+            return _preferences.FavoriteRoutes.Contains(route);
         }
 
         public async Task SetColumnVisibility(string tableName, string columnTitle, bool isVisible)
