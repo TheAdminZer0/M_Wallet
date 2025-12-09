@@ -1,33 +1,42 @@
 @page "/login"
 @using M_Wallet.Client.Services
 @using M_Wallet.Shared.Models
+@using M_Wallet.Client.Components
 @using Microsoft.AspNetCore.Authorization
 @attribute [AllowAnonymous]
 @inject CustomAuthenticationStateProvider AuthStateProvider
 @inject NavigationManager Navigation
 
 <MudContainer MaxWidth="MaxWidth.Small" Class="mt-16">
-    <MudPaper Class="pa-4">
-        <MudText Typo="Typo.h4" Align="Align.Center" Class="mb-4">Login</MudText>
-        <MudForm @ref="form" @bind-IsValid="@success">
-            <MudTextField T="string" Label="Username" @bind-Value="username" Required="true" RequiredError="Username is required!" />
-            <MudTextField T="string" Label="Password" @bind-Value="password" InputType="InputType.Password" Required="true" RequiredError="Password is required!" />
-            
-            <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="@(!success)" OnClick="DoLogin" Class="mt-4" FullWidth="true">Login</MudButton>
-            @if (error)
-            {
-                <MudAlert Severity="Severity.Error" Class="mt-2">Invalid credentials</MudAlert>
-            }
-        </MudForm>
-    </MudPaper>
+    @if (isCheckingAuth)
+    {
+        <SplashScreen Text="Checking session..." />
+    }
+    else
+    {
+        <MudPaper Class="pa-4">
+            <MudText Typo="Typo.h4" Align="Align.Center" Class="mb-4">Login</MudText>
+            <MudForm @ref="form" @bind-IsValid="@success">
+                <MudTextField T="string" Label="Username" @bind-Value="username" Required="true" RequiredError="Username is required!" />
+                <MudTextField T="string" Label="Password" @bind-Value="password" InputType="InputType.Password" Required="true" RequiredError="Password is required!" />
+                
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="@(!success)" OnClick="DoLogin" Class="mt-4" FullWidth="true">Login</MudButton>
+                @if (error)
+                {
+                    <MudAlert Severity="Severity.Error" Class="mt-2">Invalid credentials</MudAlert>
+                }
+            </MudForm>
+        </MudPaper>
+    }
 </MudContainer>
 
 @code {
     bool success;
     bool error;
-    MudForm form;
-    string username;
-    string password;
+    bool isCheckingAuth = true;
+    MudForm? form;
+    string username = "";
+    string password = "";
 
     protected override async Task OnInitializedAsync()
     {
@@ -35,6 +44,15 @@
         if (authState.User.Identity?.IsAuthenticated == true)
         {
             Navigation.NavigateTo("/");
+        }
+    }
+
+    protected override void OnAfterRender(bool firstRender)
+    {
+        if (firstRender && isCheckingAuth)
+        {
+            isCheckingAuth = false;
+            StateHasChanged();
         }
     }
 

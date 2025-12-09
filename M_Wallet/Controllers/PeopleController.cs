@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using M_Wallet.Data;
 using M_Wallet.Shared;
 using M_Wallet.Shared.Models;
+using System.Text.Json;
 
 namespace M_Wallet.Controllers;
 
@@ -143,7 +144,7 @@ public class PeopleController : ControllerBase
     }
 
     [HttpPut("{id}/preferences")]
-    public async Task<IActionResult> UpdatePreferences(int id, [FromBody] string preferences)
+    public async Task<IActionResult> UpdatePreferences(int id, [FromBody] UserPreferences preferences)
     {
         var person = await _context.People.FindAsync(id);
         if (person == null)
@@ -151,7 +152,12 @@ public class PeopleController : ControllerBase
             return NotFound();
         }
 
-        person.Preferences = preferences;
+        var options = new JsonSerializerOptions
+        {
+            PropertyNamingPolicy = null // Use PascalCase to match C# properties
+        };
+        person.Preferences = JsonSerializer.Serialize(preferences, options);
+        
         await _context.SaveChangesAsync();
 
         return NoContent();

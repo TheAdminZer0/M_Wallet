@@ -12,6 +12,8 @@ public class Product
     public int StockQuantity { get; set; }
     public bool IsActive { get; set; } = true;
     public bool IsPinned { get; set; } = false;
+    public bool IsService { get; set; } = false;
+    public bool IsStockless { get; set; } = false;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     
     [System.ComponentModel.DataAnnotations.Schema.NotMapped]

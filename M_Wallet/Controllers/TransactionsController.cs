@@ -218,4 +218,40 @@ public class TransactionsController : ControllerBase
 
         return NoContent();
     }
+
+    [HttpPut("{id}")]
+    public async Task<IActionResult> UpdateTransaction(int id, Transaction transaction)
+    {
+        if (id != transaction.Id)
+        {
+            return BadRequest();
+        }
+
+        var existingTransaction = await _context.Transactions.FindAsync(id);
+        if (existingTransaction == null)
+        {
+            return NotFound();
+        }
+
+        // Only allow updating the Note for now
+        existingTransaction.Note = transaction.Note;
+
+        try
+        {
+            await _context.SaveChangesAsync();
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            if (!_context.Transactions.Any(e => e.Id == id))
+            {
+                return NotFound();
+            }
+            else
+            {
+                throw;
+            }
+        }
+
+        return NoContent();
+    }
 }

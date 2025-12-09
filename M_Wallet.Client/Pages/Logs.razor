@@ -10,37 +10,39 @@
 <MudText Typo="Typo.h3" GutterBottom="true">Audit Logs</MudText>
 <MudText Class="mb-4">Track all system activities and employee actions.</MudText>
 
-<MudTable Items="@logs" Dense="true" Hover="true" Bordered="true" Striped="true" Breakpoint="Breakpoint.None" Filter="new Func<AuditLog,bool>(FilterFunc1)" Loading="@isLoading">
-    <ToolBarContent>
-        <MudText Typo="Typo.h6">System Logs</MudText>
-        <MudSpacer />
-        <MudTextField @bind-Value="searchString" Placeholder="Search logs..." Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium" Class="mt-0"></MudTextField>
-    </ToolBarContent>
-    <HeaderContent>
-        @if (IsVisible("Time")) { <MudTh>Time</MudTh> }
-        @if (IsVisible("Action")) { <MudTh>Action</MudTh> }
-        @if (IsVisible("Entity")) { <MudTh>Entity</MudTh> }
-        @if (IsVisible("Employee")) { <MudTh>Employee</MudTh> }
-        @if (IsVisible("Description")) { <MudTh>Description</MudTh> }
-    </HeaderContent>
-    <RowTemplate>
-        @if (IsVisible("Time")) { <MudTd DataLabel="Time" Style="white-space: nowrap;">@context.Timestamp.ToLocalTime().ToString("yyyy/MM/dd hh:mm tt")</MudTd> }
-        @if (IsVisible("Action")) {
-            <MudTd DataLabel="Action">
-                <MudChip T="string" Color="@GetColor(context.Action)" Size="Size.Small">@context.Action</MudChip>
-            </MudTd>
-        }
-        @if (IsVisible("Entity")) { <MudTd DataLabel="Entity">@context.Entity</MudTd> }
-        @if (IsVisible("Employee")) { <MudTd DataLabel="Employee">@context.EmployeeName</MudTd> }
-        @if (IsVisible("Description")) { <MudTd DataLabel="Description">@context.Description</MudTd> }
-    </RowTemplate>
-    <PagerContent>
-        <div class="d-flex align-center justify-space-between px-4 py-2">
-            <TableColumnToggle Columns="@_columns" ColumnsChanged="StateHasChanged" TableName="Logs" />
-            <MudTablePager />
-        </div>
-    </PagerContent>
-</MudTable>
+<div style="overflow-x:auto; -webkit-overflow-scrolling: touch;">
+    <MudTable Items="@logs" Dense="true" Hover="true" Bordered="true" Striped="true" Breakpoint="Breakpoint.None" Filter="new Func<AuditLog,bool>(FilterFunc1)" Loading="@isLoading">
+        <ToolBarContent>
+            <MudText Typo="Typo.h6">System Logs</MudText>
+            <MudSpacer />
+            <MudTextField @bind-Value="searchString" Placeholder="Search logs..." Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium" Class="mt-0"></MudTextField>
+        </ToolBarContent>
+        <HeaderContent>
+            @if (IsVisible("Time")) { <MudTh>Time</MudTh> }
+            @if (IsVisible("Action")) { <MudTh>Action</MudTh> }
+            @if (IsVisible("Entity")) { <MudTh>Entity</MudTh> }
+            @if (IsVisible("Employee")) { <MudTh>Employee</MudTh> }
+            @if (IsVisible("Description")) { <MudTh>Description</MudTh> }
+        </HeaderContent>
+        <RowTemplate>
+            @if (IsVisible("Time")) { <MudTd DataLabel="Time" Style="white-space: nowrap;">@context.Timestamp.ToLocalTime().ToString("yyyy/MM/dd hh:mm tt")</MudTd> }
+            @if (IsVisible("Action")) {
+                <MudTd DataLabel="Action">
+                    <MudChip T="string" Color="@GetColor(context.Action)" Size="Size.Small">@context.Action</MudChip>
+                </MudTd>
+            }
+            @if (IsVisible("Entity")) { <MudTd DataLabel="Entity">@context.Entity</MudTd> }
+            @if (IsVisible("Employee")) { <MudTd DataLabel="Employee">@context.EmployeeName</MudTd> }
+            @if (IsVisible("Description")) { <MudTd DataLabel="Description">@context.Description</MudTd> }
+        </RowTemplate>
+        <PagerContent>
+            <div class="d-flex align-center justify-space-between px-4 py-2">
+                <TableColumnToggle Columns="@_columns" ColumnsChanged="StateHasChanged" TableName="Logs" />
+                <MudTablePager />
+            </div>
+        </PagerContent>
+    </MudTable>
+</div>
 
 @code {
     private List<AuditLog> logs = new();

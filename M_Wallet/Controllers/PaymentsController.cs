@@ -21,9 +21,6 @@ public class PaymentsController : ControllerBase
     {
         return await _context.Payments
             .Include(p => p.Allocations)
-                .ThenInclude(pa => pa.Transaction!)
-                    .ThenInclude(t => t.Items)
-                        .ThenInclude(i => i.Product)
             .OrderByDescending(p => p.PaymentDate)
             .ToListAsync();
     }

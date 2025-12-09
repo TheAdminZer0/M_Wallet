@@ -1,7 +1,14 @@
 @inject NavigationManager Navigation
+@using M_Wallet.Client.Components
+
+<SplashScreen Text="Checking access..." />
+
 @code {
-    protected override void OnInitialized()
+    protected override void OnAfterRender(bool firstRender)
     {
-        Navigation.NavigateTo("login");
+        if (firstRender)
+        {
+            Navigation.NavigateTo("login");
+        }
     }
 }

@@ -12,127 +12,133 @@
 
 <MudTabs Elevation="2" Rounded="true" ApplyEffectsToContainer="true" PanelClass="pa-6">
     <MudTabPanel Text="Customers" Icon="@Icons.Material.Filled.People">
-        <MudTable Items="@GetUsersByRole("Customer")" Hover="true" Dense="true" Filter="new Func<Person, bool>(FilterFunc)" SortLabel="Sort By">
-            <ToolBarContent>
-                <MudText Typo="Typo.h6">Customers</MudText>
-                <MudSpacer />
-                <MudTextField @bind-Value="searchString" Placeholder="Search" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium" Class="mt-0"></MudTextField>
-                <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" OnClick="@(() => AddUser("Customer"))" Class="ml-4">Add Customer</MudButton>
-            </ToolBarContent>
-            <HeaderContent>
-                @if (IsCustomerColumnVisible("Name")) { <MudTh><MudTableSortLabel SortBy="new Func<Person, object>(x => x.Name)">Name</MudTableSortLabel></MudTh> }
-                @if (IsCustomerColumnVisible("Phone Number")) { <MudTh><MudTableSortLabel SortBy="new Func<Person, object>(x => x.PhoneNumber)">Phone Number</MudTableSortLabel></MudTh> }
-                @if (IsCustomerColumnVisible("Balance")) { <MudTh><MudTableSortLabel SortBy="new Func<Person, object>(x => x.Balance)">Balance</MudTableSortLabel></MudTh> }
-                @if (IsCustomerColumnVisible("Last Transaction")) { <MudTh><MudTableSortLabel SortBy="new Func<Person, object>(x => x.LastTransactionDate)">Last Transaction</MudTableSortLabel></MudTh> }
-                @if (IsCustomerColumnVisible("Actions")) { <MudTh>Actions</MudTh> }
-            </HeaderContent>
-            <RowTemplate>
-                @if (IsCustomerColumnVisible("Name")) { <MudTd DataLabel="Name">@context.Name</MudTd> }
-                @if (IsCustomerColumnVisible("Phone Number")) { <MudTd DataLabel="Phone Number">@context.PhoneNumber</MudTd> }
-                @if (IsCustomerColumnVisible("Balance")) { 
-                    <MudTd DataLabel="Balance">
-                        <MudText Color="@(context.Balance < 0 ? Color.Error : Color.Success)">
-                            @context.Balance.ToString("F2")
-                        </MudText>
-                    </MudTd> 
-                }
-                @if (IsCustomerColumnVisible("Last Transaction")) { <MudTd DataLabel="Last Transaction" Style="white-space: nowrap;">@(context.LastTransactionDate?.ToLocalTime().ToString("yyyy/MM/dd hh:mm tt") ?? "-")</MudTd> }
-                @if (IsCustomerColumnVisible("Actions")) {
-                    <MudTd DataLabel="Actions" Style="white-space: nowrap;">
-                        <MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Primary" Size="Size.Small" OnClick="@(() => EditUser(context))" />
-                        <MudIconButton Icon="@Icons.Material.Filled.ReceiptLong" Color="Color.Info" Size="Size.Small" OnClick="@(() => ShowStatement(context))" Title="Statement" />
-                        <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" Size="Size.Small" OnClick="@(() => DeleteUser(context))" />
-                    </MudTd>
-                }
-            </RowTemplate>
-            <PagerContent>
-                <div class="d-flex align-center justify-space-between px-4 py-2">
-                    <TableColumnToggle Columns="@_customerColumns" ColumnsChanged="StateHasChanged" TableName="UsersCustomers" />
-                    <MudTablePager />
-                </div>
-            </PagerContent>
-        </MudTable>
+        <div style="overflow-x:auto; -webkit-overflow-scrolling: touch;">
+            <MudTable Items="@GetUsersByRole("Customer")" Hover="true" Dense="true" Breakpoint="Breakpoint.None" Filter="new Func<Person, bool>(FilterFunc)" SortLabel="Sort By">
+                <ToolBarContent>
+                    <MudText Typo="Typo.h6">Customers</MudText>
+                    <MudSpacer />
+                    <MudTextField @bind-Value="searchString" Placeholder="Search" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium" Class="mt-0"></MudTextField>
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" OnClick="@(() => AddUser("Customer"))" Class="ml-4">Add Customer</MudButton>
+                </ToolBarContent>
+                <HeaderContent>
+                    @if (IsCustomerColumnVisible("Name")) { <MudTh><MudTableSortLabel SortBy="new Func<Person, object>(x => x.Name)">Name</MudTableSortLabel></MudTh> }
+                    @if (IsCustomerColumnVisible("Phone Number")) { <MudTh><MudTableSortLabel SortBy="new Func<Person, object>(x => x.PhoneNumber)">Phone Number</MudTableSortLabel></MudTh> }
+                    @if (IsCustomerColumnVisible("Balance")) { <MudTh><MudTableSortLabel SortBy="new Func<Person, object>(x => x.Balance)">Balance</MudTableSortLabel></MudTh> }
+                    @if (IsCustomerColumnVisible("Last Transaction")) { <MudTh><MudTableSortLabel SortBy="new Func<Person, object>(x => x.LastTransactionDate)">Last Transaction</MudTableSortLabel></MudTh> }
+                    @if (IsCustomerColumnVisible("Actions")) { <MudTh>Actions</MudTh> }
+                </HeaderContent>
+                <RowTemplate>
+                    @if (IsCustomerColumnVisible("Name")) { <MudTd DataLabel="Name">@context.Name</MudTd> }
+                    @if (IsCustomerColumnVisible("Phone Number")) { <MudTd DataLabel="Phone Number">@context.PhoneNumber</MudTd> }
+                    @if (IsCustomerColumnVisible("Balance")) { 
+                        <MudTd DataLabel="Balance">
+                            <MudText Color="@(context.Balance < 0 ? Color.Error : Color.Success)">
+                                @context.Balance.ToString("F2")
+                            </MudText>
+                        </MudTd> 
+                    }
+                    @if (IsCustomerColumnVisible("Last Transaction")) { <MudTd DataLabel="Last Transaction" Style="white-space: nowrap;">@(context.LastTransactionDate?.ToLocalTime().ToString("yyyy/MM/dd hh:mm tt") ?? "-")</MudTd> }
+                    @if (IsCustomerColumnVisible("Actions")) {
+                        <MudTd DataLabel="Actions" Style="white-space: nowrap;">
+                            <MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Primary" Size="Size.Small" OnClick="@(() => EditUser(context))" />
+                            <MudIconButton Icon="@Icons.Material.Filled.ReceiptLong" Color="Color.Info" Size="Size.Small" OnClick="@(() => ShowStatement(context))" Title="Statement" />
+                            <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" Size="Size.Small" OnClick="@(() => DeleteUser(context))" />
+                        </MudTd>
+                    }
+                </RowTemplate>
+                <PagerContent>
+                    <div class="d-flex align-center justify-space-between px-4 py-2">
+                        <TableColumnToggle Columns="@_customerColumns" ColumnsChanged="StateHasChanged" TableName="UsersCustomers" />
+                        <MudTablePager />
+                    </div>
+                </PagerContent>
+            </MudTable>
+        </div>
     </MudTabPanel>
 
     <MudTabPanel Text="Drivers" Icon="@Icons.Material.Filled.LocalShipping">
-        <MudTable Items="@GetUsersByRole("Driver")" Hover="true" Dense="true" Filter="new Func<Person, bool>(FilterFunc)" SortLabel="Sort By">
-            <ToolBarContent>
-                <MudText Typo="Typo.h6">Drivers</MudText>
-                <MudSpacer />
-                <MudTextField @bind-Value="searchString" Placeholder="Search" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium" Class="mt-0"></MudTextField>
-                <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" OnClick="@(() => AddUser("Driver"))" Class="ml-4">Add Driver</MudButton>
-            </ToolBarContent>
-            <HeaderContent>
-                @if (IsDriverColumnVisible("Name")) { <MudTh><MudTableSortLabel SortBy="new Func<Person, object>(x => x.Name)">Name</MudTableSortLabel></MudTh> }
-                @if (IsDriverColumnVisible("Phone Number")) { <MudTh><MudTableSortLabel SortBy="new Func<Person, object>(x => x.PhoneNumber)">Phone Number</MudTableSortLabel></MudTh> }
-                @if (IsDriverColumnVisible("Deliveries")) { <MudTh><MudTableSortLabel SortBy="new Func<Person, object>(x => x.CompletedDeliveries)">Deliveries</MudTableSortLabel></MudTh> }
-                @if (IsDriverColumnVisible("Balance")) { <MudTh><MudTableSortLabel SortBy="new Func<Person, object>(x => x.Balance)">Balance</MudTableSortLabel></MudTh> }
-                @if (IsDriverColumnVisible("Last Transaction")) { <MudTh><MudTableSortLabel SortBy="new Func<Person, object>(x => x.LastTransactionDate)">Last Transaction</MudTableSortLabel></MudTh> }
-                @if (IsDriverColumnVisible("Actions")) { <MudTh>Actions</MudTh> }
-            </HeaderContent>
-            <RowTemplate>
-                @if (IsDriverColumnVisible("Name")) { <MudTd DataLabel="Name">@context.Name</MudTd> }
-                @if (IsDriverColumnVisible("Phone Number")) { <MudTd DataLabel="Phone Number">@context.PhoneNumber</MudTd> }
-                @if (IsDriverColumnVisible("Deliveries")) {
-                    <MudTd DataLabel="Deliveries">
-                        <MudChip T="string" Color="Color.Success" Size="Size.Small">@context.CompletedDeliveries</MudChip>
-                    </MudTd>
-                }
-                @if (IsDriverColumnVisible("Balance")) { 
-                    <MudTd DataLabel="Balance">
-                        <MudText Color="@(context.Balance < 0 ? Color.Error : Color.Success)">
-                            @context.Balance.ToString("F2")
-                        </MudText>
-                    </MudTd> 
-                }
-                @if (IsDriverColumnVisible("Last Transaction")) { <MudTd DataLabel="Last Transaction" Style="white-space: nowrap;">@(context.LastTransactionDate?.ToLocalTime().ToString("yyyy/MM/dd hh:mm tt") ?? "-")</MudTd> }
-                @if (IsDriverColumnVisible("Actions")) {
-                    <MudTd DataLabel="Actions" Style="white-space: nowrap;">
-                        <MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Primary" Size="Size.Small" OnClick="@(() => EditUser(context))" />
-                        <MudIconButton Icon="@Icons.Material.Filled.ReceiptLong" Color="Color.Info" Size="Size.Small" OnClick="@(() => ShowStatement(context))" Title="Statement" />
-                        <MudIconButton Icon="@Icons.Material.Filled.LocalShipping" Color="Color.Warning" Size="Size.Small" OnClick="@(() => ShowDeliveries(context))" Title="Deliveries" />
-                        <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" Size="Size.Small" OnClick="@(() => DeleteUser(context))" />
-                    </MudTd>
-                }
-            </RowTemplate>
-            <PagerContent>
-                <div class="d-flex align-center justify-space-between px-4 py-2">
-                    <TableColumnToggle Columns="@_driverColumns" ColumnsChanged="StateHasChanged" TableName="UsersDrivers" />
-                    <MudTablePager />
-                </div>
-            </PagerContent>
-        </MudTable>
+        <div style="overflow-x:auto; -webkit-overflow-scrolling: touch;">
+            <MudTable Items="@GetUsersByRole("Driver")" Hover="true" Dense="true" Breakpoint="Breakpoint.None" Filter="new Func<Person, bool>(FilterFunc)" SortLabel="Sort By">
+                <ToolBarContent>
+                    <MudText Typo="Typo.h6">Drivers</MudText>
+                    <MudSpacer />
+                    <MudTextField @bind-Value="searchString" Placeholder="Search" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium" Class="mt-0"></MudTextField>
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" OnClick="@(() => AddUser("Driver"))" Class="ml-4">Add Driver</MudButton>
+                </ToolBarContent>
+                <HeaderContent>
+                    @if (IsDriverColumnVisible("Name")) { <MudTh><MudTableSortLabel SortBy="new Func<Person, object>(x => x.Name)">Name</MudTableSortLabel></MudTh> }
+                    @if (IsDriverColumnVisible("Phone Number")) { <MudTh><MudTableSortLabel SortBy="new Func<Person, object>(x => x.PhoneNumber)">Phone Number</MudTableSortLabel></MudTh> }
+                    @if (IsDriverColumnVisible("Deliveries")) { <MudTh><MudTableSortLabel SortBy="new Func<Person, object>(x => x.CompletedDeliveries)">Deliveries</MudTableSortLabel></MudTh> }
+                    @if (IsDriverColumnVisible("Balance")) { <MudTh><MudTableSortLabel SortBy="new Func<Person, object>(x => x.Balance)">Balance</MudTableSortLabel></MudTh> }
+                    @if (IsDriverColumnVisible("Last Transaction")) { <MudTh><MudTableSortLabel SortBy="new Func<Person, object>(x => x.LastTransactionDate)">Last Transaction</MudTableSortLabel></MudTh> }
+                    @if (IsDriverColumnVisible("Actions")) { <MudTh>Actions</MudTh> }
+                </HeaderContent>
+                <RowTemplate>
+                    @if (IsDriverColumnVisible("Name")) { <MudTd DataLabel="Name">@context.Name</MudTd> }
+                    @if (IsDriverColumnVisible("Phone Number")) { <MudTd DataLabel="Phone Number">@context.PhoneNumber</MudTd> }
+                    @if (IsDriverColumnVisible("Deliveries")) {
+                        <MudTd DataLabel="Deliveries">
+                            <MudChip T="string" Color="Color.Success" Size="Size.Small">@context.CompletedDeliveries</MudChip>
+                        </MudTd>
+                    }
+                    @if (IsDriverColumnVisible("Balance")) { 
+                        <MudTd DataLabel="Balance">
+                            <MudText Color="@(context.Balance < 0 ? Color.Error : Color.Success)">
+                                @context.Balance.ToString("F2")
+                            </MudText>
+                        </MudTd> 
+                    }
+                    @if (IsDriverColumnVisible("Last Transaction")) { <MudTd DataLabel="Last Transaction" Style="white-space: nowrap;">@(context.LastTransactionDate?.ToLocalTime().ToString("yyyy/MM/dd hh:mm tt") ?? "-")</MudTd> }
+                    @if (IsDriverColumnVisible("Actions")) {
+                        <MudTd DataLabel="Actions" Style="white-space: nowrap;">
+                            <MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Primary" Size="Size.Small" OnClick="@(() => EditUser(context))" />
+                            <MudIconButton Icon="@Icons.Material.Filled.ReceiptLong" Color="Color.Info" Size="Size.Small" OnClick="@(() => ShowStatement(context))" Title="Statement" />
+                            <MudIconButton Icon="@Icons.Material.Filled.LocalShipping" Color="Color.Warning" Size="Size.Small" OnClick="@(() => ShowDeliveries(context))" Title="Deliveries" />
+                            <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" Size="Size.Small" OnClick="@(() => DeleteUser(context))" />
+                        </MudTd>
+                    }
+                </RowTemplate>
+                <PagerContent>
+                    <div class="d-flex align-center justify-space-between px-4 py-2">
+                        <TableColumnToggle Columns="@_driverColumns" ColumnsChanged="StateHasChanged" TableName="UsersDrivers" />
+                        <MudTablePager />
+                    </div>
+                </PagerContent>
+            </MudTable>
+        </div>
     </MudTabPanel>
 
     <MudTabPanel Text="System" Icon="@Icons.Material.Filled.Computer">
         @if (isAdminVerified)
         {
-            <MudTable Items="@GetUsersByRole("System")" Hover="true" Dense="true" Filter="new Func<Person, bool>(FilterFunc)" SortLabel="Sort By">
-                <ToolBarContent>
-                    <MudText Typo="Typo.h6">System Accounts</MudText>
-                    <MudSpacer />
-                    <MudTextField @bind-Value="searchString" Placeholder="Search" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium" Class="mt-0"></MudTextField>
-                    <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" OnClick="@(() => AddUser("System"))" Class="ml-4">Add System User</MudButton>
-                </ToolBarContent>
-                <HeaderContent>
-                    <MudTh><MudTableSortLabel SortBy="new Func<Person, object>(x => x.Name)">Name</MudTableSortLabel></MudTh>
-                    <MudTh><MudTableSortLabel SortBy="new Func<Person, object>(x => x.Role)">Role</MudTableSortLabel></MudTh>
-                    <MudTh><MudTableSortLabel SortBy="new Func<Person, object>(x => x.Username)">Username</MudTableSortLabel></MudTh>
-                    <MudTh>Actions</MudTh>
-                </HeaderContent>
-                <RowTemplate Context="systemContext">
-                    <MudTd DataLabel="Name">@systemContext.Name</MudTd>
-                    <MudTd DataLabel="Role">@systemContext.Role</MudTd>
-                    <MudTd DataLabel="Username">@systemContext.Username</MudTd>
-                    <MudTd DataLabel="Actions" Style="white-space: nowrap;">
-                        <MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Primary" Size="Size.Small" OnClick="@(() => EditUser(systemContext))" />
-                        <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" Size="Size.Small" OnClick="@(() => DeleteUser(systemContext))" />
-                    </MudTd>
-                </RowTemplate>
-                <PagerContent>
-                    <MudTablePager />
-                </PagerContent>
-            </MudTable>
+            <div style="overflow-x:auto; -webkit-overflow-scrolling: touch;">
+                <MudTable Items="@GetUsersByRole("System")" Hover="true" Dense="true" Breakpoint="Breakpoint.None" Filter="new Func<Person, bool>(FilterFunc)" SortLabel="Sort By">
+                    <ToolBarContent>
+                        <MudText Typo="Typo.h6">System Accounts</MudText>
+                        <MudSpacer />
+                        <MudTextField @bind-Value="searchString" Placeholder="Search" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium" Class="mt-0"></MudTextField>
+                        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" OnClick="@(() => AddUser("System"))" Class="ml-4">Add System User</MudButton>
+                    </ToolBarContent>
+                    <HeaderContent>
+                        <MudTh><MudTableSortLabel SortBy="new Func<Person, object>(x => x.Name)">Name</MudTableSortLabel></MudTh>
+                        <MudTh><MudTableSortLabel SortBy="new Func<Person, object>(x => x.Role)">Role</MudTableSortLabel></MudTh>
+                        <MudTh><MudTableSortLabel SortBy="new Func<Person, object>(x => x.Username)">Username</MudTableSortLabel></MudTh>
+                        <MudTh>Actions</MudTh>
+                    </HeaderContent>
+                    <RowTemplate Context="systemContext">
+                        <MudTd DataLabel="Name">@systemContext.Name</MudTd>
+                        <MudTd DataLabel="Role">@systemContext.Role</MudTd>
+                        <MudTd DataLabel="Username">@systemContext.Username</MudTd>
+                        <MudTd DataLabel="Actions" Style="white-space: nowrap;">
+                            <MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Primary" Size="Size.Small" OnClick="@(() => EditUser(systemContext))" />
+                            <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" Size="Size.Small" OnClick="@(() => DeleteUser(systemContext))" />
+                        </MudTd>
+                    </RowTemplate>
+                    <PagerContent>
+                        <MudTablePager />
+                    </PagerContent>
+                </MudTable>
+            </div>
         }
         else
         {
@@ -148,50 +154,52 @@
     <MudTabPanel Text="Employees" Icon="@Icons.Material.Filled.Badge">
         @if (isAdminVerified)
         {
-            <MudTable Items="@GetUsersByRole("Employee")" Hover="true" Dense="true" Filter="new Func<Person, bool>(FilterFunc)" SortLabel="Sort By">
-                <ToolBarContent>
-                    <MudText Typo="Typo.h6">Employees</MudText>
-                    <MudSpacer />
-                    <MudTextField @bind-Value="searchString" Placeholder="Search" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium" Class="mt-0"></MudTextField>
-                    <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" OnClick="@(() => AddUser("Employee"))" Class="ml-4">Add Employee</MudButton>
-                </ToolBarContent>
-                <HeaderContent>
-                    @if (IsEmployeeColumnVisible("Name")) { <MudTh><MudTableSortLabel SortBy="new Func<Person, object>(x => x.Name)">Name</MudTableSortLabel></MudTh> }
-                    @if (IsEmployeeColumnVisible("Role")) { <MudTh><MudTableSortLabel SortBy="new Func<Person, object>(x => x.Role)">Role</MudTableSortLabel></MudTh> }
-                    @if (IsEmployeeColumnVisible("Username")) { <MudTh><MudTableSortLabel SortBy="new Func<Person, object>(x => x.Username)">Username</MudTableSortLabel></MudTh> }
-                    @if (IsEmployeeColumnVisible("Passcode")) { <MudTh>Passcode</MudTh> }
-                    @if (IsEmployeeColumnVisible("Balance")) { <MudTh><MudTableSortLabel SortBy="new Func<Person, object>(x => x.Balance)">Balance</MudTableSortLabel></MudTh> }
-                    @if (IsEmployeeColumnVisible("Last Transaction")) { <MudTh><MudTableSortLabel SortBy="new Func<Person, object>(x => x.LastTransactionDate)">Last Transaction</MudTableSortLabel></MudTh> }
-                    @if (IsEmployeeColumnVisible("Actions")) { <MudTh>Actions</MudTh> }
-                </HeaderContent>
-                <RowTemplate Context="employeeContext">
-                    @if (IsEmployeeColumnVisible("Name")) { <MudTd DataLabel="Name">@employeeContext.Name</MudTd> }
-                    @if (IsEmployeeColumnVisible("Role")) { <MudTd DataLabel="Role">@employeeContext.Role</MudTd> }
-                    @if (IsEmployeeColumnVisible("Username")) { <MudTd DataLabel="Username">@employeeContext.Username</MudTd> }
-                    @if (IsEmployeeColumnVisible("Passcode")) { <MudTd DataLabel="Passcode">@employeeContext.Passcode</MudTd> }
-                    @if (IsEmployeeColumnVisible("Balance")) { 
-                        <MudTd DataLabel="Balance">
-                            <MudText Color="@(employeeContext.Balance < 0 ? Color.Error : Color.Success)">
-                                @employeeContext.Balance.ToString("F2")
-                            </MudText>
-                        </MudTd> 
-                    }
-                    @if (IsEmployeeColumnVisible("Last Transaction")) { <MudTd DataLabel="Last Transaction" Style="white-space: nowrap;">@(employeeContext.LastTransactionDate?.ToLocalTime().ToString("yyyy/MM/dd hh:mm tt") ?? "-")</MudTd> }
-                    @if (IsEmployeeColumnVisible("Actions")) {
-                        <MudTd DataLabel="Actions" Style="white-space: nowrap;">
-                            <MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Primary" Size="Size.Small" OnClick="@(() => EditUser(employeeContext))" />
-                            <MudIconButton Icon="@Icons.Material.Filled.ReceiptLong" Color="Color.Info" Size="Size.Small" OnClick="@(() => ShowStatement(employeeContext))" Title="Statement" />
-                            <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" Size="Size.Small" OnClick="@(() => DeleteUser(employeeContext))" />
-                        </MudTd>
-                    }
-                </RowTemplate>
-                <PagerContent>
-                    <div class="d-flex align-center justify-space-between px-4 py-2">
-                        <TableColumnToggle Columns="@_employeeColumns" ColumnsChanged="StateHasChanged" TableName="UsersEmployees" />
-                        <MudTablePager />
-                    </div>
-                </PagerContent>
-            </MudTable>
+            <div style="overflow-x:auto; -webkit-overflow-scrolling: touch;">
+                <MudTable Items="@GetUsersByRole("Employee")" Hover="true" Dense="true" Breakpoint="Breakpoint.None" Filter="new Func<Person, bool>(FilterFunc)" SortLabel="Sort By">
+                    <ToolBarContent>
+                        <MudText Typo="Typo.h6">Employees</MudText>
+                        <MudSpacer />
+                        <MudTextField @bind-Value="searchString" Placeholder="Search" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium" Class="mt-0"></MudTextField>
+                        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" OnClick="@(() => AddUser("Employee"))" Class="ml-4">Add Employee</MudButton>
+                    </ToolBarContent>
+                    <HeaderContent>
+                        @if (IsEmployeeColumnVisible("Name")) { <MudTh><MudTableSortLabel SortBy="new Func<Person, object>(x => x.Name)">Name</MudTableSortLabel></MudTh> }
+                        @if (IsEmployeeColumnVisible("Role")) { <MudTh><MudTableSortLabel SortBy="new Func<Person, object>(x => x.Role)">Role</MudTableSortLabel></MudTh> }
+                        @if (IsEmployeeColumnVisible("Username")) { <MudTh><MudTableSortLabel SortBy="new Func<Person, object>(x => x.Username)">Username</MudTableSortLabel></MudTh> }
+                        @if (IsEmployeeColumnVisible("Passcode")) { <MudTh>Passcode</MudTh> }
+                        @if (IsEmployeeColumnVisible("Balance")) { <MudTh><MudTableSortLabel SortBy="new Func<Person, object>(x => x.Balance)">Balance</MudTableSortLabel></MudTh> }
+                        @if (IsEmployeeColumnVisible("Last Transaction")) { <MudTh><MudTableSortLabel SortBy="new Func<Person, object>(x => x.LastTransactionDate)">Last Transaction</MudTableSortLabel></MudTh> }
+                        @if (IsEmployeeColumnVisible("Actions")) { <MudTh>Actions</MudTh> }
+                    </HeaderContent>
+                    <RowTemplate Context="employeeContext">
+                        @if (IsEmployeeColumnVisible("Name")) { <MudTd DataLabel="Name">@employeeContext.Name</MudTd> }
+                        @if (IsEmployeeColumnVisible("Role")) { <MudTd DataLabel="Role">@employeeContext.Role</MudTd> }
+                        @if (IsEmployeeColumnVisible("Username")) { <MudTd DataLabel="Username">@employeeContext.Username</MudTd> }
+                        @if (IsEmployeeColumnVisible("Passcode")) { <MudTd DataLabel="Passcode">@employeeContext.Passcode</MudTd> }
+                        @if (IsEmployeeColumnVisible("Balance")) { 
+                            <MudTd DataLabel="Balance">
+                                <MudText Color="@(employeeContext.Balance < 0 ? Color.Error : Color.Success)">
+                                    @employeeContext.Balance.ToString("F2")
+                                </MudText>
+                            </MudTd> 
+                        }
+                        @if (IsEmployeeColumnVisible("Last Transaction")) { <MudTd DataLabel="Last Transaction" Style="white-space: nowrap;">@(employeeContext.LastTransactionDate?.ToLocalTime().ToString("yyyy/MM/dd hh:mm tt") ?? "-")</MudTd> }
+                        @if (IsEmployeeColumnVisible("Actions")) {
+                            <MudTd DataLabel="Actions" Style="white-space: nowrap;">
+                                <MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Primary" Size="Size.Small" OnClick="@(() => EditUser(employeeContext))" />
+                                <MudIconButton Icon="@Icons.Material.Filled.ReceiptLong" Color="Color.Info" Size="Size.Small" OnClick="@(() => ShowStatement(employeeContext))" Title="Statement" />
+                                <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" Size="Size.Small" OnClick="@(() => DeleteUser(employeeContext))" />
+                            </MudTd>
+                        }
+                    </RowTemplate>
+                    <PagerContent>
+                        <div class="d-flex align-center justify-space-between px-4 py-2">
+                            <TableColumnToggle Columns="@_employeeColumns" ColumnsChanged="StateHasChanged" TableName="UsersEmployees" />
+                            <MudTablePager />
+                        </div>
+                    </PagerContent>
+                </MudTable>
+            </div>
         }
         else
         {

@@ -1,7 +1,13 @@
-﻿<CascadingAuthenticationState>
+﻿@using M_Wallet.Client.Services
+@using M_Wallet.Client.Components
+
+<CascadingAuthenticationState>
     <Router AppAssembly="typeof(Program).Assembly">
         <Found Context="routeData">
             <AuthorizeRouteView RouteData="routeData" DefaultLayout="typeof(Layout.MainLayout)">
+                <Authorizing>
+                    <SplashScreen Text="Loading M_Wallet..." />
+                </Authorizing>
                 <NotAuthorized>
                     <RedirectToLogin />
                 </NotAuthorized>

@@ -8,6 +8,8 @@
 @inject CustomAuthenticationStateProvider AuthStateProvider
 @inject NavigationManager Navigation
 @inject UserPreferencesService UserPreferences
+@inject TransactionService TransactionService
+@inject ProductService ProductService
 
 <style>
     .remove-focus-bg:focus {
@@ -83,6 +85,14 @@
         AuthStateProvider.AuthenticationStateChanged += OnAuthenticationStateChanged;
         Navigation.LocationChanged += OnLocationChanged;
 
+        // Start background data fetch IMMEDIATELY if authenticated
+        // Do this BEFORE awaiting UserPreferences to maximize parallelism
+        if (user?.Identity?.IsAuthenticated == true)
+        {
+            _ = TransactionService.InitializeAsync();
+            _ = ProductService.InitializeAsync();
+        }
+
         await UserPreferences.InitializeAsync();
         _isDarkMode = UserPreferences.Preferences.IsDarkMode;
         UserPreferences.OnChange += OnPreferencesChanged;
@@ -103,7 +113,16 @@
     {
         var authState = await task;
         user = authState.User;
+
+        // Start background data fetch IMMEDIATELY if authenticated
+        if (user?.Identity?.IsAuthenticated == true)
+        {
+            _ = TransactionService.InitializeAsync();
+            _ = ProductService.InitializeAsync();
+        }
+
         await UserPreferences.InitializeAsync();
+        
         StateHasChanged();
     }
 

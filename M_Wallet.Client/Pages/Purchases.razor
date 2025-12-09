@@ -160,81 +160,83 @@ else
 {
     <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" OnClick="StartCreate" Class="mb-4">New Purchase</MudButton>
 
-    <MudTable Items="@purchases" Hover="true" Dense="true" Breakpoint="Breakpoint.None" Loading="@(purchases == null)" OnRowClick="OnRowClick" T="Purchase">
-        <HeaderContent>
-            <MudTh Style="width: 50px;"></MudTh>
-            @if (IsVisible("ID")) { <MudTh>ID</MudTh> }
-            @if (IsVisible("Date")) { <MudTh>Date</MudTh> }
-            @if (IsVisible("Supplier")) { <MudTh>Supplier</MudTh> }
-            @if (IsVisible("Items")) { <MudTh>Items</MudTh> }
-            @if (IsVisible("Total Amount")) { <MudTh>Total Amount</MudTh> }
-            @if (IsVisible("Actions")) { <MudTh>Actions</MudTh> }
-        </HeaderContent>
-        <RowTemplate>
-            <MudTd>
-                <MudIcon Icon="@(expandedPurchases.Contains(context.Id) ? Icons.Material.Filled.ExpandLess : Icons.Material.Filled.ExpandMore)" />
-            </MudTd>
-            @if (IsVisible("ID")) { <MudTd>#@context.Id</MudTd> }
-            @if (IsVisible("Date")) { <MudTd Style="white-space: nowrap;">@context.PurchaseDate.ToLocalTime().ToString("yyyy/MM/dd hh:mm tt")</MudTd> }
-            @if (IsVisible("Supplier")) { <MudTd>@(context.SupplierName ?? "-")</MudTd> }
-            @if (IsVisible("Items")) { <MudTd>@context.Items.Count</MudTd> }
-            @if (IsVisible("Total Amount")) { <MudTd>@context.TotalAmount.ToString("F2")</MudTd> }
-            @if (IsVisible("Actions")) {
-                <MudTd Style="white-space: nowrap;">
-                    <MudIconButton Icon="@Icons.Material.Filled.Delete" 
-                                   Color="Color.Error" 
-                                   Size="Size.Small" 
-                                   OnClick="@((e) => DeletePurchase(context))" />
+    <div style="overflow-x:auto; -webkit-overflow-scrolling: touch;">
+        <MudTable Items="@purchases" Hover="true" Dense="true" Breakpoint="Breakpoint.None" Loading="@(purchases == null)" OnRowClick="OnRowClick" T="Purchase">
+            <HeaderContent>
+                <MudTh Style="width: 50px;"></MudTh>
+                @if (IsVisible("ID")) { <MudTh>ID</MudTh> }
+                @if (IsVisible("Date")) { <MudTh>Date</MudTh> }
+                @if (IsVisible("Supplier")) { <MudTh>Supplier</MudTh> }
+                @if (IsVisible("Items")) { <MudTh>Items</MudTh> }
+                @if (IsVisible("Total Amount")) { <MudTh>Total Amount</MudTh> }
+                @if (IsVisible("Actions")) { <MudTh>Actions</MudTh> }
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd>
+                    <MudIcon Icon="@(expandedPurchases.Contains(context.Id) ? Icons.Material.Filled.ExpandLess : Icons.Material.Filled.ExpandMore)" />
                 </MudTd>
-            }
-        </RowTemplate>
-        <ChildRowContent>
-            @if (expandedPurchases.Contains(context.Id))
-            {
-                <MudTr>
-                    <td colspan="7" class="pa-0">
-                        <MudCard Elevation="0" Class="pa-4 rounded-0" Style="background-color: var(--mud-palette-background-grey); border-left: 4px solid var(--mud-palette-primary); border-bottom: 1px solid var(--mud-palette-lines-default);">
-                            <MudTable Items="@context.Items" 
-                                      Context="itemContext" 
-                                      Dense="true" 
-                                      Hover="true"
-                                      Elevation="0" 
-                                      Breakpoint="Breakpoint.None"
-                                      Class="mud-table-compact mb-0">
-                                <HeaderContent>
-                                    <MudTh Class="pa-1">Product</MudTh>
-                                    <MudTh Class="pa-1">Qty</MudTh>
-                                    <MudTh Class="pa-1">Unit Cost</MudTh>
-                                    <MudTh Class="pa-1">Total</MudTh>
-                                </HeaderContent>
-                                <RowTemplate>
-                                    <MudTd Class="pa-1">
-                                        <div class="d-flex align-center">
-                                            <img src="@GetProductImage(itemContext.Product)" 
-                                                 alt="@itemContext.Product?.Name" 
-                                                 style="width: 24px; height: 24px; object-fit: cover; border-radius: 4px; margin-right: 8px;" />
-                                            @itemContext.Product?.Name
-                                        </div>
-                                    </MudTd>
-                                    <MudTd Class="pa-1">@itemContext.Quantity</MudTd>
-                                    <MudTd Class="pa-1">@itemContext.UnitCost.ToString("F2")</MudTd>
-                                    <MudTd Class="pa-1">
-                                        <b>@itemContext.TotalCost.ToString("F2")</b>
-                                    </MudTd>
-                                </RowTemplate>
-                            </MudTable>
-                        </MudCard>
-                    </td>
-                </MudTr>
-            }
-        </ChildRowContent>
-        <PagerContent>
-            <div class="d-flex align-center justify-space-between px-4 py-2">
-                <TableColumnToggle Columns="@_columns" ColumnsChanged="StateHasChanged" TableName="Purchases" />
-                <MudTablePager />
-            </div>
-        </PagerContent>
-    </MudTable>
+                @if (IsVisible("ID")) { <MudTd>#@context.Id</MudTd> }
+                @if (IsVisible("Date")) { <MudTd Style="white-space: nowrap;">@context.PurchaseDate.ToLocalTime().ToString("yyyy/MM/dd hh:mm tt")</MudTd> }
+                @if (IsVisible("Supplier")) { <MudTd>@(context.SupplierName ?? "-")</MudTd> }
+                @if (IsVisible("Items")) { <MudTd>@context.Items.Count</MudTd> }
+                @if (IsVisible("Total Amount")) { <MudTd>@context.TotalAmount.ToString("F2")</MudTd> }
+                @if (IsVisible("Actions")) {
+                    <MudTd Style="white-space: nowrap;">
+                        <MudIconButton Icon="@Icons.Material.Filled.Delete" 
+                                       Color="Color.Error" 
+                                       Size="Size.Small" 
+                                       OnClick="@((e) => DeletePurchase(context))" />
+                    </MudTd>
+                }
+            </RowTemplate>
+            <ChildRowContent>
+                @if (expandedPurchases.Contains(context.Id))
+                {
+                    <MudTr>
+                        <td colspan="7" class="pa-0">
+                            <MudCard Elevation="0" Class="pa-4 rounded-0" Style="background-color: var(--mud-palette-background-grey); border-left: 4px solid var(--mud-palette-primary); border-bottom: 1px solid var(--mud-palette-lines-default);">
+                                <MudTable Items="@context.Items" 
+                                          Context="itemContext" 
+                                          Dense="true" 
+                                          Hover="true"
+                                          Elevation="0" 
+                                          Breakpoint="Breakpoint.None"
+                                          Class="mud-table-compact mb-0">
+                                    <HeaderContent>
+                                        <MudTh Class="pa-1">Product</MudTh>
+                                        <MudTh Class="pa-1">Qty</MudTh>
+                                        <MudTh Class="pa-1">Unit Cost</MudTh>
+                                        <MudTh Class="pa-1">Total</MudTh>
+                                    </HeaderContent>
+                                    <RowTemplate>
+                                        <MudTd Class="pa-1">
+                                            <div class="d-flex align-center">
+                                                <img src="@GetProductImage(itemContext.Product)" 
+                                                     alt="@itemContext.Product?.Name" 
+                                                     style="width: 24px; height: 24px; object-fit: cover; border-radius: 4px; margin-right: 8px;" />
+                                                @itemContext.Product?.Name
+                                            </div>
+                                        </MudTd>
+                                        <MudTd Class="pa-1">@itemContext.Quantity</MudTd>
+                                        <MudTd Class="pa-1">@itemContext.UnitCost.ToString("F2")</MudTd>
+                                        <MudTd Class="pa-1">
+                                            <b>@itemContext.TotalCost.ToString("F2")</b>
+                                        </MudTd>
+                                    </RowTemplate>
+                                </MudTable>
+                            </MudCard>
+                        </td>
+                    </MudTr>
+                }
+            </ChildRowContent>
+            <PagerContent>
+                <div class="d-flex align-center justify-space-between px-4 py-2">
+                    <TableColumnToggle Columns="@_columns" ColumnsChanged="StateHasChanged" TableName="Purchases" />
+                    <MudTablePager />
+                </div>
+            </PagerContent>
+        </MudTable>
+    </div>
 }
 
 <style>

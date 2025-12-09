@@ -1,7 +1,9 @@
 @page "/stats"
-@inject HttpClient Http
 @inject ISnackbar Snackbar
+@inject TransactionService TransactionService
+@inject ProductService ProductService
 @using M_Wallet.Shared
+@using M_Wallet.Client.Services
 @using System.Globalization
 
 <PageTitle>Statistics & Analytics</PageTitle>
@@ -279,9 +281,9 @@ else
         isLoading = true;
         try
         {
-            transactions = await Http.GetFromJsonAsync<List<Transaction>>("api/transactions");
-            products = await Http.GetFromJsonAsync<List<Product>>("api/products");
-            payments = await Http.GetFromJsonAsync<List<Payment>>("api/payments");
+            transactions = await TransactionService.GetTransactionsAsync();
+            products = await ProductService.GetProductsAsync();
+            payments = await TransactionService.GetPaymentsAsync();
             
             if (transactions != null && products != null && payments != null)
             {

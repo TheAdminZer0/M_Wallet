@@ -1,0 +1,11 @@
+@using MudBlazor
+
+<div class="d-flex flex-column justify-center align-center" style="height: 100vh; width: 100%; position: fixed; top: 0; left: 0; z-index: 9999; background-color: #27272f; color: white;">
+    <img src="logo.png" style="height: 80px; width: auto; margin-bottom: 20px; filter: brightness(0) invert(48%) sepia(13%) saturate(3207%) hue-rotate(208deg) brightness(95%) contrast(94%);" />
+    <MudProgressCircular Color="Color.Primary" Indeterminate="true" Size="Size.Large" />
+    <MudText Typo="Typo.caption" Class="mt-4" Style="color: #adadb1;">@Text</MudText>
+</div>
+
+@code {
+    [Parameter] public string Text { get; set; } = "Loading...";
+}

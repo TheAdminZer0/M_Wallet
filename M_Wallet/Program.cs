@@ -35,6 +35,8 @@ builder.Services.AddScoped<HttpClient>(sp =>
 // Add MudBlazor services
 builder.Services.AddMudServices();
 builder.Services.AddScoped<ReceiptService>();
+builder.Services.AddScoped<TransactionService>();
+builder.Services.AddScoped<ProductService>();
 builder.Services.AddScoped<UserPreferencesService>();
 
 // Add Authentication services
@@ -68,6 +70,7 @@ else
 
 app.UseHttpsRedirection();
 
+app.UseStaticFiles();
 app.UseAntiforgery();
 app.UseAuthentication();
 app.UseAuthorization();

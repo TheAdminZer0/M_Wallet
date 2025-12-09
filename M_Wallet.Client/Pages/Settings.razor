@@ -1,0 +1,142 @@
+@page "/settings"
+@using M_Wallet.Shared
+@using M_Wallet.Client.Services
+@using M_Wallet.Shared.Models
+@using MudBlazor
+@inject HttpClient Http
+@inject ISnackbar Snackbar
+@inject UserPreferencesService UserPreferencesService
+
+<MudText Typo="Typo.h4" Class="mb-4">Settings</MudText>
+
+<MudPaper Class="pa-4 mb-4">
+    <MudText Typo="Typo.h6">Image Upload Settings</MudText>
+    <MudText Class="mb-4">Control how product images are handled when uploading.</MudText>
+    
+    <MudSwitch @bind-Value="_preferences.EnableImageResizing" 
+               Color="Color.Primary" 
+               Label="Resize Images Before Uploading (Recommended)" />
+    
+    @if (_preferences.EnableImageResizing)
+    {
+        <MudNumericField @bind-Value="_preferences.MaxImageResolution" 
+                         Label="Max Resolution (px)" 
+                         Variant="Variant.Outlined" 
+                         Min="100" 
+                         Max="4000" 
+                         Step="100" 
+                         HelperText="Images will be resized to fit within this width/height (e.g., 800)." 
+                         Class="mt-2" />
+    }
+    else
+    {
+        <MudAlert Severity="Severity.Warning" Class="mt-2">
+            Disabling resizing may cause slow uploads and app crashes with large camera photos.
+        </MudAlert>
+    }
+    
+    <MudButton Variant="Variant.Filled" 
+               Color="Color.Primary" 
+               OnClick="SavePreferences" 
+               Class="mt-4"
+               StartIcon="@Icons.Material.Filled.Save">
+        Save Settings
+    </MudButton>
+</MudPaper>
+
+<MudPaper Class="pa-4 mb-4">
+    <MudText Typo="Typo.h6">Offline Capabilities</MudText>
+    <MudText Class="mb-4">Download all product images to this device so they work when the internet is down.</MudText>
+    
+    <MudButton Variant="Variant.Filled" 
+               Color="Color.Primary" 
+               OnClick="CacheAllImages" 
+               Disabled="@_isCaching"
+               StartIcon="@Icons.Material.Filled.CloudDownload">
+        @(_isCaching ? $"Caching... {_progress}%" : "Cache All Images Now")
+    </MudButton>
+    
+    @if (_isCaching)
+    {
+        <MudProgressLinear Color="Color.Primary" Value="@_progress" Class="mt-3" />
+    }
+</MudPaper>
+
+@code {
+    private bool _isCaching = false;
+    private int _progress = 0;
+    private UserPreferences _preferences = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadPreferences();
+    }
+
+    private async Task LoadPreferences()
+    {
+        _preferences = await UserPreferencesService.LoadPreferences();
+    }
+
+    private async Task SavePreferences()
+    {
+        await UserPreferencesService.SavePreferences(_preferences);
+        Snackbar.Add("Settings saved successfully", Severity.Success);
+    }
+
+    private async Task CacheAllImages()
+    {
+        _isCaching = true;
+        _progress = 0;
+        StateHasChanged();
+
+        try
+        {
+            // 1. Get all products
+            var products = await Http.GetFromJsonAsync<List<Product>>("api/Products");
+            if (products == null || !products.Any())
+            {
+                Snackbar.Add("No products found to cache.", Severity.Info);
+                _isCaching = false;
+                return;
+            }
+
+            // 2. Filter products that actually have images
+            var productsWithImages = products
+                .Where(p => !string.IsNullOrEmpty(p.ImageUrl))
+                .ToList();
+
+            int total = productsWithImages.Count;
+            int current = 0;
+
+            // 3. Fetch each image
+            // The Service Worker will automatically cache the response of these fetches
+            foreach (var product in productsWithImages)
+            {
+                try 
+                {
+                    // We just need to fetch it; the browser cache handles the rest
+                    await Http.GetAsync(product.ImageUrl);
+                }
+                catch
+                {
+                    // Ignore individual failures (maybe image link is broken)
+                }
+
+                current++;
+                _progress = (int)((double)current / total * 100);
+                StateHasChanged();
+            }
+
+            Snackbar.Add($"Successfully cached {total} images for offline use!", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error caching images: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _isCaching = false;
+            StateHasChanged();
+        }
+    }
+}

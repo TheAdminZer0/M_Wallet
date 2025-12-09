@@ -7,6 +7,7 @@ public class Transaction
     public int? PersonId { get; set; }
     public Person? Person { get; set; }
     public string? CustomerName { get; set; } // Optional customer tracking
+    public string? Note { get; set; } // Optional note for the order
     public decimal TotalAmount { get; set; }
     public string EmployeeName { get; set; } = string.Empty;
     public List<TransactionItem> Items { get; set; } = new();

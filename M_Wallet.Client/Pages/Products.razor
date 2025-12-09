@@ -2,9 +2,11 @@
 @inject HttpClient Http
 @inject ISnackbar Snackbar
 @inject IDialogService DialogService
+@inject ProductService ProductService
 @using M_Wallet.Shared
 @using M_Wallet.Client.Components
 @using M_Wallet.Client.Models
+@using M_Wallet.Client.Services
 
 <PageTitle>Product Management</PageTitle>
 
@@ -60,6 +62,7 @@ else
                   SortLabel="Sort By"
                   RowStyleFunc="RowStyleFunc">
             <HeaderContent>
+                @if (IsVisible("Actions")) { <MudTh Class="py-1 px-2">Actions</MudTh> }
                 @if (IsVisible("Name")) { <MudTh Class="py-1 px-2"><MudTableSortLabel InitialDirection="SortDirection.Ascending" SortBy="new Func<Product, object>(x => x.Name)">Name</MudTableSortLabel></MudTh> }
                 @if (IsVisible("Barcode")) { <MudTh Class="py-1 px-2">Barcode</MudTh> }
                 @if (IsVisible("Description")) { <MudTh Class="py-1 px-2">Description</MudTh> }
@@ -69,9 +72,22 @@ else
                 @if (IsVisible("Total Sold")) { <MudTh Class="py-1 px-2"><MudTableSortLabel SortBy="new Func<Product, object>(x => x.TotalSoldQuantity)">Total Sold</MudTableSortLabel></MudTh> }
                 @if (IsVisible("Stock")) { <MudTh Class="py-1 px-2"><MudTableSortLabel SortBy="new Func<Product, object>(x => x.StockQuantity)">Stock</MudTableSortLabel></MudTh> }
                 @if (IsVisible("Pinned")) { <MudTh Class="py-1 px-2"><MudTableSortLabel SortBy="new Func<Product, object>(x => x.IsPinned)">Pinned</MudTableSortLabel></MudTh> }
-                @if (IsVisible("Actions")) { <MudTh Class="py-1 px-2">Actions</MudTh> }
             </HeaderContent>
             <RowTemplate>
+                @if (IsVisible("Actions")) {
+                    <MudTd Class="py-1 px-2" Style="white-space: nowrap;">
+                        <div class="d-flex">
+                            <MudIconButton Icon="@Icons.Material.Filled.Edit"
+                                           Color="Color.Primary"
+                                           Size="Size.Small"
+                                           OnClick="@(() => OpenEditDialog(context))" />
+                            <MudIconButton Icon="@Icons.Material.Filled.Delete"
+                                           Color="Color.Error"
+                                           Size="Size.Small"
+                                           OnClick="@(() => DeleteProduct(context))" />
+                        </div>
+                    </MudTd>
+                }
                 @if (IsVisible("Name")) {
                     <MudTd Class="py-1 px-2">
                         <div class="d-flex align-center">
@@ -130,27 +146,13 @@ else
                 @if (IsVisible("Stock")) {
                     <MudTd Class="py-1 px-2">
                         <MudChip T="string" Size="Size.Small" Variant="Variant.Text" Color="@(context.StockQuantity > 10 ? Color.Success : Color.Warning)">
-                            @context.StockQuantity
+                            @(context.IsStockless ? "∞" : context.StockQuantity)
                         </MudChip>
                     </MudTd>
                 }
                 @if (IsVisible("Pinned")) {
                     <MudTd Class="py-1 px-2">
                         <MudCheckBox T="bool" Value="@context.IsPinned" ValueChanged="@((bool val) => TogglePin(context, val))" Color="Color.Warning" CheckedIcon="@Icons.Material.Filled.PushPin" UncheckedIcon="@Icons.Material.Outlined.PushPin" Size="Size.Small" />
-                    </MudTd>
-                }
-                @if (IsVisible("Actions")) {
-                    <MudTd Class="py-1 px-2" Style="white-space: nowrap;">
-                        <div class="d-flex">
-                            <MudIconButton Icon="@Icons.Material.Filled.Edit"
-                                           Color="Color.Primary"
-                                           Size="Size.Small"
-                                           OnClick="@(() => OpenEditDialog(context))" />
-                            <MudIconButton Icon="@Icons.Material.Filled.Delete"
-                                           Color="Color.Error"
-                                           Size="Size.Small"
-                                           OnClick="@(() => DeleteProduct(context))" />
-                        </div>
                     </MudTd>
                 }
             </RowTemplate>
@@ -172,6 +174,7 @@ else
 
     private List<ColumnDefinition> _columns = new()
     {
+        new() { Title = "Actions", IsVisible = true },
         new() { Title = "Name", IsVisible = true },
         new() { Title = "Barcode", IsVisible = true },
         new() { Title = "Description", IsVisible = true },
@@ -180,8 +183,7 @@ else
         new() { Title = "Profit", IsVisible = true },
         new() { Title = "Total Sold", IsVisible = true },
         new() { Title = "Stock", IsVisible = true },
-        new() { Title = "Pinned", IsVisible = true },
-        new() { Title = "Actions", IsVisible = true }
+        new() { Title = "Pinned", IsVisible = true }
     };
 
     private bool IsVisible(string title) => _columns.FirstOrDefault(c => c.Title == title)?.IsVisible ?? true;
@@ -205,6 +207,7 @@ else
 
     protected override async Task OnInitializedAsync()
     {
+        await ProductService.RefreshDataAsync();
         await LoadProducts();
     }
 
@@ -212,7 +215,7 @@ else
     {
         try
         {
-            products = await Http.GetFromJsonAsync<List<Product>>("api/products");
+            products = await ProductService.GetProductsAsync();
         }
         catch (Exception ex)
         {
@@ -251,6 +254,9 @@ else
             StockQuantity = product.StockQuantity,
             ImageUrl = product.ImageUrl,
             IsActive = product.IsActive,
+            IsStockless = product.IsStockless,
+            IsService = product.IsService,
+            IsPinned = product.IsPinned,
             Barcodes = product.Barcodes
                 .Select(b => new ProductBarcode
                 {
@@ -286,6 +292,7 @@ else
             if (response.IsSuccessStatusCode)
             {
                 Snackbar.Add("Product added successfully!", Severity.Success);
+                await ProductService.RefreshDataAsync();
                 await LoadProducts();
             }
             else
@@ -308,6 +315,7 @@ else
             if (response.IsSuccessStatusCode)
             {
                 Snackbar.Add("Product updated successfully!", Severity.Success);
+                await ProductService.RefreshDataAsync();
                 await LoadProducts();
             }
             else
@@ -361,6 +369,7 @@ else
             if (response.IsSuccessStatusCode)
             {
                 Snackbar.Add("Product deleted successfully", Severity.Success);
+                await ProductService.RefreshDataAsync();
                 await LoadProducts();
             }
             else

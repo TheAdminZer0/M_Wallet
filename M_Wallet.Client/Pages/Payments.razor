@@ -2,8 +2,10 @@
 @inject HttpClient Http
 @inject ISnackbar Snackbar
 @inject IDialogService DialogService
+@inject TransactionService TransactionService
 @using M_Wallet.Shared
 @using M_Wallet.Client.Components
+@using M_Wallet.Client.Services
 @using M_Wallet.Client.Models
 
 <PageTitle>Payments</PageTitle>
@@ -162,6 +164,7 @@
 
     protected override async Task OnInitializedAsync()
     {
+        await TransactionService.RefreshDataAsync();
         await LoadData();
     }
 
@@ -169,8 +172,8 @@
     {
         try
         {
-            transactions = await Http.GetFromJsonAsync<List<Transaction>>("api/transactions");
-            payments = await Http.GetFromJsonAsync<List<Payment>>("api/payments");
+            transactions = await TransactionService.GetTransactionsAsync();
+            payments = await TransactionService.GetPaymentsAsync();
         }
         catch (Exception ex)
         {
@@ -210,6 +213,7 @@
 
         if (result != null && !result.Canceled)
         {
+            await TransactionService.RefreshDataAsync();
             await LoadData();
         }
     }
@@ -229,6 +233,7 @@
                 if (response.IsSuccessStatusCode)
                 {
                     Snackbar.Add("Payment deleted successfully", Severity.Success);
+                    await TransactionService.RefreshDataAsync();
                     await LoadData();
                 }
                 else

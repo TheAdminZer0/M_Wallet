@@ -4,8 +4,10 @@
 @inject IDialogService DialogService
 @inject IJSRuntime JSRuntime
 @inject ReceiptService _receiptService
+@inject TransactionService TransactionService
 @inject CustomAuthenticationStateProvider AuthStateProvider
 @using M_Wallet.Client.Models
+@using M_Wallet.Client.Services
 
 <PageTitle>Transactions</PageTitle>
 
@@ -116,7 +118,6 @@ else
                               OnRowClick="OnRowClick"
                               T="Transaction">
                         <ToolBarContent>
-                            <MudText Typo="Typo.h6">Sales History</MudText>
                             <MudSpacer />
                             <MudButton Variant="Variant.Outlined" 
                                        Color="Color.Primary"
@@ -147,6 +148,7 @@ else
                             @if (IsTransactionColumnVisible("Total")) { <MudTh><MudTableSortLabel SortBy="new Func<Transaction, object>(x => x.TotalAmount)">Total (LD)</MudTableSortLabel></MudTh> }
                             @if (IsTransactionColumnVisible("Status")) { <MudTh>Status</MudTh> }
                             @if (IsTransactionColumnVisible("Customer")) { <MudTh><MudTableSortLabel SortBy="new Func<Transaction, object>(x => x.CustomerName ?? string.Empty)">Customer</MudTableSortLabel></MudTh> }
+                            @if (IsTransactionColumnVisible("Note")) { <MudTh>Note</MudTh> }
                             @if (IsTransactionColumnVisible("Employee")) { <MudTh><MudTableSortLabel SortBy="new Func<Transaction, object>(x => x.EmployeeName)">Employee</MudTableSortLabel></MudTh> }
                             @if (IsTransactionColumnVisible("Actions")) { <MudTh>Actions</MudTh> }
                         </HeaderContent>
@@ -211,6 +213,23 @@ else
                                 </MudTd>
                             }
                             @if (IsTransactionColumnVisible("Customer")) { <MudTd DataLabel="Customer">@(context.CustomerName ?? "Walk-in")</MudTd> }
+                            @if (IsTransactionColumnVisible("Note")) { 
+                                <MudTd DataLabel="Note">
+                                    <div @onclick="@(() => EditNote(context))" style="cursor: pointer; display: flex; align-items: center;">
+                                        @if (!string.IsNullOrEmpty(context.Note))
+                                        {
+                                            <MudText Typo="Typo.body2" Style="max-width: 150px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                                                @context.Note
+                                            </MudText>
+                                            <MudIcon Icon="@Icons.Material.Filled.Edit" Size="Size.Small" Class="ml-1" Color="Color.Default" Style="opacity: 0.5;" />
+                                        }
+                                        else
+                                        {
+                                            <MudIcon Icon="@Icons.Material.Filled.AddComment" Size="Size.Small" Color="Color.Default" Style="opacity: 0.3;" />
+                                        }
+                                    </div>
+                                </MudTd> 
+                            }
                             @if (IsTransactionColumnVisible("Employee")) { <MudTd DataLabel="Employee">@context.EmployeeName</MudTd> }
                             @if (IsTransactionColumnVisible("Actions")) {
                                 <MudTd DataLabel="Actions" Style="white-space: nowrap;">
@@ -313,7 +332,6 @@ else
             {
                 <MudTable Items="@FilteredPayments" Hover="true" Dense="true" Breakpoint="Breakpoint.None">
                     <ToolBarContent>
-                        <MudText Typo="Typo.h6">Payment History</MudText>
                         <MudSpacer />
                         <MudTextField @bind-Value="paymentSearchString" 
                                       Placeholder="Search Payments" 
@@ -449,7 +467,9 @@ else
 
 @code {
     private List<Transaction>? transactions;
+    private Dictionary<int, Transaction> _transactionsById = new();
     private List<Payment>? payments;
+    private Dictionary<int, List<Payment>> _paymentsByTransactionId = new();
     private Transaction? selectedTransaction;
     private string searchString = "";
     private string paymentSearchString = "";
@@ -466,6 +486,7 @@ else
         new() { Title = "Total", IsVisible = true },
         new() { Title = "Status", IsVisible = true },
         new() { Title = "Customer", IsVisible = true },
+        new() { Title = "Note", IsVisible = true },
         new() { Title = "Employee", IsVisible = true },
         new() { Title = "Actions", IsVisible = true }
     };
@@ -609,6 +630,8 @@ else
             return true;
         if ((transaction.CustomerName ?? "Walk-in").Contains(searchString, StringComparison.OrdinalIgnoreCase))
             return true;
+        if ((transaction.Note ?? "").Contains(searchString, StringComparison.OrdinalIgnoreCase))
+            return true;
         if (transaction.TotalAmount.ToString().Contains(searchString))
             return true;
         if (transaction.Items.Any(i => i.Product?.Name.Contains(searchString, StringComparison.OrdinalIgnoreCase) ?? false))
@@ -618,6 +641,7 @@ else
 
     protected override async Task OnInitializedAsync()
     {
+        await TransactionService.RefreshDataAsync();
         await LoadData();
     }
 
@@ -625,19 +649,37 @@ else
     {
         try
         {
-            // Load Transactions
-            transactions = await Http.GetFromJsonAsync<List<Transaction>>("api/transactions");
+            transactions = await TransactionService.GetTransactionsAsync();
+            payments = await TransactionService.GetPaymentsAsync();
             
-            // Load Payments (we need a way to get all payments, or we can extract them from transactions if the API supports it, 
-            // but usually a separate endpoint is better. Let's assume we can get them.)
-            try 
+            // Index transactions for fast lookup
+            if (transactions != null)
             {
-                payments = await Http.GetFromJsonAsync<List<Payment>>("api/payments");
+                _transactionsById = transactions.ToDictionary(t => t.Id);
             }
-            catch
+
+            // Pre-calculate payment lookup for performance
+            _paymentsByTransactionId.Clear();
+            if (payments != null)
             {
-                // Fallback or handle if endpoint doesn't exist yet
-                payments = new List<Payment>();
+                foreach (var p in payments)
+                {
+                    if (p.Allocations == null) continue;
+                    foreach (var a in p.Allocations)
+                    {
+                        if (!_paymentsByTransactionId.ContainsKey(a.TransactionId))
+                        {
+                            _paymentsByTransactionId[a.TransactionId] = new List<Payment>();
+                        }
+                        _paymentsByTransactionId[a.TransactionId].Add(p);
+                    }
+                }
+                
+                // Sort by date for correct cumulative calculation
+                foreach (var list in _paymentsByTransactionId.Values)
+                {
+                    list.Sort((a, b) => a.PaymentDate.CompareTo(b.PaymentDate));
+                }
             }
         }
         catch (Exception ex)
@@ -801,6 +843,7 @@ else
 
         if (result != null && !result.Canceled)
         {
+            await TransactionService.RefreshDataAsync();
             await LoadData();
         }
     }
@@ -814,6 +857,7 @@ else
 
         if (result != null && !result.Canceled)
         {
+            await TransactionService.RefreshDataAsync();
             await LoadData();
         }
     }
@@ -837,6 +881,44 @@ else
         await JSRuntime.InvokeVoidAsync("printer.printHtml", html);
     }
 
+    private async Task EditNote(Transaction transaction)
+    {
+        var parameters = new DialogParameters<M_Wallet.Client.Components.NoteDialog>
+        {
+            { x => x.Note, transaction.Note ?? "" }
+        };
+
+        var options = new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.Small, FullWidth = true };
+        var dialog = await DialogService.ShowAsync<M_Wallet.Client.Components.NoteDialog>("Edit Note", parameters, options);
+        var result = await dialog.Result;
+
+        if (!result.Canceled)
+        {
+            var newNote = result.Data as string;
+            if (transaction.Note != newNote)
+            {
+                transaction.Note = newNote;
+                try
+                {
+                    var response = await Http.PutAsJsonAsync($"api/transactions/{transaction.Id}", transaction);
+                    if (response.IsSuccessStatusCode)
+                    {
+                        Snackbar.Add("Note updated", Severity.Success);
+                    }
+                    else
+                    {
+                        Snackbar.Add("Failed to update note", Severity.Error);
+                        await LoadData();
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+                }
+            }
+        }
+    }
+
     private async Task DeleteTransaction(Transaction transaction)
     {
         bool? result = await DialogService.ShowMessageBox(
@@ -855,6 +937,7 @@ else
                 if (response.IsSuccessStatusCode)
                 {
                     Snackbar.Add("Transaction deleted", Severity.Success);
+                    await TransactionService.RefreshDataAsync();
                     await LoadData();
                 }
                 else
@@ -884,6 +967,7 @@ else
                 if (response.IsSuccessStatusCode)
                 {
                     Snackbar.Add("Payment deleted", Severity.Success);
+                    await TransactionService.RefreshDataAsync();
                     await LoadData();
                 }
                 else
@@ -905,16 +989,19 @@ else
 
         foreach (var allocation in payment.Allocations)
         {
-            var transaction = allocation.Transaction;
-            if (transaction == null || transaction.Items == null || !transaction.Items.Any()) continue;
+            // Look up transaction from our local index instead of relying on nested object
+            if (!_transactionsById.TryGetValue(allocation.TransactionId, out var transaction))
+            {
+                continue;
+            }
+            
+            if (transaction.Items == null || !transaction.Items.Any()) continue;
 
-            // Find all payments for this transaction from the payments list
-            var allPaymentsForTransaction = payments?
-                .Where(p => p.Allocations != null && p.Allocations.Any(a => a.TransactionId == transaction.Id))
-                .OrderBy(p => p.PaymentDate)
-                .ToList();
-
-            if (allPaymentsForTransaction == null || !allPaymentsForTransaction.Any()) continue;
+            // Find all payments for this transaction using the pre-calculated lookup
+            if (!_paymentsByTransactionId.TryGetValue(transaction.Id, out var allPaymentsForTransaction))
+            {
+                continue;
+            }
 
             // Calculate cumulative paid amount up to and including this payment
             decimal cumulative = 0;

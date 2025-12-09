@@ -8,7 +8,11 @@
             <MudItem xs="12" sm="6">
                 @if (!string.IsNullOrEmpty(Product.ImageUrl))
                 {
-                    <MudImage Src="@Product.ImageUrl" Alt="@Product.Name" ObjectFit="ObjectFit.Cover" Height="300" Fluid="true" Class="rounded-lg" />
+                    <MudTooltip Text="Click to zoom">
+                        <div @onclick="OpenZoomDialog" style="cursor: pointer; transition: transform 0.2s;" class="hover-zoom">
+                            <MudImage Src="@Product.ImageUrl" Alt="@Product.Name" ObjectFit="ObjectFit.Cover" Height="300" Fluid="true" Class="rounded-lg" />
+                        </div>
+                    </MudTooltip>
                 }
                 else
                 {
@@ -64,4 +68,19 @@
     [Parameter] public Product Product { get; set; } = default!;
 
     private void Cancel() => MudDialog.Cancel();
+
+    private async Task OpenZoomDialog()
+    {
+        if (string.IsNullOrEmpty(Product.ImageUrl)) return;
+
+        var parameters = new DialogParameters { ["ImageUrl"] = Product.ImageUrl };
+        var options = new DialogOptions 
+        { 
+            CloseButton = true, 
+            MaxWidth = MaxWidth.ExtraLarge, 
+            FullWidth = true,
+            BackgroundClass = "mud-theme-dark" 
+        };
+        await DialogService.ShowAsync<ImageDialog>("Product Image", parameters, options);
+    }
 }

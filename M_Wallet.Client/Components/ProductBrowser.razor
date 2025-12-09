@@ -68,7 +68,7 @@
                     @foreach (var product in PinnedProducts)
                     {
                         var availableStock = GetStockLevel(product);
-                        <MudItem xs="6" sm="4" md="3" Class="flex-shrink-0" Style="min-width: 160px;">
+                        <MudItem xs="4" sm="3" md="2" Class="flex-shrink-0">
                             <MudCard Class="cursor-pointer mud-ripple" 
                                      Elevation="2"
                                      Style="@(availableStock == 0 ? "opacity: 0.6; background-color: var(--mud-palette-background-grey);" : "")"
@@ -79,7 +79,7 @@
                                     {
                                         <div @onclick:stopPropagation="true" style="position: absolute; top: 5px; right: 5px; z-index: 10;">
                                             <MudIconButton Icon="@Icons.Material.Filled.Info" 
-                                                           Color="Color.Default" 
+                                                           Color="Color.Surface" 
                                                            Size="Size.Small"
                                                            Variant="Variant.Filled"
                                                            OnClick="@((e) => ShowProductDetails(product))" />
@@ -89,7 +89,7 @@
                                     {
                                         <div @onclick:stopPropagation="true" style="position: absolute; top: 5px; left: 5px; z-index: 10;">
                                             <MudIconButton Icon="@Icons.Material.Filled.CallSplit" 
-                                                           Color="Color.Default" 
+                                                           Color="Color.Surface" 
                                                            Size="Size.Small"
                                                            Variant="Variant.Filled"
                                                            Title="Add as separate line"
@@ -121,7 +121,14 @@
                                             <div class="d-flex align-center">
                                                 <MudIcon Icon="@Icons.Material.Filled.Inventory2" Size="Size.Small" Class="mr-1" Color="@(availableStock > 10 ? Color.Default : Color.Error)"/>
                                                 <MudText Typo="Typo.body1" Color="@(availableStock > 10 ? Color.Default : Color.Error)">
-                                                    @availableStock
+                                                    @if (availableStock == int.MaxValue)
+                                                    {
+                                                        <MudIcon Icon="@Icons.Material.Filled.AllInclusive" Size="Size.Small" Style="vertical-align: middle;" />
+                                                    }
+                                                    else
+                                                    {
+                                                        @availableStock
+                                                    }
                                                 </MudText>
                                             </div>
                                         }
@@ -141,7 +148,7 @@
                     @foreach (var product in FilteredProducts.Skip((currentPage - 1) * pageSize).Take(pageSize))
                     {
                         var availableStock = GetStockLevel(product);
-                        <MudItem xs="6" sm="4" md="3">
+                        <MudItem xs="4" sm="3" md="2">
                             <MudCard Class="cursor-pointer mud-ripple" 
                                      Elevation="2"
                                      Style="@(availableStock == 0 ? "opacity: 0.6; background-color: var(--mud-palette-background-grey);" : "")"
@@ -152,7 +159,7 @@
                                     {
                                         <div @onclick:stopPropagation="true" style="position: absolute; top: 5px; right: 5px; z-index: 10;">
                                             <MudIconButton Icon="@Icons.Material.Filled.Info" 
-                                                           Color="Color.Default" 
+                                                           Color="Color.Surface" 
                                                            Size="Size.Small"
                                                            Variant="Variant.Filled"
                                                            OnClick="@((e) => ShowProductDetails(product))" />
@@ -162,7 +169,7 @@
                                     {
                                         <div @onclick:stopPropagation="true" style="position: absolute; top: 5px; left: 5px; z-index: 10;">
                                             <MudIconButton Icon="@Icons.Material.Filled.CallSplit" 
-                                                           Color="Color.Default" 
+                                                           Color="Color.Surface" 
                                                            Size="Size.Small"
                                                            Variant="Variant.Filled"
                                                            Title="Add as separate line"
@@ -194,7 +201,14 @@
                                             <div class="d-flex align-center">
                                                 <MudIcon Icon="@Icons.Material.Filled.Inventory2" Size="Size.Small" Class="mr-1" Color="@(availableStock > 10 ? Color.Default : Color.Error)"/>
                                                 <MudText Typo="Typo.body1" Color="@(availableStock > 10 ? Color.Default : Color.Error)">
-                                                    @availableStock
+                                                    @if (availableStock == int.MaxValue)
+                                                    {
+                                                        <MudIcon Icon="@Icons.Material.Filled.AllInclusive" Size="Size.Small" Style="vertical-align: middle;" />
+                                                    }
+                                                    else
+                                                    {
+                                                        @availableStock
+                                                    }
                                                 </MudText>
                                             </div>
                                         }
@@ -234,7 +248,14 @@
                             @if (ShowStock) {
                                 <MudTd DataLabel="Stock">
                                     <MudChip T="string" Size="Size.Small" Variant="Variant.Text" Color="@(availableStock > 10 ? Color.Success : Color.Warning)">
-                                        @availableStock
+                                        @if (availableStock == int.MaxValue)
+                                        {
+                                            <MudIcon Icon="@Icons.Material.Filled.AllInclusive" Size="Size.Small" />
+                                        }
+                                        else
+                                        {
+                                            @availableStock
+                                        }
                                     </MudChip>
                                 </MudTd>
                             }
@@ -295,7 +316,7 @@
 
     private string sortBy = "MostSold";
     private int currentPage = 1;
-    private int pageSize = 12;
+    private int pageSize = 18;
     private bool isGridView = true;
     private IDialogReference? _searchScannerDialog;
 

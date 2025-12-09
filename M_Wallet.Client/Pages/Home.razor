@@ -7,10 +7,11 @@
 @inject HttpClient Http
 @inject ISnackbar Snackbar
 @inject IJSRuntime JSRuntime
-@inject IDialogService DialogService
 @inject NavigationManager NavigationManager
 @inject ReceiptService _receiptService
 @inject CustomAuthenticationStateProvider AuthStateProvider
+@inject ProductService ProductService
+@inject TransactionService TransactionService
 
 <PageTitle>POS - Point of Sale</PageTitle>
 
@@ -139,32 +140,60 @@
                                         <div class="cart-price-edit">
                                             @if (editingItem == item)
                                             {
-                                                <MudTextField @ref="priceInputRef"
-                                                              Value="@editingPriceValue"
-                                                              Margin="Margin.Dense"
-                                                              Variant="Variant.Text"
-                                                              Style="width: 80px;"
-                                                              Immediate="true"
-                                                              ValueChanged="@((string val) => OnPriceValueChanged(item, val))"
-                                                              InputType="InputType.Text"
-                                                              OnBlur="@(() => FinishEditing())"
-                                                              @onkeydown="@((KeyboardEventArgs e) => HandleKeyDown(e))"
-                                                              AutoFocus="true" />
+                                                <div class="d-flex flex-column gap-1">
+                                                    <MudTextField @ref="priceInputRef"
+                                                                  Value="@editingPriceValue"
+                                                                  Label="Price"
+                                                                  Margin="Margin.Dense"
+                                                                  Variant="Variant.Text"
+                                                                  Style="width: 80px;"
+                                                                  Immediate="true"
+                                                                  ValueChanged="@((string val) => OnPriceValueChanged(item, val))"
+                                                                  InputType="InputType.Text"
+                                                                  @onkeydown="@((KeyboardEventArgs e) => HandleKeyDown(e))"
+                                                                  AutoFocus="true" />
+                                                    
+                                                    @if (item.Product?.IsService == true)
+                                                    {
+                                                        <MudTextField Value="@editingCostValue"
+                                                                      Label="Cost"
+                                                                      Margin="Margin.Dense"
+                                                                      Variant="Variant.Text"
+                                                                      Style="width: 80px;"
+                                                                      Immediate="true"
+                                                                      ValueChanged="@((string val) => OnCostValueChanged(item, val))"
+                                                                      InputType="InputType.Text"
+                                                                      @onkeydown="@((KeyboardEventArgs e) => HandleKeyDown(e))" />
+                                                    }
+                                                                  
+                                                    <MudIconButton Icon="@Icons.Material.Filled.Check" 
+                                                                   Size="Size.Small" 
+                                                                   Color="Color.Success" 
+                                                                   OnClick="@FinishEditing" />
+                                                </div>
                                             }
                                             else
                                             {
-                                                <MudText Typo="Typo.body1" 
-                                                         Style="cursor: pointer; min-width: 60px;"
-                                                         @onclick="@(async () => await StartEditingAsync(item))">
-                                                    x @item.UnitPrice.ToString("F2")
-                                                    @if (item.UnitPrice != referencePrice)
+                                                <div class="d-flex flex-column align-end">
+                                                    <MudText Typo="Typo.body1" 
+                                                             Style="cursor: pointer; min-width: 60px;"
+                                                             @onclick="@(async () => await StartEditingAsync(item))">
+                                                        x @item.UnitPrice.ToString("F2")
+                                                        @if (item.UnitPrice != referencePrice)
+                                                        {
+                                                            <MudIcon Icon="@Icons.Material.Filled.Edit" 
+                                                                     Size="Size.Small" 
+                                                                     Color="Color.Warning" 
+                                                                     Style="vertical-align: middle; font-size: 14px;" />
+                                                        }
+                                                    </MudText>
+                                                    @if (item.UnitCost > 0 || item.Product?.IsService == true)
                                                     {
-                                                        <MudIcon Icon="@Icons.Material.Filled.Edit" 
-                                                                 Size="Size.Small" 
-                                                                 Color="Color.Warning" 
-                                                                 Style="vertical-align: middle; font-size: 14px;" />
+                                                        <MudText Typo="Typo.caption" Color="Color.Default" Style="font-size: 0.7rem;">
+                                                            (C: @item.UnitCost.ToString("F2"))
+                                                        </MudText>
                                                     }
-                                                </MudText>
+                                                </div>
                                             }
                                             @if (item.UnitPrice != referencePrice && editingItem != item)
                                             {
@@ -225,6 +254,13 @@
                                  MaxItems="null"
                                  Virtualize="true"
                                  AdornmentIcon="@Icons.Material.Filled.Search" />
+
+                <MudTextField @bind-Value="orderNote"
+                              Label="Order Note (Optional)"
+                              Variant="Variant.Outlined"
+                              Margin="Margin.Dense"
+                              Class="mb-2"
+                              Lines="1" />
 
                 <MudSelect T="string" Label="Payment Status" @bind-Value="paymentStatus" Variant="Variant.Outlined" Margin="Margin.Dense" Class="mb-2">
                     <MudSelectItem Value="@("Paid")">Paid Now</MudSelectItem>
@@ -317,12 +353,14 @@
     private DateTime? selectedDate = DateTime.Today;
     private bool showDatePicker = false;
     private string customerName = "";
+    private string orderNote = "";
     private Person? currentEmployee;
     private bool isProcessing = false;
     private bool printReceipt = false;
     private string printFormat = "A4";
     private TransactionItem? editingItem = null;
     private string editingPriceValue = "";
+    private string editingCostValue = "";
     private MudTextField<string>? priceInputRef;
     private PatternLock? patternLock;
 
@@ -339,6 +377,7 @@
              return;
         }
 
+        await ProductService.RefreshDataAsync();
         await LoadProducts();
         await LoadCustomers();
         
@@ -365,11 +404,10 @@
     {
         try
         {
-            products = await Http.GetFromJsonAsync<List<Product>>("api/products");
+            products = await ProductService.GetProductsAsync();
         }
         catch (Exception)
         {
-            // Snackbar.Add($"Error loading products: {ex.Message}", Severity.Error);
         }
     }
 
@@ -401,6 +439,8 @@
     /// </summary>
     private int GetAvailableStock(Product product)
     {
+        if (product.IsStockless) return int.MaxValue;
+
         var quantityInCart = cartItems
             .Where(i => i.ProductId == product.Id)
             .Sum(i => i.Quantity);
@@ -414,7 +454,6 @@
         
         if (availableStock == 0)
         {
-            // Snackbar.Add($"{product.Name} is out of stock", Severity.Warning);
             return;
         }
 
@@ -426,11 +465,6 @@
             {
                 existingItem.Quantity++;
                 existingItem.Subtotal = existingItem.Quantity * existingItem.UnitPrice;
-                // Snackbar.Add($"{product.Name} quantity increased", Severity.Success);
-            }
-            else
-            {
-                // Snackbar.Add("Cannot exceed available stock", Severity.Warning);
             }
         }
         else
@@ -441,10 +475,9 @@
                 Product = product,
                 Quantity = 1,
                 UnitPrice = product.Price,
+                UnitCost = product.CostPrice,
                 Subtotal = product.Price
             });
-
-            // Snackbar.Add($"{product.Name} added to cart", Severity.Success);
         }
     }
 
@@ -454,7 +487,6 @@
         
         if (availableStock == 0)
         {
-            // Snackbar.Add($"{product.Name} is out of stock", Severity.Warning);
             return;
         }
 
@@ -464,10 +496,9 @@
             Product = product,
             Quantity = 1,
             UnitPrice = product.Price,
+            UnitCost = product.CostPrice,
             Subtotal = product.Price
         });
-
-        // Snackbar.Add($"{product.Name} added as new line", Severity.Success);
     }
 
     private void IncreaseQuantity(TransactionItem item)
@@ -478,10 +509,6 @@
         {
             item.Quantity++;
             item.Subtotal = item.Quantity * item.UnitPrice;
-        }
-        else
-        {
-            // Snackbar.Add("Cannot exceed available stock", Severity.Warning);
         }
     }
 
@@ -511,6 +538,7 @@
     {
         editingItem = item;
         editingPriceValue = item.UnitPrice.ToString("F2");
+        editingCostValue = item.UnitCost.ToString("F2");
         
         // Wait a tick for the input to render, then select all text
         await Task.Delay(50);
@@ -567,10 +595,36 @@
         }
     }
 
+    private void OnCostValueChanged(TransactionItem item, string value)
+    {
+        // Only allow numbers and one decimal point
+        if (string.IsNullOrEmpty(value))
+        {
+            editingCostValue = "";
+            return;
+        }
+
+        // Validate: only digits and at most one decimal point
+        var validChars = value.Where(c => char.IsDigit(c) || c == '.').ToArray();
+        var dotCount = validChars.Count(c => c == '.');
+        
+        if (dotCount <= 1)
+        {
+            editingCostValue = new string(validChars);
+            
+            // Try to parse and update the cost
+            if (decimal.TryParse(editingCostValue, out decimal newCost) && newCost >= 0)
+            {
+                item.UnitCost = newCost;
+            }
+        }
+    }
+
     private void FinishEditing()
     {
         editingItem = null;
         editingPriceValue = "";
+        editingCostValue = "";
     }
 
     private void ResetItemPrice(TransactionItem item)
@@ -582,14 +636,13 @@
     private void RemoveFromCart(TransactionItem item)
     {
         cartItems.Remove(item);
-        // Snackbar.Add("Item removed from cart", Severity.Info);
     }
 
     private void ClearCart()
     {
         cartItems.Clear();
         customerName = "";
-        // Snackbar.Add("Cart cleared", Severity.Info);
+        orderNote = "";
     }
 
     private decimal CalculateTotal()
@@ -638,7 +691,6 @@
 
         if (!cartItems.Any())
         {
-            // Snackbar.Add("Cart is empty", Severity.Warning);
             return;
         }
 
@@ -660,6 +712,7 @@
             {
                 TransactionDate = transactionDate,
                 CustomerName = string.IsNullOrWhiteSpace(customerName) ? null : customerName,
+                Note = string.IsNullOrWhiteSpace(orderNote) ? null : orderNote,
                 EmployeeName = transactionEmployee!.Name,
                 Items = cartItems.Select(ci => new TransactionItem
                 {
@@ -760,23 +813,22 @@
                 await Task.Delay(3000);
                 showSuccessOverlay = false;
 
-                // Snackbar.Add($"Sale completed! Total: LD {total:F2}", Severity.Success);
                 ClearCart();
                 
                 paymentStatus = "Paid"; // Reset defaults
                 paymentMethod = "Cash";
                 amountPaid = 0;
-                await LoadProducts(); // Refresh product stock from database
+                await ProductService.RefreshDataAsync(); // Refresh product stock
+                await LoadProducts(); // Reload products
+                await TransactionService.RefreshDataAsync(); // Refresh transactions list
             }
             else
             {
                 var errorContent = await response.Content.ReadAsStringAsync();
-                // Snackbar.Add($"Failed to complete sale: {errorContent}", Severity.Error);
             }
         }
         catch (Exception)
         {
-            // Snackbar.Add($"Error: {ex.Message}", Severity.Error);
         }
         finally
         {

@@ -10,6 +10,8 @@ builder.Services.AddAuthorizationCore();
 builder.Services.AddScoped<CustomAuthenticationStateProvider>();
 builder.Services.AddScoped<AuthenticationStateProvider>(sp => sp.GetRequiredService<CustomAuthenticationStateProvider>());
 builder.Services.AddScoped<ReceiptService>();
+builder.Services.AddScoped<TransactionService>();
+builder.Services.AddScoped<ProductService>();
 builder.Services.AddScoped<UserPreferencesService>();
 
 // Add HttpClient for API calls

@@ -5,6 +5,8 @@
 @using System.Text
 @inject ISnackbar Snackbar
 @inject IDialogService DialogService
+@inject HttpClient Http
+@inject M_Wallet.Client.Services.UserPreferencesService UserPreferencesService
 
 <MudDialog>
     <TitleContent>
@@ -13,12 +15,22 @@
         </MudText>
     </TitleContent>
     <DialogContent>
-        <MudTextField @bind-Value="Product.Name" 
-                      Label="Product Name" 
-                      Required="true" 
-                      RequiredError="Name is required"
-                      Variant="Variant.Outlined"
-                  Class="mb-2" />
+        <MudGrid GutterSize="2" Class="mb-2">
+            <MudItem xs="8">
+                <MudTextField @bind-Value="Product.Name" 
+                              Label="Product Name" 
+                              Required="true" 
+                              RequiredError="Name is required"
+                              Variant="Variant.Outlined" />
+            </MudItem>
+            <MudItem xs="4">
+                <MudNumericField @bind-Value="Product.StockQuantity" 
+                                 Label="Stock" 
+                                 Min="0"
+                                 Variant="Variant.Outlined"
+                                 Disabled="@(Product.IsStockless || Product.IsService)" />
+            </MudItem>
+        </MudGrid>
 
         <MudTextField @bind-Value="Product.Description" 
                       Label="Description" 
@@ -47,32 +59,51 @@
             </MudItem>
         </MudGrid>
 
+        <MudGrid GutterSize="2" Class="mb-2">
+            <MudItem xs="6">
+                <MudSwitch @bind-Value="Product.IsStockless" 
+                           Label="Stockless (Infinite Stock)" 
+                           Color="Color.Primary" />
+            </MudItem>
+            <MudItem xs="6">
+                <MudSwitch @bind-Value="Product.IsService" 
+                           Label="Allow Cost Edit in Cart" 
+                           Color="Color.Warning" />
+            </MudItem>
+        </MudGrid>
+
         <MudStack Spacing="1" Class="mb-2">
-            <MudStack Direction="Row" Spacing="1" AlignItems="AlignItems.Center">
+            <div class="d-flex align-center gap-1">
+                <MudTooltip Text="Generate Random Barcode">
+                    <MudIconButton Icon="@Icons.Material.Filled.AutoFixHigh"
+                                   Color="Color.Secondary"
+                                   Size="Size.Medium"
+                                   OnClick="GenerateBarcode" />
+                </MudTooltip>
+
                 <MudTextField @bind-Value="_currentBarcodeValue"
                               Label="Barcode / SKU"
                               Variant="Variant.Outlined"
                               Margin="Margin.Dense"
                               Placeholder="Scan or type"
+                              Class="flex-grow-1"
                               @onkeydown="HandleBarcodeKeyDown"
                               OnBlur="HandleBarcodeBlur" />
-                <MudIconButton Icon="@Icons.Material.Filled.Add"
-                               Color="Color.Primary"
-                               Size="Size.Medium"
-                               OnClick="StartNewBarcode" />
-                <MudButton Variant="Variant.Outlined"
-                           Color="Color.Default"
-                           Size="Size.Small"
-                           OnClick="GenerateBarcode">
-                    Generate
-                </MudButton>
-                <MudButton Variant="Variant.Outlined"
-                           Color="Color.Primary"
-                           Size="Size.Small"
-                           OnClick="OpenScannerDialogAsync">
-                    Scan
-                </MudButton>
-            </MudStack>
+
+                <MudTooltip Text="Scan Barcode">
+                    <MudIconButton Icon="@Icons.Material.Filled.QrCodeScanner"
+                                   Color="Color.Primary"
+                                   Size="Size.Medium"
+                                   OnClick="OpenScannerDialogAsync" />
+                </MudTooltip>
+
+                <MudTooltip Text="Add Barcode">
+                    <MudIconButton Icon="@Icons.Material.Filled.Add"
+                                   Color="Color.Primary"
+                                   Size="Size.Medium"
+                                   OnClick="StartNewBarcode" />
+                </MudTooltip>
+            </div>
             @if (Product.Barcodes.Any())
             {
                 <MudStack Direction="Row" Spacing="1" Class="flex-wrap">
@@ -97,16 +128,26 @@
             </MudAlert>
         }
 
-        <MudNumericField @bind-Value="Product.StockQuantity" 
-                         Label="Stock Quantity" 
-                         Min="0"
-                         Variant="Variant.Outlined"
-                 Class="mb-2" />
 
-        <MudTextField @bind-Value="Product.ImageUrl" 
-                      Label="Image URL (Optional)" 
-                      Variant="Variant.Outlined"
-                  Class="mb-2" />
+
+        <MudStack Direction="Row" AlignItems="AlignItems.Center" Spacing="2" Class="mb-2">
+             <MudFileUpload T="IBrowserFile" FilesChanged="UploadFiles">
+                 <ActivatorContent>
+                     <MudButton Variant="Variant.Filled"
+                                Color="Color.Primary"
+                                StartIcon="@Icons.Material.Filled.CloudUpload">
+                         Upload Image
+                     </MudButton>
+                 </ActivatorContent>
+             </MudFileUpload>
+        </MudStack>
+        
+        @if (!string.IsNullOrEmpty(Product.ImageUrl))
+        {
+            <MudPaper Class="d-flex justify-center pa-2 my-2" Outlined="true">
+                <MudImage Src="@Product.ImageUrl" Height="150" ObjectFit="ObjectFit.Contain" />
+            </MudPaper>
+        }
     </DialogContent>
     
     <DialogActions>
@@ -255,5 +296,101 @@
         _scannerDialogReference?.Close();
         _scannerDialogReference = null;
         return Task.CompletedTask;
+    }
+
+    private async Task UploadFiles(IBrowserFile file)
+    {
+        if (file is null) return;
+
+        // Ensure product name is entered first
+        if (string.IsNullOrWhiteSpace(Product.Name))
+        {
+            Snackbar.Add("Please enter the Product Name before uploading an image.", Severity.Warning);
+            return;
+        }
+
+        // Limit size to 30MB for the initial file selection to prevent immediate rejection
+        long maxFileSize = 1024 * 1024 * 30; 
+
+        try
+        {
+            var prefs = await UserPreferencesService.LoadPreferences();
+            IBrowserFile fileToUpload = file;
+            string contentType = file.ContentType;
+            string fileName = file.Name;
+
+            if (prefs.EnableImageResizing)
+            {
+                // Resize image to max resolution from settings (default 800)
+                int maxRes = prefs.MaxImageResolution > 0 ? prefs.MaxImageResolution : 800;
+                
+                try 
+                {
+                    // This significantly reduces upload size and memory usage
+                    fileToUpload = await file.RequestImageFileAsync("image/jpeg", maxRes, maxRes);
+                    contentType = "image/jpeg";
+                    fileName = "product_image.jpg";
+                }
+                catch (Exception resizeEx)
+                {
+                    Console.WriteLine($"Resize failed: {resizeEx.Message}. Uploading original.");
+                }
+            }
+            
+            using var content = new MultipartFormDataContent();
+            
+            // Read the file (resized or original)
+            var fileContent = new StreamContent(fileToUpload.OpenReadStream(maxFileSize));
+            fileContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(contentType);
+            
+            content.Add(fileContent, "file", fileName);
+            content.Add(new StringContent(Product.Name), "productName");
+
+            var response = await Http.PostAsync("api/Uploads", content);
+            
+            if (response.IsSuccessStatusCode)
+            {
+                var result = await response.Content.ReadFromJsonAsync<UploadResult>();
+                if (result != null)
+                {
+                    // Add timestamp to prevent caching issues
+                    Product.ImageUrl = $"{result.Url}?t={DateTime.Now.Ticks}";
+                    
+                    // IMMEDIATE SAVE: If product exists, save the new image URL to DB immediately
+                    // This ensures the link is kept even if the app crashes afterwards
+                    if (Product.Id > 0)
+                    {
+                        try 
+                        {
+                            await Http.PutAsJsonAsync($"api/products/{Product.Id}", Product);
+                            Snackbar.Add("Image uploaded & saved", Severity.Success);
+                        }
+                        catch
+                        {
+                            Snackbar.Add("Image uploaded (Save failed)", Severity.Warning);
+                        }
+                    }
+                    else
+                    {
+                        Snackbar.Add("Image uploaded successfully", Severity.Success);
+                    }
+
+                    StateHasChanged();
+                }
+            }
+            else
+            {
+                Snackbar.Add("Image upload failed", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error uploading image: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private class UploadResult
+    {
+        public string Url { get; set; } = string.Empty;
     }
 }

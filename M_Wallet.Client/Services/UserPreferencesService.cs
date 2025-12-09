@@ -1,6 +1,6 @@
 using System.Net.Http.Json;
 using System.Text.Json;
-using M_Wallet.Client.Models;
+using M_Wallet.Shared.Models;
 using Microsoft.AspNetCore.Components.Authorization;
 using M_Wallet.Shared;
 using MudBlazor;
@@ -35,6 +35,7 @@ namespace M_Wallet.Client.Services
             new() { Title = "Debts & Balance", Href = "debts", Icon = Icons.Material.Filled.MoneyOff },
             new() { Title = "Users", Href = "users", Icon = Icons.Material.Filled.People },
             new() { Title = "History & Logs", Href = "logs", Icon = Icons.Material.Filled.History },
+            new() { Title = "Settings", Href = "settings", Icon = Icons.Material.Filled.Settings },
         };
 
         public UserPreferencesService(HttpClient http, AuthenticationStateProvider authStateProvider)
@@ -67,43 +68,57 @@ namespace M_Wallet.Client.Services
             }
         }
 
-        private async Task LoadPreferences()
+        public async Task<UserPreferences> LoadPreferences()
         {
-            if (_currentUserId == null) return;
+            if (_currentUserId == null) return _preferences;
 
             try
             {
-                var person = await _http.GetFromJsonAsync<Person>($"api/people/{_currentUserId}");
+                // Add timestamp to prevent caching
+                var person = await _http.GetFromJsonAsync<Person>($"api/people/{_currentUserId}?t={DateTime.Now.Ticks}");
                 
-                if (person?.Preferences != null)
+                if (!string.IsNullOrEmpty(person?.Preferences))
                 {
-                    _preferences = JsonSerializer.Deserialize<UserPreferences>(person.Preferences) ?? new UserPreferences();
+                    var options = new JsonSerializerOptions
+                    {
+                        PropertyNameCaseInsensitive = true
+                    };
+                    _preferences = JsonSerializer.Deserialize<UserPreferences>(person.Preferences, options) ?? new UserPreferences();
+                    Console.WriteLine($"Loaded preferences for user {_currentUserId}. Favorites: {_preferences.FavoriteRoutes.Count}");
                 }
                 else
                 {
                     _preferences = new UserPreferences();
+                    Console.WriteLine($"Loaded empty preferences for user {_currentUserId}");
                 }
                 NotifyStateChanged();
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"Error loading preferences: {ex.Message}");
-                _preferences = new UserPreferences();
-                NotifyStateChanged();
+                // Do NOT reset preferences on error, keep existing state or default
+                // _preferences = new UserPreferences(); 
+                // NotifyStateChanged();
             }
+            return _preferences;
         }
 
-        public async Task SavePreferences()
+        public async Task SavePreferences(UserPreferences? newPreferences = null)
         {
             if (_currentUserId == null) return;
 
+            if (newPreferences != null)
+            {
+                _preferences = newPreferences;
+                NotifyStateChanged();
+            }
+
             try
             {
-                var json = JsonSerializer.Serialize(_preferences);
-                var response = await _http.PutAsJsonAsync($"api/people/{_currentUserId}/preferences", json);
+                var response = await _http.PutAsJsonAsync($"api/people/{_currentUserId}/preferences", _preferences);
                 if (!response.IsSuccessStatusCode)
                 {
-                    Console.WriteLine("Failed to save preferences");
+                    Console.WriteLine($"Failed to save preferences: {response.StatusCode}");
                 }
             }
             catch (Exception ex)
