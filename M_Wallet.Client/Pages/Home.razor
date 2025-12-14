@@ -242,18 +242,43 @@
                                    AdornmentIcon="@Icons.Material.Filled.Event" />
                 }
 
-                <MudAutocomplete T="string"
-                                 Label="Customer Name (Optional)"
-                                 @bind-Value="customerName"
-                                 SearchFunc="@SearchCustomers"
-                                 Variant="Variant.Outlined"
-                                 Margin="Margin.Dense"
-                                 Class="mb-2"
-                                 Clearable="true"
-                                 CoerceValue="true"
-                                 MaxItems="null"
-                                 Virtualize="true"
-                                 AdornmentIcon="@Icons.Material.Filled.Search" />
+                <div class="d-flex gap-2 mb-2 align-center">
+                    <div style="flex: 1; min-width: 0;">
+                        <MudAutocomplete T="string"
+                                         @ref="_nameAutocomplete"
+                                         Label="Customer Name"
+                                         Value="customerName"
+                                         ValueChanged="OnCustomerNameChanged"
+                                         SearchFunc="@SearchCustomersByName"
+                                         Variant="Variant.Outlined"
+                                         Margin="Margin.Dense"
+                                         Clearable="true"
+                                         CoerceValue="true"
+                                         AdornmentIcon="@Icons.Material.Filled.Person"
+                                         ReadOnly="@(selectedCustomer != null)" />
+                    </div>
+                    <div style="flex: 1; min-width: 0;">
+                        <MudAutocomplete T="string"
+                                         @ref="_phoneAutocomplete"
+                                         Label="Phone Number"
+                                         Value="customerPhone"
+                                         ValueChanged="OnCustomerPhoneChanged"
+                                         SearchFunc="@SearchCustomersByPhone"
+                                         Variant="Variant.Outlined"
+                                         Margin="Margin.Dense"
+                                         Clearable="true"
+                                         CoerceValue="true"
+                                         AdornmentIcon="@Icons.Material.Filled.Phone"
+                                         ReadOnly="@(selectedCustomer != null)" />
+                    </div>
+                    @if (selectedCustomer != null)
+                    {
+                        <MudIconButton Icon="@Icons.Material.Filled.Clear" 
+                                       Color="Color.Error" 
+                                       OnClick="ClearCustomerSelection" 
+                                       Title="Clear Selection" />
+                    }
+                </div>
 
                 <MudTextField @bind-Value="orderNote"
                               Label="Order Note (Optional)"
@@ -349,9 +374,13 @@
     private decimal lastTransactionPaidAmount;
     private string lastPaymentMethod = "";
 
+    private MudAutocomplete<string>? _nameAutocomplete;
+    private MudAutocomplete<string>? _phoneAutocomplete;
     private DateTime? selectedDate = DateTime.Today;
     private bool showDatePicker = false;
     private string customerName = "";
+    private string customerPhone = "";
+    private Person? selectedCustomer = null;
     private string orderNote = "";
     private Person? currentEmployee;
     private bool isProcessing = false;
@@ -422,14 +451,63 @@
         }
     }
 
-    private Task<IEnumerable<string>> SearchCustomers(string value, CancellationToken token)
+    private Task<IEnumerable<string>> SearchCustomersByName(string value, CancellationToken token)
     {
         if (string.IsNullOrEmpty(value))
-            return Task.FromResult(customers.Select(x => x.Name));
+            return Task.FromResult(customers.Where(x => x.Name != null).Select(x => x.Name!));
             
         return Task.FromResult(customers
-            .Where(x => x.Name.Contains(value, StringComparison.InvariantCultureIgnoreCase))
-            .Select(x => x.Name));
+            .Where(x => x.Name != null && x.Name.Contains(value, StringComparison.InvariantCultureIgnoreCase))
+            .Select(x => x.Name!));
+    }
+
+    private Task<IEnumerable<string>> SearchCustomersByPhone(string value, CancellationToken token)
+    {
+        if (string.IsNullOrEmpty(value))
+            return Task.FromResult(customers.Where(x => !string.IsNullOrEmpty(x.PhoneNumber)).Select(x => x.PhoneNumber!));
+            
+        return Task.FromResult(customers
+            .Where(x => !string.IsNullOrEmpty(x.PhoneNumber) && x.PhoneNumber.Contains(value))
+            .Select(x => x.PhoneNumber!));
+    }
+
+    private void OnCustomerNameChanged(string value)
+    {
+        customerName = value;
+        var match = customers.FirstOrDefault(c => c.Name != null && c.Name.Equals(value, StringComparison.InvariantCultureIgnoreCase));
+        if (match != null)
+        {
+            selectedCustomer = match;
+            customerPhone = match.PhoneNumber ?? "";
+        }
+        else
+        {
+            selectedCustomer = null;
+        }
+    }
+
+    private void OnCustomerPhoneChanged(string value)
+    {
+        customerPhone = value;
+        var match = customers.FirstOrDefault(c => c.PhoneNumber == value);
+        if (match != null)
+        {
+            selectedCustomer = match;
+            customerName = match.Name;
+        }
+        else
+        {
+            selectedCustomer = null;
+        }
+    }
+
+    private async Task ClearCustomerSelection()
+    {
+        selectedCustomer = null;
+        customerName = "";
+        customerPhone = "";
+        if (_nameAutocomplete != null) await _nameAutocomplete.Clear();
+        if (_phoneAutocomplete != null) await _phoneAutocomplete.Clear();
     }
 
     /// <summary>
@@ -644,10 +722,10 @@
         amountPaid = CalculateTotal();
     }
 
-    private void ClearCart()
+    private async void ClearCart()
     {
         cartItems.Clear();
-        customerName = "";
+        await ClearCustomerSelection();
         orderNote = "";
         amountPaid = 0;
         applyDiscount = false;
@@ -703,7 +781,9 @@
             var transaction = new Transaction
             {
                 TransactionDate = transactionDate,
+                PersonId = selectedCustomer?.Id,
                 CustomerName = string.IsNullOrWhiteSpace(customerName) ? null : customerName,
+                CustomerPhone = string.IsNullOrWhiteSpace(customerPhone) ? null : customerPhone,
                 Note = string.IsNullOrWhiteSpace(orderNote) ? null : orderNote,
                 EmployeeName = transactionEmployee!.Name,
                 Discount = applyDiscount ? discountAmount : 0,
@@ -732,7 +812,7 @@
                 {
                     var payment = new Payment
                     {
-                        PaymentDate = transactionDate,
+                        PaymentDate = transactionDate.AddSeconds(1), // Ensure payment comes after transaction
                         Amount = paidAmount,
                         PaymentMethod = paymentMethod,
                         CustomerName = customerName,

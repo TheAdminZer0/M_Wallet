@@ -84,7 +84,7 @@ public class PaymentsController : ControllerBase
             if (existingCustomer == null)
             {
                 existingCustomer = await _context.People
-                    .FirstOrDefaultAsync(c => c.Name.ToLower() == customerInput.ToLower() && c.Role == "Customer");
+                    .FirstOrDefaultAsync(c => c.Name != null && c.Name.ToLower() == customerInput.ToLower() && c.Role == "Customer");
             }
 
             if (existingCustomer != null)

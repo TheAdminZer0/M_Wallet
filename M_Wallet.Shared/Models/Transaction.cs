@@ -7,6 +7,10 @@ public class Transaction
     public int? PersonId { get; set; }
     public Person? Person { get; set; }
     public string? CustomerName { get; set; } // Optional customer tracking
+    
+    [System.ComponentModel.DataAnnotations.Schema.NotMapped]
+    public string? CustomerPhone { get; set; } // For creating new customers during transaction
+
     public string? Note { get; set; } // Optional note for the order
     public decimal TotalAmount { get; set; }
     public decimal Discount { get; set; }

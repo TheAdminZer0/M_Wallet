@@ -102,47 +102,51 @@ public class TransactionsController : ControllerBase
             if (transaction.TotalAmount < 0) transaction.TotalAmount = 0;
 
             // Handle Customer Creation/Linking
-            if (!string.IsNullOrWhiteSpace(transaction.CustomerName))
+            if (transaction.PersonId.HasValue)
             {
-                var customerInput = transaction.CustomerName.Trim();
+                // Client already identified the person
+                var person = await _context.People.FindAsync(transaction.PersonId.Value);
+                if (person != null)
+                {
+                    transaction.CustomerName = person.Name;
+                }
+            }
+            else if (!string.IsNullOrWhiteSpace(transaction.CustomerName) || !string.IsNullOrWhiteSpace(transaction.CustomerPhone))
+            {
+                var customerName = transaction.CustomerName?.Trim();
+                var customerPhone = transaction.CustomerPhone?.Trim();
+                
                 Person? existingCustomer = null;
 
-                // Check if input is a 10-digit phone number
-                bool isPhoneNumber = System.Text.RegularExpressions.Regex.IsMatch(customerInput, @"^\d{10}$");
-
-                if (isPhoneNumber)
+                // Try to find by Phone first if available
+                if (!string.IsNullOrWhiteSpace(customerPhone))
                 {
-                    // Try to find by phone number first
                     existingCustomer = await _context.People
-                        .FirstOrDefaultAsync(c => c.PhoneNumber == customerInput && c.Role == "Customer");
+                        .FirstOrDefaultAsync(c => c.PhoneNumber == customerPhone && c.Role == "Customer");
                 }
-
-                // If not found by phone number (or not a phone number), try by name
-                if (existingCustomer == null)
+                
+                // Try to find by Name if not found and name available
+                if (existingCustomer == null && !string.IsNullOrWhiteSpace(customerName))
                 {
                     existingCustomer = await _context.People
-                        .FirstOrDefaultAsync(c => c.Name.ToLower() == customerInput.ToLower() && c.Role == "Customer");
+                        .FirstOrDefaultAsync(c => c.Name != null && c.Name.ToLower() == customerName.ToLower() && c.Role == "Customer");
                 }
 
                 if (existingCustomer != null)
                 {
                     transaction.PersonId = existingCustomer.Id;
-                    // Ensure the name matches exactly the existing record to avoid case discrepancies
                     transaction.CustomerName = existingCustomer.Name; 
                 }
                 else
                 {
+                    // Create new customer
                     var newCustomer = new Person
                     {
-                        Name = customerInput,
+                        Name = customerName,
                         Role = "Customer",
+                        PhoneNumber = customerPhone,
                         CreatedAt = DateTime.UtcNow
                     };
-
-                    if (isPhoneNumber)
-                    {
-                        newCustomer.PhoneNumber = customerInput;
-                    }
 
                     _context.People.Add(newCustomer);
                     await _context.SaveChangesAsync(); // Save to generate ID

@@ -7,8 +7,7 @@ namespace M_Wallet.Shared
     {
         public int Id { get; set; }
         
-        [Required]
-        public string Name { get; set; } = string.Empty;
+        public string? Name { get; set; }
         
         public string Role { get; set; } = "Customer"; // "Customer", "Driver", "Employee", "Admin"
         
@@ -29,6 +28,12 @@ namespace M_Wallet.Shared
 
         [System.ComponentModel.DataAnnotations.Schema.NotMapped]
         public decimal Balance { get; set; }
+
+        [System.ComponentModel.DataAnnotations.Schema.NotMapped]
+        public decimal TotalProfit { get; set; }
+
+        [System.ComponentModel.DataAnnotations.Schema.NotMapped]
+        public decimal TotalSpent { get; set; }
 
         [System.ComponentModel.DataAnnotations.Schema.NotMapped]
         public DateTime? LastTransactionDate { get; set; }

@@ -24,6 +24,8 @@
                     @if (IsCustomerColumnVisible("Name")) { <MudTh><MudTableSortLabel SortBy="new Func<Person, object>(x => x.Name)">Name</MudTableSortLabel></MudTh> }
                     @if (IsCustomerColumnVisible("Phone Number")) { <MudTh><MudTableSortLabel SortBy="new Func<Person, object>(x => x.PhoneNumber)">Phone Number</MudTableSortLabel></MudTh> }
                     @if (IsCustomerColumnVisible("Balance")) { <MudTh><MudTableSortLabel SortBy="new Func<Person, object>(x => x.Balance)">Balance</MudTableSortLabel></MudTh> }
+                    @if (IsCustomerColumnVisible("Total Spent")) { <MudTh><MudTableSortLabel SortBy="new Func<Person, object>(x => x.TotalSpent)">Total Spent</MudTableSortLabel></MudTh> }
+                    @if (IsCustomerColumnVisible("Total Profit")) { <MudTh><MudTableSortLabel SortBy="new Func<Person, object>(x => x.TotalProfit)">Total Profit</MudTableSortLabel></MudTh> }
                     @if (IsCustomerColumnVisible("Last Transaction")) { <MudTh><MudTableSortLabel SortBy="new Func<Person, object>(x => x.LastTransactionDate)">Last Transaction</MudTableSortLabel></MudTh> }
                     @if (IsCustomerColumnVisible("Actions")) { <MudTh>Actions</MudTh> }
                 </HeaderContent>
@@ -34,6 +36,20 @@
                         <MudTd DataLabel="Balance">
                             <MudText Color="@(context.Balance < 0 ? Color.Error : Color.Success)">
                                 @context.Balance.ToString("F2")
+                            </MudText>
+                        </MudTd> 
+                    }
+                    @if (IsCustomerColumnVisible("Total Spent")) { 
+                        <MudTd DataLabel="Total Spent">
+                            <MudText Color="Color.Primary">
+                                @context.TotalSpent.ToString("F2")
+                            </MudText>
+                        </MudTd> 
+                    }
+                    @if (IsCustomerColumnVisible("Total Profit")) { 
+                        <MudTd DataLabel="Total Profit">
+                            <MudText Color="@(context.TotalProfit < 0 ? Color.Error : Color.Success)">
+                                @context.TotalProfit.ToString("F2")
                             </MudText>
                         </MudTd> 
                     }
@@ -224,6 +240,8 @@
         new() { Title = "Name", IsVisible = true },
         new() { Title = "Phone Number", IsVisible = true },
         new() { Title = "Balance", IsVisible = true },
+        new() { Title = "Total Spent", IsVisible = true },
+        new() { Title = "Total Profit", IsVisible = true },
         new() { Title = "Last Transaction", IsVisible = true },
         new() { Title = "Actions", IsVisible = true }
     };
@@ -302,7 +320,7 @@
     {
         if (string.IsNullOrWhiteSpace(searchString))
             return true;
-        if (user.Name.Contains(searchString, StringComparison.OrdinalIgnoreCase))
+        if (user.Name?.Contains(searchString, StringComparison.OrdinalIgnoreCase) == true)
             return true;
         if (user.PhoneNumber != null && user.PhoneNumber.Contains(searchString))
             return true;

@@ -42,8 +42,21 @@ public class PeopleController : ControllerBase
 
         var transactions = await _context.Transactions
             .Where(t => t.PersonId.HasValue && personIds.Contains(t.PersonId.Value))
+            .Select(t => new 
+            { 
+                t.PersonId, 
+                t.TotalAmount, 
+                t.TransactionDate,
+                Profit = t.Items.Sum(i => (i.UnitPrice - i.UnitCost) * i.Quantity) - t.Discount
+            })
             .GroupBy(t => t.PersonId)
-            .Select(g => new { PersonId = g.Key, Total = g.Sum(t => t.TotalAmount), LastDate = g.Max(t => t.TransactionDate) })
+            .Select(g => new 
+            { 
+                PersonId = g.Key, 
+                Total = g.Sum(t => t.TotalAmount), 
+                TotalProfit = g.Sum(t => t.Profit),
+                LastDate = g.Max(t => t.TransactionDate) 
+            })
             .ToListAsync();
 
         var payments = await _context.Payments
@@ -61,6 +74,8 @@ public class PeopleController : ControllerBase
             decimal totalPayments = p?.Total ?? 0;
             
             person.Balance = totalPayments - totalTransactions;
+            person.TotalProfit = t?.TotalProfit ?? 0;
+            person.TotalSpent = totalTransactions;
             
             DateTime? lastT = t?.LastDate;
             DateTime? lastP = p?.LastDate;
@@ -246,7 +261,7 @@ public class PeopleController : ControllerBase
 
         var items = transactions.Concat(payments)
             .OrderBy(i => i.Date)
-            .ThenByDescending(i => i.Type) // Ensure Transaction comes before Payment if dates are equal
+            .ThenBy(i => i.Type == "Transaction" ? 0 : 1) // Ensure Transaction comes before Payment if dates are equal
             .ToList();
 
         decimal balance = 0;
