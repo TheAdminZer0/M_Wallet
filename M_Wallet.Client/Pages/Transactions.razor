@@ -9,6 +9,13 @@
 @using M_Wallet.Client.Models
 @using M_Wallet.Client.Services
 
+<style>
+    .fixed-layout-table .mud-table-container > table {
+        table-layout: fixed;
+        min-width: 1200px;
+    }
+</style>
+
 <PageTitle>Transactions</PageTitle>
 
 @if (transactions == null)
@@ -97,7 +104,7 @@ else
     </MudPaper>
 
     <MudTabs Elevation="2" Rounded="true" ApplyEffectsToContainer="true" PanelClass="pa-0">
-        <MudTabPanel Text="Sales History" Icon="@Icons.Material.Filled.Receipt">
+        <MudTabPanel Text="Orders" Icon="@Icons.Material.Filled.Receipt">
             @if (FilteredTransactions.Count() != transactions.Count)
             {
                 <MudAlert Severity="Severity.Info" Dense="true" Class="mb-4">
@@ -116,7 +123,8 @@ else
                               SortLabel="Sort By"
                               RowStyleFunc="RowStyleFunc"
                               OnRowClick="OnRowClick"
-                              T="Transaction">
+                              T="Transaction"
+                              Class="fixed-layout-table">
                         <ToolBarContent>
                             <MudSpacer />
                             <MudButton Variant="Variant.Outlined" 
@@ -136,21 +144,22 @@ else
                             </MudTextField>
                         </ToolBarContent>
                         <HeaderContent>
-                            @if (IsTransactionColumnVisible("Order ID")) { <MudTh><MudTableSortLabel InitialDirection="SortDirection.Descending" SortBy="new Func<Transaction, object>(x => x.Id)">Order ID</MudTableSortLabel></MudTh> }
-                            @if (IsTransactionColumnVisible("Date")) { <MudTh><MudTableSortLabel SortBy="new Func<Transaction, object>(x => x.TransactionDate)">Date</MudTableSortLabel></MudTh> }
-                            @if (IsTransactionColumnVisible("Items")) { <MudTh>Items</MudTh> }
-                            @if (IsTransactionColumnVisible("Quantity")) { <MudTh><MudTableSortLabel SortBy="new Func<Transaction, object>(x => x.Items.Sum(i => i.Quantity))">Quantity</MudTableSortLabel></MudTh> }
+                            @if (IsTransactionColumnVisible("Order ID")) { <MudTh Style="@($"width:{GetColumnWidth("Order ID")}")"><MudTableSortLabel InitialDirection="SortDirection.Descending" SortBy="new Func<Transaction, object>(x => x.Id)">Order ID</MudTableSortLabel></MudTh> }
+                            @if (IsTransactionColumnVisible("Date")) { <MudTh Style="@($"width:{GetColumnWidth("Date")}")"><MudTableSortLabel SortBy="new Func<Transaction, object>(x => x.TransactionDate)">Date</MudTableSortLabel></MudTh> }
+                            @if (IsTransactionColumnVisible("Items")) { <MudTh Style="@($"width:{GetColumnWidth("Items")}")">Items</MudTh> }
+                            @if (IsTransactionColumnVisible("Quantity")) { <MudTh Style="@($"width:{GetColumnWidth("Quantity")}")"><MudTableSortLabel SortBy="new Func<Transaction, object>(x => x.Items.Sum(i => i.Quantity))">Quantity</MudTableSortLabel></MudTh> }
                             @if (showProfit)
                             {
-                                <MudTh>Cost (LD)</MudTh>
-                                <MudTh>Profit (LD)</MudTh>
+                                <MudTh Style="@($"width:{GetColumnWidth("Cost")}")">Cost (LD)</MudTh>
+                                <MudTh Style="@($"width:{GetColumnWidth("Profit")}")">Profit (LD)</MudTh>
                             }
-                            @if (IsTransactionColumnVisible("Total")) { <MudTh><MudTableSortLabel SortBy="new Func<Transaction, object>(x => x.TotalAmount)">Total (LD)</MudTableSortLabel></MudTh> }
-                            @if (IsTransactionColumnVisible("Status")) { <MudTh>Status</MudTh> }
-                            @if (IsTransactionColumnVisible("Customer")) { <MudTh><MudTableSortLabel SortBy="new Func<Transaction, object>(x => x.CustomerName ?? string.Empty)">Customer</MudTableSortLabel></MudTh> }
-                            @if (IsTransactionColumnVisible("Note")) { <MudTh>Note</MudTh> }
-                            @if (IsTransactionColumnVisible("Employee")) { <MudTh><MudTableSortLabel SortBy="new Func<Transaction, object>(x => x.EmployeeName)">Employee</MudTableSortLabel></MudTh> }
-                            @if (IsTransactionColumnVisible("Actions")) { <MudTh>Actions</MudTh> }
+                            @if (IsTransactionColumnVisible("Total")) { <MudTh Style="@($"width:{GetColumnWidth("Total")}")"><MudTableSortLabel SortBy="new Func<Transaction, object>(x => x.TotalAmount)">Total (LD)</MudTableSortLabel></MudTh> }
+                            @if (IsTransactionColumnVisible("Discount")) { <MudTh Style="@($"width:{GetColumnWidth("Discount")}")"><MudTableSortLabel SortBy="new Func<Transaction, object>(x => x.Discount)">Discount</MudTableSortLabel></MudTh> }
+                            @if (IsTransactionColumnVisible("Status")) { <MudTh Style="@($"width:{GetColumnWidth("Status")}")">Status</MudTh> }
+                            @if (IsTransactionColumnVisible("Customer")) { <MudTh Style="@($"width:{GetColumnWidth("Customer")}")"><MudTableSortLabel SortBy="new Func<Transaction, object>(x => x.CustomerName ?? string.Empty)">Customer</MudTableSortLabel></MudTh> }
+                            @if (IsTransactionColumnVisible("Note")) { <MudTh Style="@($"width:{GetColumnWidth("Note")}")">Note</MudTh> }
+                            @if (IsTransactionColumnVisible("Employee")) { <MudTh Style="@($"width:{GetColumnWidth("Employee")}")"><MudTableSortLabel SortBy="new Func<Transaction, object>(x => x.EmployeeName)">Employee</MudTableSortLabel></MudTh> }
+                            @if (IsTransactionColumnVisible("Actions")) { <MudTh Style="@($"width:{GetColumnWidth("Actions")}")">Actions</MudTh> }
                         </HeaderContent>
                         <RowTemplate>
                             @if (IsTransactionColumnVisible("Order ID")) {
@@ -190,6 +199,20 @@ else
                                     <MudChip T="string" Size="Size.Small" Variant="Variant.Text" Color="Color.Success">
                                         @context.TotalAmount.ToString("F2")
                                     </MudChip>
+                                </MudTd>
+                            }
+                            @if (IsTransactionColumnVisible("Discount")) {
+                                <MudTd DataLabel="Discount">
+                                    @if (context.Discount > 0)
+                                    {
+                                        <MudChip T="string" Size="Size.Small" Variant="Variant.Text" Color="Color.Error">
+                                            -@context.Discount.ToString("F2")
+                                        </MudChip>
+                                    }
+                                    else
+                                    {
+                                        <MudText Typo="Typo.body2" Color="Color.Default">-</MudText>
+                                    }
                                 </MudTd>
                             }
                             @if (IsTransactionColumnVisible("Status")) {
@@ -251,62 +274,70 @@ else
                             {
                                 <MudTr>
                                     <td colspan="20" class="pa-0">
-                                        <MudCard Elevation="0" Class="pa-4 rounded-0" Style="background-color: var(--mud-palette-background-grey); border-left: 4px solid var(--mud-palette-primary); border-bottom: 1px solid var(--mud-palette-lines-default);">
-                                            <MudTable Items="@trans.Items" 
-                                                      Dense="true" 
-                                                      Hover="true"
-                                                      Elevation="0"
-                                                      Breakpoint="Breakpoint.None"
-                                                      Class="mud-table-compact">
-                                                <HeaderContent>
-                                                    <MudTh Class="pa-1">Product</MudTh>
-                                                    <MudTh Class="pa-1">Qty</MudTh>
-                                                    <MudTh Class="pa-1">Price</MudTh>
-                                                    @if (showProfit)
-                                                    {
-                                                        <MudTh Class="pa-1">Cost</MudTh>
-                                                        <MudTh Class="pa-1">Profit</MudTh>
-                                                    }
-                                                    <MudTh Class="pa-1">Total</MudTh>
-                                                </HeaderContent>
-                                                <RowTemplate Context="item">
-                                                    <MudTd Class="pa-1">
-                                                        <div class="d-flex align-center">
-                                                            @if (item.Product != null)
-                                                            {
-                                                                <MudIconButton Icon="@Icons.Material.Filled.Info"
-                                                                               Color="Color.Default"
-                                                                               Size="Size.Small"
-                                                                               Class="mr-2"
-                                                                               OnClick="@(() => ShowProductDetails(item.Product!))" />
-                                                            }
-                                                            @item.Product?.Name
-                                                        </div>
-                                                    </MudTd>
-                                                    <MudTd Class="pa-1">@item.Quantity</MudTd>
-                                                    <MudTd Class="pa-1">@item.UnitPrice.ToString("F2")</MudTd>
-                                                    @if (showProfit)
-                                                    {
-                                                        <MudTd Class="pa-1">
-                                                            <MudText Typo="Typo.body2" Color="Color.Info">
-                                                                @(((item.UnitCost > 0 ? item.UnitCost : item.Product?.CostPrice ?? 0) * item.Quantity).ToString("F2"))
-                                                            </MudText>
-                                                        </MudTd>
-                                                        <MudTd Class="pa-1">
-                                                            @{
-                                                                var cost = item.UnitCost > 0 ? item.UnitCost : (item.Product?.CostPrice ?? 0);
-                                                                var itemProfit = (item.UnitPrice - cost) * item.Quantity;
-                                                            }
-                                                            <MudText Typo="Typo.body2" Color="@(itemProfit > 0 ? Color.Success : Color.Error)">
-                                                                <b>@itemProfit.ToString("F2")</b>
-                                                            </MudText>
-                                                        </MudTd>
-                                                    }
-                                                    <MudTd Class="pa-1">
-                                                        <b>@item.Subtotal.ToString("F2")</b>
-                                                    </MudTd>
-                                                </RowTemplate>
-                                            </MudTable>
+                                        <MudCard Elevation="0" Class="pa-0 rounded-0" Style="position: relative; background-color: var(--mud-palette-background-grey); border-bottom: 1px solid var(--mud-palette-lines-default);">
+                                            <div style="position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background-color: var(--mud-palette-primary); z-index: 1;"></div>
+                                            <div class="d-flex flex-column">
+                                                @foreach (var item in trans.Items)
+                                                {
+                                                    <div class="d-flex flex-row align-center" style="border-bottom: 1px solid var(--mud-palette-divider);">
+                                                        @if (IsTransactionColumnVisible("Order ID")) { <div style="@($"width:{GetColumnWidth("Order ID")}")"></div> }
+                                                        @if (IsTransactionColumnVisible("Date")) { <div style="@($"width:{GetColumnWidth("Date")}")"></div> }
+                                                        @if (IsTransactionColumnVisible("Items")) {
+                                                            <div class="py-1 px-4" style="@($"width:{GetColumnWidth("Items")}")">
+                                                                <div class="d-flex align-center">
+                                                                    <MudText Typo="Typo.caption" Class="mr-2" Color="Color.Default">(@item.UnitPrice.ToString("F2"))</MudText>
+                                                                    @if (item.Product != null)
+                                                                    {
+                                                                        <MudIconButton Icon="@Icons.Material.Filled.Info"
+                                                                                       Color="Color.Default"
+                                                                                       Size="Size.Small"
+                                                                                       Class="mr-2"
+                                                                                       OnClick="@(() => ShowProductDetails(item.Product!))" />
+                                                                    }
+                                                                    <MudText>@item.Product?.Name</MudText>
+                                                                </div>
+                                                            </div>
+                                                        }
+                                                        @if (IsTransactionColumnVisible("Quantity")) { <div class="py-1 px-4" style="@($"width:{GetColumnWidth("Quantity")}")">@item.Quantity</div> }
+                                                        @if (showProfit)
+                                                        {
+                                                            <div class="py-1 px-4" style="@($"width:{GetColumnWidth("Cost")}")">
+                                                                <MudText Typo="Typo.body2" Color="Color.Info">
+                                                                    @(((item.UnitCost > 0 ? item.UnitCost : item.Product?.CostPrice ?? 0) * item.Quantity).ToString("F2"))
+                                                                </MudText>
+                                                            </div>
+                                                            <div class="py-1 px-4" style="@($"width:{GetColumnWidth("Profit")}")">
+                                                                @{
+                                                                    var cost = item.UnitCost > 0 ? item.UnitCost : (item.Product?.CostPrice ?? 0);
+                                                                    var itemProfit = (item.UnitPrice - cost) * item.Quantity;
+                                                                }
+                                                                <MudText Typo="Typo.body2" Color="@(itemProfit > 0 ? Color.Success : Color.Error)">
+                                                                    <b>@itemProfit.ToString("F2")</b>
+                                                                </MudText>
+                                                            </div>
+                                                        }
+                                                        @if (IsTransactionColumnVisible("Total")) {
+                                                            <div class="py-1 px-4" style="@($"width:{GetColumnWidth("Total")}")">
+                                                                <b>@item.Subtotal.ToString("F2")</b>
+                                                            </div>
+                                                        }
+                                                        @if (IsTransactionColumnVisible("Discount")) { <div style="@($"width:{GetColumnWidth("Discount")}")"></div> }
+                                                        @if (IsTransactionColumnVisible("Status")) { <div style="@($"width:{GetColumnWidth("Status")}")"></div> }
+                                                        @if (IsTransactionColumnVisible("Customer")) { <div style="@($"width:{GetColumnWidth("Customer")}")"></div> }
+                                                        @if (IsTransactionColumnVisible("Note")) { <div style="@($"width:{GetColumnWidth("Note")}")"></div> }
+                                                        @if (IsTransactionColumnVisible("Employee")) { <div style="@($"width:{GetColumnWidth("Employee")}")"></div> }
+                                                        @if (IsTransactionColumnVisible("Actions")) { <div style="@($"width:{GetColumnWidth("Actions")}")"></div> }
+                                                    </div>
+                                                }
+                                            </div>
+                                            @if (trans.Discount > 0)
+                                            {
+                                                <div class="d-flex justify-end mt-2 gap-4 px-4">
+                                                     <MudText Typo="Typo.body2"><b>Subtotal:</b> @((trans.TotalAmount + trans.Discount).ToString("F2"))</MudText>
+                                                     <MudText Typo="Typo.body2" Color="Color.Error"><b>Discount:</b> -@trans.Discount.ToString("F2")</MudText>
+                                                     <MudText Typo="Typo.body2" Color="Color.Primary"><b>Total:</b> @trans.TotalAmount.ToString("F2")</MudText>
+                                                </div>
+                                            }
                                         </MudCard>
                                     </td>
                                 </MudTr>
@@ -323,7 +354,7 @@ else
             </MudPaper>
         </MudTabPanel>
 
-        <MudTabPanel Text="Payment History" Icon="@Icons.Material.Filled.History">
+        <MudTabPanel Text="Payments" Icon="@Icons.Material.Filled.History">
             @if (payments == null)
             {
                 <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
@@ -484,6 +515,7 @@ else
         new() { Title = "Items", IsVisible = true },
         new() { Title = "Quantity", IsVisible = true },
         new() { Title = "Total", IsVisible = true },
+        new() { Title = "Discount", IsVisible = true },
         new() { Title = "Status", IsVisible = true },
         new() { Title = "Customer", IsVisible = true },
         new() { Title = "Note", IsVisible = true },
@@ -759,11 +791,12 @@ else
     private decimal CalculateOrderProfit(Transaction transaction)
     {
         if (transaction.Items == null) return 0;
-        return transaction.Items.Sum(item =>
+        var grossProfit = transaction.Items.Sum(item =>
         {
             var cost = item.UnitCost > 0 ? item.UnitCost : (item.Product?.CostPrice ?? 0);
             return (item.UnitPrice - cost) * item.Quantity;
         });
+        return grossProfit - transaction.Discount;
     }
 
     private Task<IEnumerable<Product>> SearchProducts(string value, CancellationToken token)
@@ -1029,5 +1062,26 @@ else
             }
         }
         return totalRealizedProfit;
+    }
+
+    private string GetColumnWidth(string columnName)
+    {
+        return columnName switch
+        {
+            "Order ID" => "100px",
+            "Date" => "15%",
+            "Items" => "20%",
+            "Quantity" => "5%",
+            "Cost" => "8%",
+            "Profit" => "8%",
+            "Total" => "8%",
+            "Discount" => "8%",
+            "Status" => "8%",
+            "Customer" => "10%",
+            "Note" => "10%",
+            "Employee" => "8%",
+            "Actions" => "5%",
+            _ => "auto"
+        };
     }
 }

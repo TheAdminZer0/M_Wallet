@@ -65,6 +65,14 @@ namespace M_Wallet.Client.Services
 
             // Totals
             sb.Append("<div class='total-section'>");
+            
+            if (transaction.Discount > 0)
+            {
+                 var subtotal = transaction.TotalAmount + transaction.Discount;
+                 sb.Append($"<div class='sub-row'><span>{subtotal:F2}</span><span>المجموع</span></div>");
+                 sb.Append($"<div class='sub-row'><span>{transaction.Discount:F2}</span><span>الخصم</span></div>");
+            }
+
             sb.Append($"<div class='total-row'><span>{transaction.TotalAmount:F2}</span><span>الإجمالي</span></div>");
             
             // Calculate Paid Amount
@@ -191,7 +199,17 @@ namespace M_Wallet.Client.Services
 
             // Totals
             sb.Append("<div class='totals'>");
-            sb.Append($"<div class='total-row'><span>المجموع الفرعي</span><span>{transaction.TotalAmount:F2}</span></div>");
+            
+            if (transaction.Discount > 0)
+            {
+                var subtotal = transaction.TotalAmount + transaction.Discount;
+                sb.Append($"<div class='total-row'><span>المجموع الفرعي</span><span>{subtotal:F2}</span></div>");
+                sb.Append($"<div class='total-row'><span>الخصم</span><span>{transaction.Discount:F2}</span></div>");
+            }
+            else 
+            {
+                sb.Append($"<div class='total-row'><span>المجموع الفرعي</span><span>{transaction.TotalAmount:F2}</span></div>");
+            }
             
             var paid = transaction.PaymentAllocations?.Sum(pa => pa.Amount) ?? 0;
             var balance = transaction.TotalAmount - paid;

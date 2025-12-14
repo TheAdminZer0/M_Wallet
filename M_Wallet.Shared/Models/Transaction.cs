@@ -9,6 +9,7 @@ public class Transaction
     public string? CustomerName { get; set; } // Optional customer tracking
     public string? Note { get; set; } // Optional note for the order
     public decimal TotalAmount { get; set; }
+    public decimal Discount { get; set; }
     public string EmployeeName { get; set; } = string.Empty;
     public List<TransactionItem> Items { get; set; } = new();
     public List<PaymentAllocation> PaymentAllocations { get; set; } = new();

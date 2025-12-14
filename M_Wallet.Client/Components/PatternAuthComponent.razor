@@ -1,0 +1,45 @@
+@namespace M_Wallet.Client.Components
+@using M_Wallet.Shared
+@using MudBlazor
+@using System.Net.Http.Json
+@inject HttpClient Http
+@inject ISnackbar Snackbar
+
+<PatternLock @ref="patternLock" OnPatternComplete="VerifyPattern" />
+
+@code {
+    [Parameter] public EventCallback<Person> OnAuthorized { get; set; }
+    
+    private PatternLock? patternLock;
+
+    private async Task VerifyPattern(string pattern)
+    {
+        try
+        {
+            var response = await Http.GetAsync($"api/people/verify/{pattern}");
+            if (response.IsSuccessStatusCode)
+            {
+                var emp = await response.Content.ReadFromJsonAsync<Person>();
+                if (emp != null)
+                {
+                    await OnAuthorized.InvokeAsync(emp);
+                }
+            }
+            else
+            {
+                if (patternLock != null)
+                {
+                    await patternLock.ShowError("Invalid Pattern");
+                }
+                else
+                {
+                    Snackbar.Add("Invalid Pattern", Severity.Error);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+        }
+    }
+}

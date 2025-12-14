@@ -187,7 +187,7 @@
                                                                      Style="vertical-align: middle; font-size: 14px;" />
                                                         }
                                                     </MudText>
-                                                    @if (item.UnitCost > 0 || item.Product?.IsService == true)
+                                                    @if (item.Product?.IsService == true)
                                                     {
                                                         <MudText Typo="Typo.caption" Color="Color.Default" Style="font-size: 0.7rem;">
                                                             (C: @item.UnitCost.ToString("F2"))
@@ -250,7 +250,7 @@
                                  Margin="Margin.Dense"
                                  Class="mb-2"
                                  Clearable="true"
-                                 CoerceValue="false"
+                                 CoerceValue="true"
                                  MaxItems="null"
                                  Virtualize="true"
                                  AdornmentIcon="@Icons.Material.Filled.Search" />
@@ -262,11 +262,6 @@
                               Class="mb-2"
                               Lines="1" />
 
-                <MudSelect T="string" Label="Payment Status" @bind-Value="paymentStatus" Variant="Variant.Outlined" Margin="Margin.Dense" Class="mb-2">
-                    <MudSelectItem Value="@("Paid")">Paid Now</MudSelectItem>
-                    <MudSelectItem Value="@("Unpaid")">Pay Later (Credit)</MudSelectItem>
-                </MudSelect>
-
                 <div class="d-flex align-center gap-4 mb-2">
                     <MudCheckBox @bind-Value="printReceipt" Label="Print / طباعة" Color="Color.Primary" Dense="true" />
                     @if (printReceipt)
@@ -276,23 +271,27 @@
                             <MudRadio Value="@("Thermal")" Color="Color.Primary" Dense="true">Thermal</MudRadio>
                         </MudRadioGroup>
                     }
+                    <MudSpacer />
+                    <MudCheckBox @bind-Value="applyDiscount" Label="Discount" Color="Color.Secondary" Dense="true" CheckedChanged="@((bool val) => OnDiscountToggled(val))" />
                 </div>
 
-                @if (paymentStatus == "Paid")
+                @if (applyDiscount)
                 {
-                    <MudGrid Spacing="1">
-                        <MudItem xs="6">
-                            <MudSelect T="string" Label="Method" @bind-Value="paymentMethod" Variant="Variant.Outlined" Margin="Margin.Dense">
-                                <MudSelectItem Value="@("Cash")">Cash</MudSelectItem>
-                                <MudSelectItem Value="@("Card")">Card</MudSelectItem>
-                                <MudSelectItem Value="@("Transfer")">Transfer</MudSelectItem>
-                            </MudSelect>
-                        </MudItem>
-                        <MudItem xs="6">
-                            <MudNumericField @bind-Value="amountPaid" Label="Amount" Variant="Variant.Outlined" Margin="Margin.Dense" Min="0" />
-                        </MudItem>
-                    </MudGrid>
+                    <MudNumericField Value="discountAmount" ValueChanged="@((decimal val) => OnDiscountChanged(val))" Label="Discount Amount" Variant="Variant.Outlined" Margin="Margin.Dense" Class="mb-2" Min="0" />
                 }
+
+                <MudGrid Spacing="1">
+                    <MudItem xs="6">
+                        <MudSelect T="string" Label="Method" @bind-Value="paymentMethod" Variant="Variant.Outlined" Margin="Margin.Dense">
+                            <MudSelectItem Value="@("Cash")">Cash</MudSelectItem>
+                            <MudSelectItem Value="@("Card")">Card</MudSelectItem>
+                            <MudSelectItem Value="@("Transfer")">Transfer</MudSelectItem>
+                        </MudSelect>
+                    </MudItem>
+                    <MudItem xs="6">
+                        <MudNumericField @bind-Value="amountPaid" Label="Amount" Variant="Variant.Outlined" Margin="Margin.Dense" Min="0" />
+                    </MudItem>
+                </MudGrid>
                 
                 <div class="d-flex justify-space-between align-center mb-4 pa-3" 
                      style="background-color: var(--mud-palette-background-grey); border-radius: 8px;">
@@ -307,7 +306,7 @@
                 {
                      <MudPaper Class="pa-2 mb-3 d-flex flex-column align-center" Elevation="0" Style="background-color: transparent;">
                         <MudText Typo="Typo.caption" Class="mb-1">Enter Pattern to Complete Sale</MudText>
-                        <PatternLock @ref="patternLock" OnPatternComplete="VerifyPatternAndComplete" />
+                        <PatternAuthComponent OnAuthorized="CompleteCheckout" />
                     </MudPaper>
                 }
                 else
@@ -362,11 +361,11 @@
     private string editingPriceValue = "";
     private string editingCostValue = "";
     private MudTextField<string>? priceInputRef;
-    private PatternLock? patternLock;
 
-    private string paymentStatus = "Paid";
     private string paymentMethod = "Cash";
     private decimal amountPaid;
+    private bool applyDiscount = false;
+    private decimal discountAmount = 0;
 
     protected override async Task OnInitializedAsync()
     {
@@ -479,6 +478,7 @@
                 Subtotal = product.Price
             });
         }
+        amountPaid = CalculateTotal();
     }
 
     private void AddSeparateLineToCart(Product product)
@@ -499,6 +499,7 @@
             UnitCost = product.CostPrice,
             Subtotal = product.Price
         });
+        amountPaid = CalculateTotal();
     }
 
     private void IncreaseQuantity(TransactionItem item)
@@ -509,6 +510,7 @@
         {
             item.Quantity++;
             item.Subtotal = item.Quantity * item.UnitPrice;
+            amountPaid = CalculateTotal();
         }
     }
 
@@ -518,6 +520,7 @@
         {
             item.Quantity--;
             item.Subtotal = item.Quantity * item.UnitPrice;
+            amountPaid = CalculateTotal();
         }
         else
         {
@@ -591,6 +594,7 @@
             {
                 item.UnitPrice = newPrice;
                 item.Subtotal = item.Quantity * item.UnitPrice;
+                amountPaid = CalculateTotal();
             }
         }
     }
@@ -631,11 +635,13 @@
     {
         item.UnitPrice = item.Product!.Price;
         item.Subtotal = item.Quantity * item.UnitPrice;
+        amountPaid = CalculateTotal();
     }
 
     private void RemoveFromCart(TransactionItem item)
     {
         cartItems.Remove(item);
+        amountPaid = CalculateTotal();
     }
 
     private void ClearCart()
@@ -643,46 +649,32 @@
         cartItems.Clear();
         customerName = "";
         orderNote = "";
+        amountPaid = 0;
+        applyDiscount = false;
+        discountAmount = 0;
     }
 
     private decimal CalculateTotal()
     {
-        return cartItems.Sum(i => i.Subtotal);
+        var total = cartItems.Sum(i => i.Subtotal);
+        if (applyDiscount)
+        {
+            total -= discountAmount;
+        }
+        return total < 0 ? 0 : total;
     }
 
-    private async Task VerifyPatternAndComplete(string pattern)
+    private void OnDiscountToggled(bool val)
     {
-        try
-        {
-            var response = await Http.GetAsync($"api/people/verify/{pattern}");
-            if (response.IsSuccessStatusCode)
-            {
-                var employee = await response.Content.ReadFromJsonAsync<Person>();
-                await CompleteCheckout(employee);
-            }
-            else
-            {
-                if (patternLock != null)
-                {
-                    await patternLock.ShowError("Invalid Pattern");
-                }
-                else
-                {
-                    Snackbar.Add("Invalid passcode pattern", Severity.Error);
-                }
-            }
-        }
-        catch (Exception ex)
-        {
-            if (patternLock != null)
-            {
-                await patternLock.ShowError("Error verifying");
-            }
-            else
-            {
-                Snackbar.Add($"Error: {ex.Message}", Severity.Error);
-            }
-        }
+        applyDiscount = val;
+        if (!val) discountAmount = 0;
+        amountPaid = CalculateTotal();
+    }
+
+    private void OnDiscountChanged(decimal val)
+    {
+        discountAmount = val;
+        amountPaid = CalculateTotal();
     }
 
     private async Task CompleteCheckout(Person? employee = null)
@@ -714,6 +706,7 @@
                 CustomerName = string.IsNullOrWhiteSpace(customerName) ? null : customerName,
                 Note = string.IsNullOrWhiteSpace(orderNote) ? null : orderNote,
                 EmployeeName = transactionEmployee!.Name,
+                Discount = applyDiscount ? discountAmount : 0,
                 Items = cartItems.Select(ci => new TransactionItem
                 {
                     ProductId = ci.ProductId,
@@ -733,9 +726,9 @@
                 var result = await response.Content.ReadFromJsonAsync<JsonElement>();
                 var transactionId = result.GetProperty("id").GetInt32();
                 var total = CalculateTotal();
-                var paidAmount = amountPaid > 0 ? amountPaid : total;
+                var paidAmount = amountPaid;
 
-                if (paymentStatus == "Paid")
+                if (paidAmount > 0)
                 {
                     var payment = new Payment
                     {
@@ -771,6 +764,7 @@
                         CustomerName = customerName,
                         EmployeeName = transactionEmployee!.Name,
                         TotalAmount = total,
+                        Discount = applyDiscount ? discountAmount : 0,
                         Items = cartItems.Select(ci => new TransactionItem
                         {
                             Product = ci.Product,
@@ -815,9 +809,10 @@
 
                 ClearCart();
                 
-                paymentStatus = "Paid"; // Reset defaults
                 paymentMethod = "Cash";
                 amountPaid = 0;
+                applyDiscount = false;
+                discountAmount = 0;
                 await ProductService.RefreshDataAsync(); // Refresh product stock
                 await LoadProducts(); // Reload products
                 await TransactionService.RefreshDataAsync(); // Refresh transactions list
@@ -847,6 +842,7 @@
         var normalized = Math.Clamp(newQuantity.Value, 1, maxQuantity);
         item.Quantity = normalized;
         item.Subtotal = item.Quantity * item.UnitPrice;
+        amountPaid = CalculateTotal();
     }
 
     private int GetMaxQuantity(TransactionItem item)

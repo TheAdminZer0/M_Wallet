@@ -9,11 +9,17 @@
 
 <MudDialog>
     <DialogContent>
-        <MudText Class="mb-4">Recording payment for Order #@TransactionId</MudText>
+        <MudText Class="mb-4">Record Payment for @Person.Name</MudText>
         
         <MudGrid>
             <MudItem xs="12">
-                <MudNumericField @bind-Value="amount" Label="Payment Amount" Format="F2" Min="0.01m" Max="@BalanceDue" Adornment="Adornment.Start" AdornmentText="LD" Variant="Variant.Outlined" AutoFocus="true" />
+                <MudToggleGroup T="string" @bind-Value="paymentType" Outline="true" Delimiters="true" Class="mb-4">
+                    <MudToggleItem Value="@("Deposit")" Text="Deposit" />
+                    <MudToggleItem Value="@("Withdraw")" Text="Withdraw" />
+                </MudToggleGroup>
+            </MudItem>
+            <MudItem xs="12">
+                <MudNumericField @bind-Value="amount" Label="Amount" Format="F2" Min="0.01m" Adornment="Adornment.Start" AdornmentText="LD" Variant="Variant.Outlined" AutoFocus="true" />
             </MudItem>
             <MudItem xs="12">
                 <MudSelect @bind-Value="paymentMethod" Label="Payment Method" Variant="Variant.Outlined">
@@ -52,11 +58,10 @@
 @code {
     [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = default!;
 
-    [Parameter] public int TransactionId { get; set; }
-    [Parameter] public decimal BalanceDue { get; set; }
-    [Parameter] public string? CustomerName { get; set; }
+    [Parameter] public Person Person { get; set; } = default!;
 
     private decimal amount;
+    private string paymentType = "Deposit";
     private string paymentMethod = "Cash";
     private string reference = "";
     private string employeeName = "";
@@ -65,7 +70,6 @@
 
     protected override async Task OnInitializedAsync()
     {
-        amount = BalanceDue;
         currentEmployee = await AuthStateProvider.GetCurrentUserAsync();
         if (currentEmployee != null && !isSystemUser)
         {
@@ -78,44 +82,25 @@
         employeeName = employee.Name;
     }
 
-    private void Cancel() => MudDialog.Cancel();
-
     private async Task Submit()
     {
         if (amount <= 0)
         {
-            Snackbar.Add("Amount must be greater than 0", Severity.Warning);
+            Snackbar.Add("Amount must be greater than zero", Severity.Warning);
             return;
         }
 
-        if (string.IsNullOrWhiteSpace(employeeName))
-        {
-            Snackbar.Add("Employee name is required", Severity.Warning);
-            return;
-        }
-
-        if (amount > BalanceDue)
-        {
-            Snackbar.Add($"Amount cannot exceed balance due (LD {BalanceDue:F2})", Severity.Warning);
-            return;
-        }
+        var finalAmount = paymentType == "Withdraw" ? -amount : amount;
 
         var payment = new Payment
         {
-            PaymentDate = DateTime.UtcNow,
-            Amount = amount,
+            PersonId = Person.Id,
+            CustomerName = Person.Name,
+            Amount = finalAmount,
             PaymentMethod = paymentMethod,
             Reference = reference,
-            CustomerName = CustomerName,
             EmployeeName = employeeName,
-            Allocations = new List<PaymentAllocation>
-            {
-                new PaymentAllocation
-                {
-                    TransactionId = TransactionId,
-                    Amount = amount
-                }
-            }
+            PaymentDate = DateTime.UtcNow
         };
 
         try
@@ -123,8 +108,8 @@
             var response = await Http.PostAsJsonAsync("api/payments", payment);
             if (response.IsSuccessStatusCode)
             {
-                Snackbar.Add("Payment recorded successfully", Severity.Success);
                 MudDialog.Close(DialogResult.Ok(true));
+                Snackbar.Add("Payment recorded successfully", Severity.Success);
             }
             else
             {
@@ -137,4 +122,6 @@
             Snackbar.Add($"Error: {ex.Message}", Severity.Error);
         }
     }
+
+    private void Cancel() => MudDialog.Cancel();
 }

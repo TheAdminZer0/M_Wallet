@@ -28,9 +28,9 @@ public class PaymentsController : ControllerBase
     [HttpPost]
     public async Task<ActionResult<Payment>> CreatePayment(Payment payment)
     {
-        if (payment.Amount <= 0)
+        if (payment.Amount == 0)
         {
-            return BadRequest("Payment amount must be greater than zero.");
+            return BadRequest("Payment amount cannot be zero.");
         }
 
         // Ensure UTC date for PostgreSQL
@@ -56,7 +56,74 @@ public class PaymentsController : ControllerBase
                     return BadRequest($"Transaction {allocation.TransactionId} not found.");
                 }
                 
+                // Link payment to the same person as the transaction if not already linked
+                if (payment.PersonId == null && transaction.PersonId != null)
+                {
+                    payment.PersonId = transaction.PersonId;
+                }
+
                 allocation.Payment = payment;
+            }
+        }
+
+        // If PersonId is still null but we have a CustomerName, try to find the customer
+        if (payment.PersonId == null && !string.IsNullOrWhiteSpace(payment.CustomerName))
+        {
+            var customerInput = payment.CustomerName.Trim();
+            Person? existingCustomer = null;
+
+            // Check if input is a 10-digit phone number
+            bool isPhoneNumber = System.Text.RegularExpressions.Regex.IsMatch(customerInput, @"^\d{10}$");
+
+            if (isPhoneNumber)
+            {
+                existingCustomer = await _context.People
+                    .FirstOrDefaultAsync(c => c.PhoneNumber == customerInput && c.Role == "Customer");
+            }
+
+            if (existingCustomer == null)
+            {
+                existingCustomer = await _context.People
+                    .FirstOrDefaultAsync(c => c.Name.ToLower() == customerInput.ToLower() && c.Role == "Customer");
+            }
+
+            if (existingCustomer != null)
+            {
+                payment.PersonId = existingCustomer.Id;
+            }
+        }
+
+        // Auto-allocate if it's a deposit (positive amount) and we have a PersonId but no manual allocations
+        if (payment.Amount > 0 && payment.PersonId.HasValue && (payment.Allocations == null || !payment.Allocations.Any()))
+        {
+            var unpaidTransactions = await _context.Transactions
+                .Include(t => t.PaymentAllocations)
+                .Where(t => t.PersonId == payment.PersonId)
+                .OrderBy(t => t.TransactionDate)
+                .ToListAsync();
+
+            decimal remainingPayment = payment.Amount;
+            payment.Allocations ??= new List<PaymentAllocation>();
+
+            foreach (var transaction in unpaidTransactions)
+            {
+                if (remainingPayment <= 0) break;
+
+                var paidAmount = transaction.PaymentAllocations.Sum(pa => pa.Amount);
+                var balanceDue = transaction.TotalAmount - paidAmount;
+
+                if (balanceDue > 0)
+                {
+                    var allocateAmount = Math.Min(remainingPayment, balanceDue);
+                    
+                    payment.Allocations.Add(new PaymentAllocation
+                    {
+                        TransactionId = transaction.Id,
+                        Amount = allocateAmount
+                    });
+
+                    remainingPayment -= allocateAmount;
+                }
             }
         }
 

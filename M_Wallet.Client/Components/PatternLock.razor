@@ -153,13 +153,7 @@
                 var pattern = string.Join("", selectedIndices);
                 await OnPatternComplete.InvokeAsync(pattern);
                 
-                if (!IsError)
-                {
-                    // Reset after a short delay to show the pattern
-                    await Task.Delay(500);
-                    selectedIndices.Clear();
-                    StateHasChanged();
-                }
+                // Pattern remains highlighted until next attempt or error
             }
         }
     }
@@ -200,7 +194,8 @@
                     const updatePreview = (clientX, clientY) => {
                         if (lastDot === -1 || !previewLine) return;
                         
-                        const rect = container.getBoundingClientRect();
+                        const svg = container.querySelector('.pattern-svg');
+                        const rect = svg.getBoundingClientRect();
                         const scaleX = 300 / rect.width;
                         const scaleY = 300 / rect.height;
                         
@@ -225,6 +220,7 @@
                         if (element && element.dataset.index) {
                             const idx = parseInt(element.dataset.index);
                             if (idx !== lastDot) {
+                                lastDot = idx; // Update immediately for smooth drawing
                                 dotNetHelper.invokeMethodAsync('OnDotEnter', idx);
                             }
                         }

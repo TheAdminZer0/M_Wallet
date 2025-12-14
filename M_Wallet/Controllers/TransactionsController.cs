@@ -98,14 +98,31 @@ public class TransactionsController : ControllerBase
                 item.Subtotal = item.Quantity * item.UnitPrice;
             }
             
-            transaction.TotalAmount = transaction.Items.Sum(i => i.Subtotal);
+            transaction.TotalAmount = transaction.Items.Sum(i => i.Subtotal) - transaction.Discount;
+            if (transaction.TotalAmount < 0) transaction.TotalAmount = 0;
 
             // Handle Customer Creation/Linking
             if (!string.IsNullOrWhiteSpace(transaction.CustomerName))
             {
-                var customerName = transaction.CustomerName.Trim();
-                var existingCustomer = await _context.People
-                    .FirstOrDefaultAsync(c => c.Name.ToLower() == customerName.ToLower() && c.Role == "Customer");
+                var customerInput = transaction.CustomerName.Trim();
+                Person? existingCustomer = null;
+
+                // Check if input is a 10-digit phone number
+                bool isPhoneNumber = System.Text.RegularExpressions.Regex.IsMatch(customerInput, @"^\d{10}$");
+
+                if (isPhoneNumber)
+                {
+                    // Try to find by phone number first
+                    existingCustomer = await _context.People
+                        .FirstOrDefaultAsync(c => c.PhoneNumber == customerInput && c.Role == "Customer");
+                }
+
+                // If not found by phone number (or not a phone number), try by name
+                if (existingCustomer == null)
+                {
+                    existingCustomer = await _context.People
+                        .FirstOrDefaultAsync(c => c.Name.ToLower() == customerInput.ToLower() && c.Role == "Customer");
+                }
 
                 if (existingCustomer != null)
                 {
@@ -117,10 +134,16 @@ public class TransactionsController : ControllerBase
                 {
                     var newCustomer = new Person
                     {
-                        Name = customerName,
+                        Name = customerInput,
                         Role = "Customer",
                         CreatedAt = DateTime.UtcNow
                     };
+
+                    if (isPhoneNumber)
+                    {
+                        newCustomer.PhoneNumber = customerInput;
+                    }
+
                     _context.People.Add(newCustomer);
                     await _context.SaveChangesAsync(); // Save to generate ID
                     

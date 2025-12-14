@@ -6,7 +6,6 @@
 
 <MudDialog>
     <DialogContent>
-        <MudText Typo="Typo.h6" Class="mb-4">Payment History for Order #@Transaction.Id</MudText>
         @if (Transaction.PaymentAllocations == null || !Transaction.PaymentAllocations.Any())
         {
             <MudAlert Severity="Severity.Info">No payments recorded for this order.</MudAlert>
@@ -67,11 +66,12 @@
     private decimal CalculateOrderProfit()
     {
         if (Transaction.Items == null) return 0;
-        return Transaction.Items.Sum(item =>
+        var grossProfit = Transaction.Items.Sum(item =>
         {
             var cost = item.UnitCost > 0 ? item.UnitCost : (item.Product?.CostPrice ?? 0);
             return (item.UnitPrice - cost) * item.Quantity;
         });
+        return grossProfit - Transaction.Discount;
     }
 
     private bool IsCompletingPayment(PaymentAllocation allocation)

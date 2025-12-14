@@ -227,7 +227,7 @@ public class PeopleController : ControllerBase
             .Select(t => new StatementItem
             {
                 Date = t.TransactionDate,
-                Description = $"Transaction #{t.Id}",
+                Description = $"Order #{t.Id}",
                 Amount = -t.TotalAmount, // Debit
                 Type = "Transaction"
             })
@@ -246,6 +246,7 @@ public class PeopleController : ControllerBase
 
         var items = transactions.Concat(payments)
             .OrderBy(i => i.Date)
+            .ThenByDescending(i => i.Type) // Ensure Transaction comes before Payment if dates are equal
             .ToList();
 
         decimal balance = 0;

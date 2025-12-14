@@ -41,6 +41,7 @@
                     @if (IsCustomerColumnVisible("Actions")) {
                         <MudTd DataLabel="Actions" Style="white-space: nowrap;">
                             <MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Primary" Size="Size.Small" OnClick="@(() => EditUser(context))" />
+                            <MudIconButton Icon="@Icons.Material.Filled.AttachMoney" Color="Color.Success" Size="Size.Small" OnClick="@(() => OpenPaymentDialog(context))" Title="Payment" />
                             <MudIconButton Icon="@Icons.Material.Filled.ReceiptLong" Color="Color.Info" Size="Size.Small" OnClick="@(() => ShowStatement(context))" Title="Statement" />
                             <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" Size="Size.Small" OnClick="@(() => DeleteUser(context))" />
                         </MudTd>
@@ -146,7 +147,7 @@
                 <MudIcon Icon="@Icons.Material.Filled.Lock" Size="Size.Large" Color="Color.Warning" Class="mb-4" />
                 <MudText Typo="Typo.h5" Class="mb-4">Admin Access Required</MudText>
                 <MudText Class="mb-6">Please enter Admin Pattern to view system accounts.</MudText>
-                <PatternLock OnPatternComplete="VerifyAdminPattern" />
+                <PatternAuthComponent OnAuthorized="OnAdminAuthorized" />
             </MudPaper>
         }
     </MudTabPanel>
@@ -207,7 +208,7 @@
                 <MudIcon Icon="@Icons.Material.Filled.Lock" Size="Size.Large" Color="Color.Warning" Class="mb-4" />
                 <MudText Typo="Typo.h5" Class="mb-4">Admin Access Required</MudText>
                 <MudText Class="mb-6">Please enter Admin Pattern to view employees.</MudText>
-                <PatternLock OnPatternComplete="VerifyAdminPattern" />
+                <PatternAuthComponent OnAuthorized="OnAdminAuthorized" />
             </MudPaper>
         }
     </MudTabPanel>
@@ -263,32 +264,16 @@
         }
     }
 
-    private async Task VerifyAdminPattern(string pattern)
+    private void OnAdminAuthorized(Person person)
     {
-        try
+        if (person.Role == "Admin")
         {
-            var response = await Http.GetAsync($"api/people/verify/{pattern}");
-            if (response.IsSuccessStatusCode)
-            {
-                var person = await response.Content.ReadFromJsonAsync<Person>();
-                if (person != null && person.Role == "Admin")
-                {
-                    isAdminVerified = true;
-                    Snackbar.Add("Access Granted", Severity.Success);
-                }
-                else
-                {
-                    Snackbar.Add("Access Denied: Not an Admin", Severity.Error);
-                }
-            }
-            else
-            {
-                Snackbar.Add("Invalid Pattern", Severity.Error);
-            }
+            isAdminVerified = true;
+            Snackbar.Add("Access Granted", Severity.Success);
         }
-        catch (Exception ex)
+        else
         {
-            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+            Snackbar.Add("Access Denied: Not an Admin", Severity.Error);
         }
     }
 
@@ -367,6 +352,20 @@
             {
                 Snackbar.Add("Error deleting user", Severity.Error);
             }
+        }
+    }
+
+    private async Task OpenPaymentDialog(Person person)
+    {
+        var parameters = new DialogParameters();
+        parameters.Add("Person", person);
+
+        var dialog = await DialogService.ShowAsync<CustomerPaymentDialog>("Customer Payment", parameters);
+        var result = await dialog.Result;
+
+        if (result != null && !result.Canceled)
+        {
+            await LoadUsers();
         }
     }
 
