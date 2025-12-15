@@ -24,6 +24,7 @@ public class TransactionsController : ControllerBase
             .ThenInclude(i => i.Product)
             .Include(t => t.PaymentAllocations)
             .ThenInclude(pa => pa.Payment)
+            .Include(t => t.Driver)
             .OrderByDescending(t => t.TransactionDate)
             .ToListAsync();
     }
@@ -67,6 +68,16 @@ public class TransactionsController : ControllerBase
             else
             {
                 transaction.TransactionDate = transaction.TransactionDate.ToUniversalTime();
+            }
+
+            // Set initial status
+            if (transaction.IsDelivery)
+            {
+                transaction.Status = TransactionStatus.Pending;
+            }
+            else
+            {
+                transaction.Status = TransactionStatus.Completed;
             }
             
             var productNames = new List<string>();
@@ -156,6 +167,57 @@ public class TransactionsController : ControllerBase
                 }
             }
 
+            // Handle Driver Creation/Linking
+            if (transaction.IsDelivery)
+            {
+                if (transaction.DriverId.HasValue)
+                {
+                    // Driver already selected, nothing to do
+                }
+                else if (!string.IsNullOrWhiteSpace(transaction.DriverName) || !string.IsNullOrWhiteSpace(transaction.DriverPhone))
+                {
+                    var driverName = transaction.DriverName?.Trim();
+                    var driverPhone = transaction.DriverPhone?.Trim();
+                    
+                    Person? existingDriver = null;
+
+                    // Try to find by Phone first if available
+                    if (!string.IsNullOrWhiteSpace(driverPhone))
+                    {
+                        existingDriver = await _context.People
+                            .FirstOrDefaultAsync(d => d.PhoneNumber == driverPhone && d.Role == "Driver");
+                    }
+                    
+                    // Try to find by Name if not found and name available
+                    if (existingDriver == null && !string.IsNullOrWhiteSpace(driverName))
+                    {
+                        existingDriver = await _context.People
+                            .FirstOrDefaultAsync(d => d.Name != null && d.Name.ToLower() == driverName.ToLower() && d.Role == "Driver");
+                    }
+
+                    if (existingDriver != null)
+                    {
+                        transaction.DriverId = existingDriver.Id;
+                    }
+                    else
+                    {
+                        // Create new driver
+                        var newDriver = new Person
+                        {
+                            Name = driverName,
+                            Role = "Driver",
+                            PhoneNumber = driverPhone,
+                            CreatedAt = DateTime.UtcNow
+                        };
+
+                        _context.People.Add(newDriver);
+                        await _context.SaveChangesAsync(); // Save to generate ID
+                        
+                        transaction.DriverId = newDriver.Id;
+                    }
+                }
+            }
+
             _context.Transactions.Add(transaction);
             await _context.SaveChangesAsync();
 
@@ -193,6 +255,70 @@ public class TransactionsController : ControllerBase
         {
             return StatusCode(500, $"Internal server error: {ex.Message}");
         }
+    }
+
+    [HttpPut("{id}/status")]
+    public async Task<IActionResult> UpdateStatus(int id, [FromBody] TransactionStatus newStatus)
+    {
+        var transaction = await _context.Transactions
+            .Include(t => t.Items)
+            .FirstOrDefaultAsync(t => t.Id == id);
+
+        if (transaction == null)
+        {
+            return NotFound();
+        }
+
+        var oldStatus = transaction.Status;
+        if (oldStatus == newStatus)
+        {
+            return NoContent();
+        }
+
+        // Handle Stock Logic
+        if (newStatus == TransactionStatus.Canceled && oldStatus != TransactionStatus.Canceled)
+        {
+            // Restore stock
+            foreach (var item in transaction.Items)
+            {
+                var product = await _context.Products.FindAsync(item.ProductId);
+                if (product != null)
+                {
+                    product.StockQuantity += item.Quantity;
+                }
+            }
+        }
+        else if (oldStatus == TransactionStatus.Canceled && newStatus != TransactionStatus.Canceled)
+        {
+            // Deduct stock (Un-cancel)
+            foreach (var item in transaction.Items)
+            {
+                var product = await _context.Products.FindAsync(item.ProductId);
+                if (product != null)
+                {
+                    product.StockQuantity -= item.Quantity;
+                }
+            }
+        }
+
+        transaction.Status = newStatus;
+        
+        // Log the status change
+        var log = new AuditLog
+        {
+            Timestamp = DateTime.UtcNow,
+            Action = "UpdateStatus",
+            Entity = "Transaction",
+            EntityId = transaction.Id.ToString(),
+            EmployeeName = "System", 
+            Description = $"Updated transaction #{transaction.Id} status from {oldStatus} to {newStatus}",
+            Changes = $"Status: {oldStatus} -> {newStatus}"
+        };
+        _context.AuditLogs.Add(log);
+
+        await _context.SaveChangesAsync();
+
+        return NoContent();
     }
 
     [HttpDelete("{id}")]

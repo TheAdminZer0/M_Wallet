@@ -20,6 +20,20 @@ public class Transaction
     public string EmployeeName { get; set; } = string.Empty;
     public List<TransactionItem> Items { get; set; } = new();
     public List<PaymentAllocation> PaymentAllocations { get; set; } = new();
+    public TransactionStatus Status { get; set; } = TransactionStatus.Completed;
+
+    [System.ComponentModel.DataAnnotations.Schema.NotMapped]
+    public string? DriverName { get; set; } // For creating new drivers during transaction
+
+    [System.ComponentModel.DataAnnotations.Schema.NotMapped]
+    public string? DriverPhone { get; set; } // For creating new drivers during transaction
+}
+
+public enum TransactionStatus
+{
+    Completed,
+    Pending,
+    Canceled
 }
 
 public class TransactionItem

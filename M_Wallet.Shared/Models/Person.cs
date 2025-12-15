@@ -27,6 +27,12 @@ namespace M_Wallet.Shared
         public int CompletedDeliveries { get; set; } = 0;
 
         [System.ComponentModel.DataAnnotations.Schema.NotMapped]
+        public int PendingDeliveries { get; set; }
+
+        [System.ComponentModel.DataAnnotations.Schema.NotMapped]
+        public int CanceledDeliveries { get; set; }
+
+        [System.ComponentModel.DataAnnotations.Schema.NotMapped]
         public decimal Balance { get; set; }
 
         [System.ComponentModel.DataAnnotations.Schema.NotMapped]

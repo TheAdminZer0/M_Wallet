@@ -8,6 +8,7 @@
 @inject CustomAuthenticationStateProvider AuthStateProvider
 @using M_Wallet.Client.Models
 @using M_Wallet.Client.Services
+@using M_Wallet.Client.Components
 
 <style>
     .fixed-layout-table .mud-table-container > table {
@@ -76,6 +77,19 @@ else
                                      Label="Employee" 
                                      @bind-Value="filterEmployee"
                                      SearchFunc="@SearchEmployees"
+                                     Variant="Variant.Outlined"
+                                     Margin="Margin.Dense"
+                                     Clearable="true"
+                                     ResetValueOnEmptyText="true"
+                                     MaxItems="null"
+                                     Virtualize="true"
+                                     AdornmentIcon="@Icons.Material.Filled.Search" />
+                </MudItem>
+                <MudItem xs="6" sm="6" md="2">
+                    <MudAutocomplete T="string" 
+                                     Label="Driver" 
+                                     @bind-Value="filterDriver"
+                                     SearchFunc="@SearchDrivers"
                                      Variant="Variant.Outlined"
                                      Margin="Margin.Dense"
                                      Clearable="true"
@@ -155,7 +169,9 @@ else
                             }
                             @if (IsTransactionColumnVisible("Total")) { <MudTh Style="@($"width:{GetColumnWidth("Total")}")"><MudTableSortLabel SortBy="new Func<Transaction, object>(x => x.TotalAmount)">Total (LD)</MudTableSortLabel></MudTh> }
                             @if (IsTransactionColumnVisible("Discount")) { <MudTh Style="@($"width:{GetColumnWidth("Discount")}")"><MudTableSortLabel SortBy="new Func<Transaction, object>(x => x.Discount)">Discount</MudTableSortLabel></MudTh> }
-                            @if (IsTransactionColumnVisible("Status")) { <MudTh Style="@($"width:{GetColumnWidth("Status")}")">Status</MudTh> }
+                            @if (IsTransactionColumnVisible("Payment")) { <MudTh Style="@($"width:{GetColumnWidth("Payment")}")">Payment</MudTh> }
+                            @if (IsTransactionColumnVisible("Delivery")) { <MudTh Style="@($"width:{GetColumnWidth("Delivery")}")">Delivery</MudTh> }
+                            @if (IsTransactionColumnVisible("Driver")) { <MudTh Style="@($"width:{GetColumnWidth("Driver")}")"><MudTableSortLabel SortBy="new Func<Transaction, object>(x => x.Driver?.Name ?? string.Empty)">Driver</MudTableSortLabel></MudTh> }
                             @if (IsTransactionColumnVisible("Customer")) { <MudTh Style="@($"width:{GetColumnWidth("Customer")}")"><MudTableSortLabel SortBy="new Func<Transaction, object>(x => x.CustomerName ?? string.Empty)">Customer</MudTableSortLabel></MudTh> }
                             @if (IsTransactionColumnVisible("Note")) { <MudTh Style="@($"width:{GetColumnWidth("Note")}")">Note</MudTh> }
                             @if (IsTransactionColumnVisible("Employee")) { <MudTh Style="@($"width:{GetColumnWidth("Employee")}")"><MudTableSortLabel SortBy="new Func<Transaction, object>(x => x.EmployeeName)">Employee</MudTableSortLabel></MudTh> }
@@ -215,13 +231,19 @@ else
                                     }
                                 </MudTd>
                             }
-                            @if (IsTransactionColumnVisible("Status")) {
-                                <MudTd DataLabel="Status">
+                            @if (IsTransactionColumnVisible("Payment Status")) {
+                                <MudTd DataLabel="Payment Status">
                                     @{
                                         var paid = context.PaymentAllocations?.Sum(pa => pa.Amount) ?? 0;
                                         var status = "Unpaid";
                                         var color = Color.Error;
-                                        if (paid >= context.TotalAmount - 0.01m) // Tolerance for float math
+                                        
+                                        if (context.Status == TransactionStatus.Canceled)
+                                        {
+                                            status = "Canceled";
+                                            color = Color.Default;
+                                        }
+                                        else if (paid >= context.TotalAmount - 0.01m) // Tolerance for float math
                                         { 
                                             status = "Paid"; 
                                             color = Color.Success; 
@@ -232,9 +254,31 @@ else
                                             color = Color.Warning; 
                                         }
                                     }
-                                    <MudChip T="string" Size="Size.Small" Variant="Variant.Filled" Color="@color" OnClick="@((e) => OpenPaymentDialog(context))" Style="cursor: pointer;">@status</MudChip>
+                                    <MudChip T="string" Size="Size.Small" Variant="Variant.Filled" Color="@color" OnClick="@((e) => (status == "Paid" || status == "Canceled") ? null : OpenPaymentDialog(context))" Style="@((status == "Paid" || status == "Canceled") ? "" : "cursor: pointer;")">@status</MudChip>
                                 </MudTd>
                             }
+                            @if (IsTransactionColumnVisible("Delivery Status")) {
+                                <MudTd DataLabel="Delivery Status">
+                                    @if (context.IsDelivery)
+                                    {
+                                        var isFinalized = context.Status == TransactionStatus.Completed || context.Status == TransactionStatus.Canceled;
+                                        <MudIconButton Icon="@Icons.Material.Filled.LocalShipping" 
+                                                       Color="@GetStatusColor(context.Status)" 
+                                                       Size="Size.Small"
+                                                       OnClick="@(() => isFinalized ? Task.CompletedTask : OpenStatusDialog(context))"
+                                                       Ripple="@(!isFinalized)"
+                                                       Style="@(isFinalized ? "cursor: default;" : "")"
+                                                       Title="@(isFinalized ? $"{context.Status} (Finalized)" : "Update Status")" />
+                                    }
+                                    else
+                                    {
+                                        <div class="d-flex justify-center" style="width: 100%;">
+                                            <MudText Typo="Typo.body2" Color="Color.Default">-</MudText>
+                                        </div>
+                                    }
+                                </MudTd>
+                            }
+                            @if (IsTransactionColumnVisible("Driver")) { <MudTd DataLabel="Driver">@(context.Driver?.Name ?? "-")</MudTd> }
                             @if (IsTransactionColumnVisible("Customer")) { <MudTd DataLabel="Customer">@(context.CustomerName ?? "Walk-in")</MudTd> }
                             @if (IsTransactionColumnVisible("Note")) { 
                                 <MudTd DataLabel="Note">
@@ -322,7 +366,9 @@ else
                                                             </div>
                                                         }
                                                         @if (IsTransactionColumnVisible("Discount")) { <div style="@($"width:{GetColumnWidth("Discount")}")"></div> }
-                                                        @if (IsTransactionColumnVisible("Status")) { <div style="@($"width:{GetColumnWidth("Status")}")"></div> }
+                                                        @if (IsTransactionColumnVisible("Payment Status")) { <div style="@($"width:{GetColumnWidth("Payment Status")}")"></div> }
+                                                        @if (IsTransactionColumnVisible("Delivery Status")) { <div style="@($"width:{GetColumnWidth("Delivery Status")}")"></div> }
+                                                        @if (IsTransactionColumnVisible("Driver")) { <div style="@($"width:{GetColumnWidth("Driver")}")"></div> }
                                                         @if (IsTransactionColumnVisible("Customer")) { <div style="@($"width:{GetColumnWidth("Customer")}")"></div> }
                                                         @if (IsTransactionColumnVisible("Note")) { <div style="@($"width:{GetColumnWidth("Note")}")"></div> }
                                                         @if (IsTransactionColumnVisible("Employee")) { <div style="@($"width:{GetColumnWidth("Employee")}")"></div> }
@@ -516,7 +562,9 @@ else
         new() { Title = "Quantity", IsVisible = true },
         new() { Title = "Total", IsVisible = true },
         new() { Title = "Discount", IsVisible = true },
-        new() { Title = "Status", IsVisible = true },
+        new() { Title = "Payment Status", IsVisible = true },
+        new() { Title = "Delivery Status", IsVisible = true },
+        new() { Title = "Driver", IsVisible = true },
         new() { Title = "Customer", IsVisible = true },
         new() { Title = "Note", IsVisible = true },
         new() { Title = "Employee", IsVisible = true },
@@ -557,6 +605,7 @@ else
     private Product? selectedProductFilter;
     private string? filterCustomer;
     private string? filterEmployee;
+    private string? filterDriver;
 
     private IEnumerable<Transaction> FilteredTransactions
     {
@@ -599,6 +648,12 @@ else
             if (!string.IsNullOrWhiteSpace(filterEmployee))
             {
                 filtered = filtered.Where(t => t.EmployeeName == filterEmployee);
+            }
+
+            // Driver filter
+            if (!string.IsNullOrWhiteSpace(filterDriver))
+            {
+                filtered = filtered.Where(t => (t.Driver?.Name ?? "") == filterDriver);
             }
 
             return filtered;
@@ -775,6 +830,7 @@ else
         selectedProductFilter = null;
         filterCustomer = null;
         filterEmployee = null;
+        filterDriver = null;
     }
 
     private void ToggleProfitVisibility()
@@ -857,6 +913,26 @@ else
         return Task.FromResult(string.IsNullOrEmpty(value) 
             ? employees 
             : employees.Where(x => x.Contains(value, StringComparison.InvariantCultureIgnoreCase)));
+    }
+
+    private List<string> GetUniqueDrivers()
+    {
+        if (transactions == null) return new();
+
+        return transactions
+            .Where(t => t.Driver != null)
+            .Select(t => t.Driver!.Name)
+            .Distinct()
+            .OrderBy(d => d)
+            .ToList();
+    }
+
+    private Task<IEnumerable<string>> SearchDrivers(string value, CancellationToken token)
+    {
+        var drivers = GetUniqueDrivers();
+        return Task.FromResult(string.IsNullOrEmpty(value) 
+            ? drivers 
+            : drivers.Where(x => x.Contains(value, StringComparison.InvariantCultureIgnoreCase)));
     }
 
     private async Task OpenPaymentDialog(Transaction transaction)
@@ -1064,19 +1140,120 @@ else
         return totalRealizedProfit;
     }
 
+    private Color GetStatusColor(TransactionStatus status)
+    {
+        return status switch
+        {
+            TransactionStatus.Completed => Color.Success,
+            TransactionStatus.Pending => Color.Warning,
+            TransactionStatus.Canceled => Color.Default,
+            _ => Color.Default
+        };
+    }
+
+    private async Task UpdateStatus(Transaction transaction, TransactionStatus newStatus)
+    {
+        if (transaction.Status == newStatus) return;
+
+        try
+        {
+            var response = await Http.PutAsJsonAsync($"api/transactions/{transaction.Id}/status", newStatus);
+            if (response.IsSuccessStatusCode)
+            {
+                transaction.Status = newStatus;
+                Snackbar.Add($"Status updated to {newStatus}", Severity.Success);
+                await TransactionService.RefreshDataAsync(); // Refresh to update stock if needed
+            }
+            else
+            {
+                Snackbar.Add("Failed to update status", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task OpenStatusDialog(Transaction transaction)
+    {
+        var parameters = new DialogParameters { ["Transaction"] = transaction };
+        var options = new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.Small, FullWidth = true };
+        var dialog = await DialogService.ShowAsync<StatusUpdateDialog>($"Delivery Status #{transaction.Id}", parameters, options);
+        var result = await dialog.Result;
+
+        if (result != null && !result.Canceled && result.Data is StatusUpdateDialog.StatusUpdateResult updateResult)
+        {
+            // 1. Update Status
+            if (transaction.Status != updateResult.Status)
+            {
+                await UpdateStatus(transaction, updateResult.Status);
+            }
+
+            // 2. Process Payment if requested
+            if (updateResult.AddPayment && updateResult.PaymentAmount > 0)
+            {
+                await ProcessPayment(transaction, updateResult.PaymentAmount, updateResult.PaymentMethod);
+            }
+        }
+    }
+
+    private async Task ProcessPayment(Transaction transaction, decimal amount, string method)
+    {
+        try
+        {
+            var currentUser = await AuthStateProvider.GetCurrentUserAsync();
+            var payment = new Payment
+            {
+                PaymentDate = DateTime.UtcNow,
+                Amount = amount,
+                PaymentMethod = method,
+                CustomerName = transaction.CustomerName,
+                EmployeeName = currentUser?.Name ?? "Unknown",
+                PersonId = transaction.PersonId,
+                Allocations = new List<PaymentAllocation>
+                {
+                    new PaymentAllocation
+                    {
+                        TransactionId = transaction.Id,
+                        Amount = amount
+                    }
+                }
+            };
+            
+            var response = await Http.PostAsJsonAsync("api/payments", payment);
+            if (response.IsSuccessStatusCode)
+            {
+                Snackbar.Add("Payment recorded", Severity.Success);
+                await TransactionService.RefreshDataAsync();
+                await LoadData();
+            }
+            else
+            {
+                Snackbar.Add("Failed to record payment", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error recording payment: {ex.Message}", Severity.Error);
+        }
+    }
+
     private string GetColumnWidth(string columnName)
     {
         return columnName switch
         {
-            "Order ID" => "100px",
+            "Order ID" => "120px",
             "Date" => "15%",
             "Items" => "20%",
-            "Quantity" => "5%",
+            "Quantity" => "6%",
             "Cost" => "8%",
             "Profit" => "8%",
-            "Total" => "8%",
+            "Total" => "12%",
             "Discount" => "8%",
-            "Status" => "8%",
+            "Payment" => "8%",
+            "Delivery" => "8%",
+            "Driver" => "10%",
             "Customer" => "10%",
             "Note" => "10%",
             "Employee" => "8%",

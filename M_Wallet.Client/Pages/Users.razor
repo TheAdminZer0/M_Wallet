@@ -10,10 +10,10 @@
 
 <PageTitle>Users</PageTitle>
 
-<MudTabs Elevation="2" Rounded="true" ApplyEffectsToContainer="true" PanelClass="pa-6">
+<MudTabs Elevation="2" Rounded="true" ApplyEffectsToContainer="true" PanelClass="pa-0">
     <MudTabPanel Text="Customers" Icon="@Icons.Material.Filled.People">
         <div style="overflow-x:auto; -webkit-overflow-scrolling: touch;">
-            <MudTable Items="@GetUsersByRole("Customer")" Hover="true" Dense="true" Breakpoint="Breakpoint.None" Filter="new Func<Person, bool>(FilterFunc)" SortLabel="Sort By">
+            <MudTable Items="@GetUsersByRole("Customer")" Elevation="0" Square="true" Hover="true" Dense="true" Breakpoint="Breakpoint.None" Filter="new Func<Person, bool>(FilterFunc)" SortLabel="Sort By">
                 <ToolBarContent>
                     <MudText Typo="Typo.h6">Customers</MudText>
                     <MudSpacer />
@@ -75,7 +75,7 @@
 
     <MudTabPanel Text="Drivers" Icon="@Icons.Material.Filled.LocalShipping">
         <div style="overflow-x:auto; -webkit-overflow-scrolling: touch;">
-            <MudTable Items="@GetUsersByRole("Driver")" Hover="true" Dense="true" Breakpoint="Breakpoint.None" Filter="new Func<Person, bool>(FilterFunc)" SortLabel="Sort By">
+            <MudTable Items="@GetUsersByRole("Driver")" Elevation="0" Square="true" Hover="true" Dense="true" Breakpoint="Breakpoint.None" Filter="new Func<Person, bool>(FilterFunc)" SortLabel="Sort By">
                 <ToolBarContent>
                     <MudText Typo="Typo.h6">Drivers</MudText>
                     <MudSpacer />
@@ -85,7 +85,9 @@
                 <HeaderContent>
                     @if (IsDriverColumnVisible("Name")) { <MudTh><MudTableSortLabel SortBy="new Func<Person, object>(x => x.Name)">Name</MudTableSortLabel></MudTh> }
                     @if (IsDriverColumnVisible("Phone Number")) { <MudTh><MudTableSortLabel SortBy="new Func<Person, object>(x => x.PhoneNumber)">Phone Number</MudTableSortLabel></MudTh> }
-                    @if (IsDriverColumnVisible("Deliveries")) { <MudTh><MudTableSortLabel SortBy="new Func<Person, object>(x => x.CompletedDeliveries)">Deliveries</MudTableSortLabel></MudTh> }
+                    @if (IsDriverColumnVisible("Pending")) { <MudTh><MudTableSortLabel SortBy="new Func<Person, object>(x => x.PendingDeliveries)">Pending</MudTableSortLabel></MudTh> }
+                    @if (IsDriverColumnVisible("Completed")) { <MudTh><MudTableSortLabel SortBy="new Func<Person, object>(x => x.CompletedDeliveries)">Completed</MudTableSortLabel></MudTh> }
+                    @if (IsDriverColumnVisible("Canceled")) { <MudTh><MudTableSortLabel SortBy="new Func<Person, object>(x => x.CanceledDeliveries)">Canceled</MudTableSortLabel></MudTh> }
                     @if (IsDriverColumnVisible("Balance")) { <MudTh><MudTableSortLabel SortBy="new Func<Person, object>(x => x.Balance)">Balance</MudTableSortLabel></MudTh> }
                     @if (IsDriverColumnVisible("Total Spent")) { <MudTh><MudTableSortLabel SortBy="new Func<Person, object>(x => x.TotalSpent)">Total Spent</MudTableSortLabel></MudTh> }
                     @if (IsDriverColumnVisible("Total Profit")) { <MudTh><MudTableSortLabel SortBy="new Func<Person, object>(x => x.TotalProfit)">Total Profit</MudTableSortLabel></MudTh> }
@@ -95,9 +97,19 @@
                 <RowTemplate>
                     @if (IsDriverColumnVisible("Name")) { <MudTd DataLabel="Name">@context.Name</MudTd> }
                     @if (IsDriverColumnVisible("Phone Number")) { <MudTd DataLabel="Phone Number">@context.PhoneNumber</MudTd> }
-                    @if (IsDriverColumnVisible("Deliveries")) {
-                        <MudTd DataLabel="Deliveries">
+                    @if (IsDriverColumnVisible("Pending")) {
+                        <MudTd DataLabel="Pending">
+                            <MudChip T="string" Color="Color.Warning" Size="Size.Small">@context.PendingDeliveries</MudChip>
+                        </MudTd>
+                    }
+                    @if (IsDriverColumnVisible("Completed")) {
+                        <MudTd DataLabel="Completed">
                             <MudChip T="string" Color="Color.Success" Size="Size.Small">@context.CompletedDeliveries</MudChip>
+                        </MudTd>
+                    }
+                    @if (IsDriverColumnVisible("Canceled")) {
+                        <MudTd DataLabel="Canceled">
+                            <MudChip T="string" Color="Color.Error" Size="Size.Small">@context.CanceledDeliveries</MudChip>
                         </MudTd>
                     }
                     @if (IsDriverColumnVisible("Balance")) { 
@@ -145,7 +157,7 @@
         @if (isAdminVerified)
         {
             <div style="overflow-x:auto; -webkit-overflow-scrolling: touch;">
-                <MudTable Items="@GetUsersByRole("System")" Hover="true" Dense="true" Breakpoint="Breakpoint.None" Filter="new Func<Person, bool>(FilterFunc)" SortLabel="Sort By">
+                <MudTable Items="@GetUsersByRole("System")" Elevation="0" Square="true" Hover="true" Dense="true" Breakpoint="Breakpoint.None" Filter="new Func<Person, bool>(FilterFunc)" SortLabel="Sort By">
                     <ToolBarContent>
                         <MudText Typo="Typo.h6">System Accounts</MudText>
                         <MudSpacer />
@@ -200,7 +212,7 @@
         @if (isAdminVerified)
         {
             <div style="overflow-x:auto; -webkit-overflow-scrolling: touch;">
-                <MudTable Items="@GetUsersByRole("Employee")" Hover="true" Dense="true" Breakpoint="Breakpoint.None" Filter="new Func<Person, bool>(FilterFunc)" SortLabel="Sort By">
+                <MudTable Items="@GetUsersByRole("Employee")" Elevation="0" Square="true" Hover="true" Dense="true" Breakpoint="Breakpoint.None" Filter="new Func<Person, bool>(FilterFunc)" SortLabel="Sort By">
                     <ToolBarContent>
                         <MudText Typo="Typo.h6">Employees</MudText>
                         <MudSpacer />
@@ -294,7 +306,9 @@
     {
         new() { Title = "Name", IsVisible = true },
         new() { Title = "Phone Number", IsVisible = true },
-        new() { Title = "Deliveries", IsVisible = true },
+        new() { Title = "Pending", IsVisible = true },
+        new() { Title = "Completed", IsVisible = true },
+        new() { Title = "Canceled", IsVisible = true },
         new() { Title = "Balance", IsVisible = true },
         new() { Title = "Total Spent", IsVisible = true },
         new() { Title = "Total Profit", IsVisible = true },

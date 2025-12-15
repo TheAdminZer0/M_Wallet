@@ -304,17 +304,40 @@
 
                 @if (isDelivery)
                 {
-                    <div class="mb-2">
-                        <MudAutocomplete T="string"
-                                         Label="Driver Name"
-                                         Value="driverName"
-                                         ValueChanged="OnDriverNameChanged"
-                                         SearchFunc="@SearchDriversByName"
-                                         Variant="Variant.Outlined"
-                                         Margin="Margin.Dense"
-                                         Clearable="true"
-                                         CoerceValue="true"
-                                         AdornmentIcon="@Icons.Material.Filled.LocalShipping" />
+                    <div class="d-flex gap-2 mb-2 align-center">
+                        <div style="flex: 1; min-width: 0;">
+                            <MudAutocomplete T="string"
+                                             Label="Driver Name"
+                                             Value="driverName"
+                                             ValueChanged="OnDriverNameChanged"
+                                             SearchFunc="@SearchDriversByName"
+                                             Variant="Variant.Outlined"
+                                             Margin="Margin.Dense"
+                                             Clearable="true"
+                                             CoerceValue="true"
+                                             AdornmentIcon="@Icons.Material.Filled.LocalShipping"
+                                             ReadOnly="@(selectedDriver != null)" />
+                        </div>
+                        <div style="flex: 1; min-width: 0;">
+                            <MudAutocomplete T="string"
+                                             Label="Driver Phone"
+                                             Value="driverPhone"
+                                             ValueChanged="OnDriverPhoneChanged"
+                                             SearchFunc="@SearchDriversByPhone"
+                                             Variant="Variant.Outlined"
+                                             Margin="Margin.Dense"
+                                             Clearable="true"
+                                             CoerceValue="true"
+                                             AdornmentIcon="@Icons.Material.Filled.Phone"
+                                             ReadOnly="@(selectedDriver != null)" />
+                        </div>
+                        @if (selectedDriver != null)
+                        {
+                            <MudIconButton Icon="@Icons.Material.Filled.Clear" 
+                                           Color="Color.Error" 
+                                           OnClick="ClearDriverSelection" 
+                                           Title="Clear Selection" />
+                        }
                     </div>
                 }
 
@@ -417,9 +440,29 @@
     private decimal discountAmount = 0;
 
     // Delivery State
-    private bool isDelivery = false;
+    private bool _isDelivery = false;
+    private bool isDelivery
+    {
+        get => _isDelivery;
+        set
+        {
+            if (_isDelivery != value)
+            {
+                _isDelivery = value;
+                if (_isDelivery)
+                {
+                    amountPaid = 0;
+                }
+                else
+                {
+                    UpdateAmountPaid();
+                }
+            }
+        }
+    }
     private Person? selectedDriver = null;
     private string driverName = "";
+    private string driverPhone = "";
 
     protected override async Task OnInitializedAsync()
     {
@@ -438,9 +481,10 @@
         discountAmount = CartService.DiscountAmount;
         printReceipt = CartService.PrintReceipt;
         printFormat = CartService.PrintFormat;
-        isDelivery = CartService.IsDelivery;
+        _isDelivery = CartService.IsDelivery;
         selectedDriver = CartService.SelectedDriver;
         driverName = CartService.DriverName;
+        driverPhone = CartService.DriverPhone;
 
         currentEmployee = await AuthStateProvider.GetCurrentUserAsync();
         if (currentEmployee == null)
@@ -528,6 +572,16 @@
             .Select(x => x.Name!));
     }
 
+    private Task<IEnumerable<string>> SearchDriversByPhone(string value, CancellationToken token)
+    {
+        if (string.IsNullOrEmpty(value))
+            return Task.FromResult(drivers.Where(x => !string.IsNullOrEmpty(x.PhoneNumber)).Select(x => x.PhoneNumber!));
+            
+        return Task.FromResult(drivers
+            .Where(x => !string.IsNullOrEmpty(x.PhoneNumber) && x.PhoneNumber.Contains(value, StringComparison.InvariantCultureIgnoreCase))
+            .Select(x => x.PhoneNumber!));
+    }
+
     private Task<IEnumerable<string>> SearchCustomersByPhone(string value, CancellationToken token)
     {
         if (string.IsNullOrEmpty(value))
@@ -560,11 +614,35 @@
         if (match != null)
         {
             selectedDriver = match;
+            driverPhone = match.PhoneNumber ?? "";
         }
         else
         {
             selectedDriver = null;
         }
+    }
+
+    private void OnDriverPhoneChanged(string value)
+    {
+        driverPhone = value;
+        var match = drivers.FirstOrDefault(d => d.PhoneNumber == value);
+        if (match != null)
+        {
+            selectedDriver = match;
+            driverName = match.Name;
+        }
+        else
+        {
+            selectedDriver = null;
+        }
+    }
+
+    private async Task ClearDriverSelection()
+    {
+        selectedDriver = null;
+        driverName = "";
+        driverPhone = "";
+        await Task.CompletedTask;
     }
 
     private void OnCustomerPhoneChanged(string value)
@@ -636,7 +714,7 @@
                 Subtotal = product.Price
             });
         }
-        amountPaid = CalculateTotal();
+        UpdateAmountPaid();
     }
 
     private void AddSeparateLineToCart(Product product)
@@ -657,7 +735,7 @@
             UnitCost = product.CostPrice,
             Subtotal = product.Price
         });
-        amountPaid = CalculateTotal();
+        UpdateAmountPaid();
     }
 
     private void IncreaseQuantity(TransactionItem item)
@@ -668,7 +746,7 @@
         {
             item.Quantity++;
             item.Subtotal = item.Quantity * item.UnitPrice;
-            amountPaid = CalculateTotal();
+            UpdateAmountPaid();
         }
     }
 
@@ -678,7 +756,7 @@
         {
             item.Quantity--;
             item.Subtotal = item.Quantity * item.UnitPrice;
-            amountPaid = CalculateTotal();
+            UpdateAmountPaid();
         }
         else
         {
@@ -743,7 +821,7 @@
             {
                 item.UnitPrice = newPrice;
                 item.Subtotal = item.Quantity * item.UnitPrice;
-                amountPaid = CalculateTotal();
+                UpdateAmountPaid();
             }
         }
     }
@@ -784,13 +862,13 @@
     {
         item.UnitPrice = item.Product!.Price;
         item.Subtotal = item.Quantity * item.UnitPrice;
-        amountPaid = CalculateTotal();
+        UpdateAmountPaid();
     }
 
     private void RemoveFromCart(TransactionItem item)
     {
         cartItems.Remove(item);
-        amountPaid = CalculateTotal();
+        UpdateAmountPaid();
     }
 
     private async void ClearCart()
@@ -804,6 +882,7 @@
         isDelivery = false;
         selectedDriver = null;
         driverName = "";
+        driverPhone = "";
     }
 
     private decimal CalculateTotal()
@@ -820,13 +899,13 @@
     {
         applyDiscount = val;
         if (!val) discountAmount = 0;
-        amountPaid = CalculateTotal();
+        UpdateAmountPaid();
     }
 
     private void OnDiscountChanged(decimal val)
     {
         discountAmount = val;
-        amountPaid = CalculateTotal();
+        UpdateAmountPaid();
     }
 
     private async Task CompleteCheckout(Person? employee = null)
@@ -841,6 +920,12 @@
         if (transactionEmployee == null)
         {
             Snackbar.Add("Employee login required", Severity.Warning);
+            return;
+        }
+
+        if (isDelivery && selectedDriver == null && string.IsNullOrWhiteSpace(driverName) && string.IsNullOrWhiteSpace(driverPhone))
+        {
+            Snackbar.Add("Please select or enter a driver for delivery orders", Severity.Warning);
             return;
         }
 
@@ -862,6 +947,8 @@
                 EmployeeName = transactionEmployee!.Name,
                 IsDelivery = isDelivery,
                 DriverId = isDelivery ? selectedDriver?.Id : null,
+                DriverName = isDelivery && string.IsNullOrWhiteSpace(driverName) ? null : driverName,
+                DriverPhone = isDelivery && string.IsNullOrWhiteSpace(driverPhone) ? null : driverPhone,
                 Discount = applyDiscount ? discountAmount : 0,
                 Items = cartItems.Select(ci => new TransactionItem
                 {
@@ -987,6 +1074,14 @@
         }
     }
 
+    private void UpdateAmountPaid()
+    {
+        if (!isDelivery)
+        {
+            amountPaid = CalculateTotal();
+        }
+    }
+
     private void OnQuantityInputChanged(TransactionItem item, int? newQuantity)
     {
         if (newQuantity is null)
@@ -998,7 +1093,7 @@
         var normalized = Math.Clamp(newQuantity.Value, 1, maxQuantity);
         item.Quantity = normalized;
         item.Subtotal = item.Quantity * item.UnitPrice;
-        amountPaid = CalculateTotal();
+        UpdateAmountPaid();
     }
 
     private int GetMaxQuantity(TransactionItem item)
@@ -1044,5 +1139,6 @@
         CartService.IsDelivery = isDelivery;
         CartService.SelectedDriver = selectedDriver;
         CartService.DriverName = driverName;
+        CartService.DriverPhone = driverPhone;
     }
 }

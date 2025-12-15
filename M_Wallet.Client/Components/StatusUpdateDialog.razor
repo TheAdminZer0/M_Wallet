@@ -1,0 +1,107 @@
+@using M_Wallet.Shared
+@using M_Wallet.Shared.Models
+@using MudBlazor
+
+<MudDialog>
+    <DialogContent>
+        <MudGrid Class="mb-4">
+            <MudItem xs="4">
+                <MudButton Variant="@(Status == TransactionStatus.Pending ? Variant.Filled : Variant.Outlined)" 
+                           Color="Color.Warning" 
+                           FullWidth="true"
+                           OnClick="@(() => SetStatus(TransactionStatus.Pending))">Pending</MudButton>
+            </MudItem>
+            <MudItem xs="4">
+                <MudButton Variant="@(Status == TransactionStatus.Completed ? Variant.Filled : Variant.Outlined)" 
+                           Color="Color.Success" 
+                           FullWidth="true"
+                           OnClick="@(() => SetStatus(TransactionStatus.Completed))">Delivered</MudButton>
+            </MudItem>
+            <MudItem xs="4">
+                <MudButton Variant="@(Status == TransactionStatus.Canceled ? Variant.Filled : Variant.Outlined)" 
+                           Color="Color.Error" 
+                           FullWidth="true"
+                           OnClick="@(() => SetStatus(TransactionStatus.Canceled))">Canceled</MudButton>
+            </MudItem>
+        </MudGrid>
+
+        @if (Status == TransactionStatus.Completed && Balance > 0)
+        {
+            <MudPaper Class="pa-4" Elevation="0" Outlined="true" Style="background-color: var(--mud-palette-background-grey);">
+                <MudCheckBox @bind-Value="AddPayment" Label="Record Payment" Color="Color.Primary" Dense="true" />
+                
+                @if (AddPayment)
+                {
+                    <MudGrid Spacing="2">
+                        <MudItem xs="6">
+                            <MudNumericField @bind-Value="PaymentAmount" Label="Amount" Variant="Variant.Outlined" Margin="Margin.Dense" Min="0" Max="@Balance" />
+                        </MudItem>
+                        <MudItem xs="6">
+                            <MudSelect @bind-Value="PaymentMethod" Label="Method" Variant="Variant.Outlined" Margin="Margin.Dense" Dense="true">
+                                <MudSelectItem Value="@("Cash")">Cash</MudSelectItem>
+                                <MudSelectItem Value="@("Card")">Card</MudSelectItem>
+                                <MudSelectItem Value="@("Transfer")">Transfer</MudSelectItem>
+                            </MudSelect>
+                        </MudItem>
+                    </MudGrid>
+                }
+            </MudPaper>
+        }
+        
+        @if (Status == TransactionStatus.Canceled)
+        {
+             <MudAlert Severity="Severity.Warning" Dense="true" Class="mt-2">Items will be returned to stock.</MudAlert>
+        }
+
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="Submit">Update</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = default!;
+    [Parameter] public Transaction Transaction { get; set; } = default!;
+
+    private TransactionStatus Status { get; set; }
+    private bool AddPayment { get; set; } = true;
+    private decimal PaymentAmount { get; set; }
+    private string PaymentMethod { get; set; } = "Cash";
+    private decimal Balance { get; set; }
+
+    protected override void OnInitialized()
+    {
+        Status = Transaction.Status;
+        var paid = Transaction.PaymentAllocations?.Sum(pa => pa.Amount) ?? 0;
+        Balance = Transaction.TotalAmount - paid;
+        if (Balance < 0) Balance = 0;
+        PaymentAmount = Balance;
+    }
+
+    private void SetStatus(TransactionStatus status)
+    {
+        Status = status;
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+
+    private void Submit()
+    {
+        MudDialog.Close(DialogResult.Ok(new StatusUpdateResult 
+        { 
+            Status = Status, 
+            AddPayment = AddPayment && Status == TransactionStatus.Completed && Balance > 0,
+            PaymentAmount = PaymentAmount,
+            PaymentMethod = PaymentMethod
+        }));
+    }
+
+    public class StatusUpdateResult
+    {
+        public TransactionStatus Status { get; set; }
+        public bool AddPayment { get; set; }
+        public decimal PaymentAmount { get; set; }
+        public string PaymentMethod { get; set; } = string.Empty;
+    }
+}

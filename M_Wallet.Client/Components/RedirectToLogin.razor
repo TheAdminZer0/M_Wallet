@@ -4,11 +4,14 @@
 <SplashScreen Text="Checking access..." />
 
 @code {
-    protected override void OnAfterRender(bool firstRender)
+    protected override void OnInitialized()
     {
-        if (firstRender)
+        var uri = Navigation.Uri;
+        // If we are not already on the login page, redirect to login with the return URL
+        if (!uri.Contains("login", StringComparison.OrdinalIgnoreCase))
         {
-            Navigation.NavigateTo("login");
+            var returnUrl = Uri.EscapeDataString(uri);
+            Navigation.NavigateTo($"login?returnUrl={returnUrl}");
         }
     }
 }

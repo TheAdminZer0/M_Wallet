@@ -18,6 +18,7 @@ public class CartService
     public bool IsDelivery { get; set; } = false;
     public Person? SelectedDriver { get; set; }
     public string DriverName { get; set; } = "";
+    public string DriverPhone { get; set; } = "";
 
     public void Clear()
     {
@@ -35,5 +36,6 @@ public class CartService
         IsDelivery = false;
         SelectedDriver = null;
         DriverName = "";
+        DriverPhone = "";
     }
 }

@@ -41,7 +41,7 @@ public class PeopleController : ControllerBase
         var personIds = people.Select(p => p.Id).ToList();
 
         var transactions = await _context.Transactions
-            .Where(t => t.PersonId.HasValue && personIds.Contains(t.PersonId.Value))
+            .Where(t => t.PersonId.HasValue && personIds.Contains(t.PersonId.Value) && t.Status != TransactionStatus.Canceled)
             .Select(t => new 
             { 
                 t.PersonId, 
@@ -59,6 +59,18 @@ public class PeopleController : ControllerBase
             })
             .ToListAsync();
 
+        var driverStats = await _context.Transactions
+            .Where(t => t.DriverId.HasValue && personIds.Contains(t.DriverId.Value))
+            .GroupBy(t => t.DriverId)
+            .Select(g => new 
+            { 
+                DriverId = g.Key, 
+                Pending = g.Count(t => t.Status == TransactionStatus.Pending),
+                Completed = g.Count(t => t.Status == TransactionStatus.Completed),
+                Canceled = g.Count(t => t.Status == TransactionStatus.Canceled)
+            })
+            .ToListAsync();
+
         var payments = await _context.Payments
             .Where(p => p.PersonId.HasValue && personIds.Contains(p.PersonId.Value))
             .GroupBy(p => p.PersonId)
@@ -69,6 +81,7 @@ public class PeopleController : ControllerBase
         {
             var t = transactions.FirstOrDefault(x => x.PersonId == person.Id);
             var p = payments.FirstOrDefault(x => x.PersonId == person.Id);
+            var d = driverStats.FirstOrDefault(x => x.DriverId == person.Id);
 
             decimal totalTransactions = t?.Total ?? 0;
             decimal totalPayments = p?.Total ?? 0;
@@ -76,6 +89,13 @@ public class PeopleController : ControllerBase
             person.Balance = totalPayments - totalTransactions;
             person.TotalProfit = t?.TotalProfit ?? 0;
             person.TotalSpent = totalTransactions;
+
+            if (d != null)
+            {
+                person.PendingDeliveries = d.Pending;
+                person.CompletedDeliveries = d.Completed;
+                person.CanceledDeliveries = d.Canceled;
+            }
             
             DateTime? lastT = t?.LastDate;
             DateTime? lastP = p?.LastDate;

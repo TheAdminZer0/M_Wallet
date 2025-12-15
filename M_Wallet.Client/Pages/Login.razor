@@ -38,12 +38,15 @@
     string username = "";
     string password = "";
 
+    [SupplyParameterFromQuery]
+    public string? ReturnUrl { get; set; }
+
     protected override async Task OnInitializedAsync()
     {
         var authState = await AuthStateProvider.GetAuthenticationStateAsync();
         if (authState.User.Identity?.IsAuthenticated == true)
         {
-            Navigation.NavigateTo("/");
+            NavigateToReturnUrl();
         }
     }
 
@@ -62,11 +65,23 @@
         var result = await AuthStateProvider.LoginAsync(username, password);
         if (result)
         {
-            Navigation.NavigateTo("/");
+            NavigateToReturnUrl();
         }
         else
         {
             error = true;
+        }
+    }
+
+    private void NavigateToReturnUrl()
+    {
+        if (!string.IsNullOrEmpty(ReturnUrl))
+        {
+            Navigation.NavigateTo(ReturnUrl);
+        }
+        else
+        {
+            Navigation.NavigateTo("/");
         }
     }
 }
