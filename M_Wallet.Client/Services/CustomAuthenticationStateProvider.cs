@@ -82,9 +82,9 @@ public class CustomAuthenticationStateProvider : AuthenticationStateProvider
                 }
             }
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            Console.WriteLine($"Login error: {ex.Message}");
+            // Ignore login errors
         }
 
         return false;

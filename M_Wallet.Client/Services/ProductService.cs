@@ -34,9 +34,8 @@ public class ProductService
             _products = await _http.GetFromJsonAsync<List<Product>>("api/products");
             _isInitialized = true;
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            Console.WriteLine($"Error initializing product service: {ex.Message}");
             throw;
         }
     }

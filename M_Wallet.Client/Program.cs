@@ -12,6 +12,7 @@ builder.Services.AddScoped<AuthenticationStateProvider>(sp => sp.GetRequiredServ
 builder.Services.AddScoped<ReceiptService>();
 builder.Services.AddScoped<TransactionService>();
 builder.Services.AddScoped<ProductService>();
+builder.Services.AddScoped<CartService>();
 builder.Services.AddScoped<UserPreferencesService>();
 
 // Add HttpClient for API calls

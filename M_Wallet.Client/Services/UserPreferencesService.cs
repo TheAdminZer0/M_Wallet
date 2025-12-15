@@ -84,18 +84,15 @@ namespace M_Wallet.Client.Services
                         PropertyNameCaseInsensitive = true
                     };
                     _preferences = JsonSerializer.Deserialize<UserPreferences>(person.Preferences, options) ?? new UserPreferences();
-                    Console.WriteLine($"Loaded preferences for user {_currentUserId}. Favorites: {_preferences.FavoriteRoutes.Count}");
                 }
                 else
                 {
                     _preferences = new UserPreferences();
-                    Console.WriteLine($"Loaded empty preferences for user {_currentUserId}");
                 }
                 NotifyStateChanged();
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                Console.WriteLine($"Error loading preferences: {ex.Message}");
                 // Do NOT reset preferences on error, keep existing state or default
                 // _preferences = new UserPreferences(); 
                 // NotifyStateChanged();

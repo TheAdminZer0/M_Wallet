@@ -12,6 +12,9 @@ public class Transaction
     public string? CustomerPhone { get; set; } // For creating new customers during transaction
 
     public string? Note { get; set; } // Optional note for the order
+    public bool IsDelivery { get; set; }
+    public int? DriverId { get; set; }
+    public Person? Driver { get; set; }
     public decimal TotalAmount { get; set; }
     public decimal Discount { get; set; }
     public string EmployeeName { get; set; } = string.Empty;

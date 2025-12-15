@@ -43,9 +43,8 @@ public class TransactionService
             
             _isInitialized = true;
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            Console.WriteLine($"Error initializing transaction service: {ex.Message}");
             throw;
         }
     }

@@ -1,4 +1,5 @@
 ﻿@page "/"
+@implements IDisposable
 @using M_Wallet.Client.Components
 @using System.Text.Json
 @using M_Wallet.Client.Services
@@ -12,6 +13,7 @@
 @inject CustomAuthenticationStateProvider AuthStateProvider
 @inject ProductService ProductService
 @inject TransactionService TransactionService
+@inject CartService CartService
 
 <PageTitle>POS - Point of Sale</PageTitle>
 
@@ -288,36 +290,53 @@
                               Lines="1" />
 
                 <div class="d-flex align-center gap-4 mb-2">
-                    <MudCheckBox @bind-Value="printReceipt" Label="Print / طباعة" Color="Color.Primary" Dense="true" />
+                    <MudCheckBox @bind-Value="isDelivery" Label="Delivery" Color="Color.Warning" Dense="true" />
+                    <MudCheckBox @bind-Value="printReceipt" Label="Print" Color="Color.Primary" Dense="true" />
                     @if (printReceipt)
                     {
-                        <MudRadioGroup @bind-Value="printFormat" Class="d-flex gap-4">
+                        <MudDivider Vertical="true" FlexItem="true" Class="mx-2" />
+                        <MudRadioGroup T="string" @bind-Value="printFormat" Class="d-flex gap-2">
                             <MudRadio Value="@("A4")" Color="Color.Primary" Dense="true">A4</MudRadio>
                             <MudRadio Value="@("Thermal")" Color="Color.Primary" Dense="true">Thermal</MudRadio>
                         </MudRadioGroup>
                     }
-                    <MudSpacer />
-                    <MudCheckBox @bind-Value="applyDiscount" Label="Discount" Color="Color.Secondary" Dense="true" CheckedChanged="@((bool val) => OnDiscountToggled(val))" />
                 </div>
 
-                @if (applyDiscount)
+                @if (isDelivery)
                 {
-                    <MudNumericField Value="discountAmount" ValueChanged="@((decimal val) => OnDiscountChanged(val))" Label="Discount Amount" Variant="Variant.Outlined" Margin="Margin.Dense" Class="mb-2" Min="0" />
+                    <div class="mb-2">
+                        <MudAutocomplete T="string"
+                                         Label="Driver Name"
+                                         Value="driverName"
+                                         ValueChanged="OnDriverNameChanged"
+                                         SearchFunc="@SearchDriversByName"
+                                         Variant="Variant.Outlined"
+                                         Margin="Margin.Dense"
+                                         Clearable="true"
+                                         CoerceValue="true"
+                                         AdornmentIcon="@Icons.Material.Filled.LocalShipping" />
+                    </div>
                 }
 
-                <MudGrid Spacing="1">
-                    <MudItem xs="6">
+                <MudGrid Spacing="1" Class="align-center">
+                    <MudItem xs="5">
                         <MudSelect T="string" Label="Method" @bind-Value="paymentMethod" Variant="Variant.Outlined" Margin="Margin.Dense">
                             <MudSelectItem Value="@("Cash")">Cash</MudSelectItem>
                             <MudSelectItem Value="@("Card")">Card</MudSelectItem>
                             <MudSelectItem Value="@("Transfer")">Transfer</MudSelectItem>
                         </MudSelect>
                     </MudItem>
-                    <MudItem xs="6">
-                        <MudNumericField @bind-Value="amountPaid" Label="Amount" Variant="Variant.Outlined" Margin="Margin.Dense" Min="0" />
+                    <MudItem xs="7" Class="d-flex align-center gap-2">
+                        <MudNumericField @bind-Value="amountPaid" Label="Amount" Variant="Variant.Outlined" Margin="Margin.Dense" Min="0" Class="flex-grow-1" />
+                        <MudCheckBox @bind-Value="applyDiscount" Label="Discount" Color="Color.Secondary" Dense="true" CheckedChanged="@((bool val) => OnDiscountToggled(val))" />
                     </MudItem>
                 </MudGrid>
-                
+
+                @if (applyDiscount)
+                {
+                    <MudNumericField Value="discountAmount" ValueChanged="@((decimal val) => OnDiscountChanged(val))" Label="Discount Amount" Variant="Variant.Outlined" Margin="Margin.Dense" Class="mb-2" Min="0" />
+                }
+
                 <div class="d-flex justify-space-between align-center mb-4 pa-3" 
                      style="background-color: var(--mud-palette-background-grey); border-radius: 8px;">
                     <MudText Typo="Typo.h6">Total:</MudText>
@@ -365,6 +384,7 @@
 
     private List<Product>? products;
     private List<Person> customers = new();
+    private List<Person> drivers = new();
     private List<TransactionItem> cartItems = new();
     private string searchString = "";
     
@@ -396,8 +416,32 @@
     private bool applyDiscount = false;
     private decimal discountAmount = 0;
 
+    // Delivery State
+    private bool isDelivery = false;
+    private Person? selectedDriver = null;
+    private string driverName = "";
+
     protected override async Task OnInitializedAsync()
     {
+        // Load state from CartService
+        if (CartService.CartItems != null && CartService.CartItems.Any())
+        {
+            cartItems = new List<TransactionItem>(CartService.CartItems);
+        }
+        selectedCustomer = CartService.SelectedCustomer;
+        customerName = CartService.CustomerName;
+        customerPhone = CartService.CustomerPhone;
+        orderNote = CartService.OrderNote;
+        paymentMethod = CartService.PaymentMethod;
+        amountPaid = CartService.AmountPaid;
+        applyDiscount = CartService.ApplyDiscount;
+        discountAmount = CartService.DiscountAmount;
+        printReceipt = CartService.PrintReceipt;
+        printFormat = CartService.PrintFormat;
+        isDelivery = CartService.IsDelivery;
+        selectedDriver = CartService.SelectedDriver;
+        driverName = CartService.DriverName;
+
         currentEmployee = await AuthStateProvider.GetCurrentUserAsync();
         if (currentEmployee == null)
         {
@@ -408,6 +452,7 @@
         await ProductService.RefreshDataAsync();
         await LoadProducts();
         await LoadCustomers();
+        await LoadDrivers();
         
         var uri = NavigationManager.ToAbsoluteUri(NavigationManager.Uri);
         var query = uri.Query;
@@ -451,12 +496,34 @@
         }
     }
 
+    private async Task LoadDrivers()
+    {
+        try
+        {
+            drivers = await Http.GetFromJsonAsync<List<Person>>("api/people?role=Driver") ?? new();
+        }
+        catch (Exception)
+        {
+            // Ignore errors
+        }
+    }
+
     private Task<IEnumerable<string>> SearchCustomersByName(string value, CancellationToken token)
     {
         if (string.IsNullOrEmpty(value))
             return Task.FromResult(customers.Where(x => x.Name != null).Select(x => x.Name!));
             
         return Task.FromResult(customers
+            .Where(x => x.Name != null && x.Name.Contains(value, StringComparison.InvariantCultureIgnoreCase))
+            .Select(x => x.Name!));
+    }
+
+    private Task<IEnumerable<string>> SearchDriversByName(string value, CancellationToken token)
+    {
+        if (string.IsNullOrEmpty(value))
+            return Task.FromResult(drivers.Where(x => x.Name != null).Select(x => x.Name!));
+            
+        return Task.FromResult(drivers
             .Where(x => x.Name != null && x.Name.Contains(value, StringComparison.InvariantCultureIgnoreCase))
             .Select(x => x.Name!));
     }
@@ -486,6 +553,20 @@
         }
     }
 
+    private void OnDriverNameChanged(string value)
+    {
+        driverName = value;
+        var match = drivers.FirstOrDefault(d => d.Name != null && d.Name.Equals(value, StringComparison.InvariantCultureIgnoreCase));
+        if (match != null)
+        {
+            selectedDriver = match;
+        }
+        else
+        {
+            selectedDriver = null;
+        }
+    }
+
     private void OnCustomerPhoneChanged(string value)
     {
         customerPhone = value;
@@ -506,8 +587,7 @@
         selectedCustomer = null;
         customerName = "";
         customerPhone = "";
-        if (_nameAutocomplete != null) await _nameAutocomplete.Clear();
-        if (_phoneAutocomplete != null) await _phoneAutocomplete.Clear();
+        await Task.CompletedTask;
     }
 
     /// <summary>
@@ -603,15 +683,6 @@
         else
         {
             RemoveFromCart(item);
-        }
-    }
-
-    private void UpdateItemPrice(TransactionItem item, decimal newPrice)
-    {
-        if (newPrice >= 0)
-        {
-            item.UnitPrice = newPrice;
-            item.Subtotal = item.Quantity * item.UnitPrice;
         }
     }
 
@@ -730,6 +801,9 @@
         amountPaid = 0;
         applyDiscount = false;
         discountAmount = 0;
+        isDelivery = false;
+        selectedDriver = null;
+        driverName = "";
     }
 
     private decimal CalculateTotal()
@@ -786,6 +860,8 @@
                 CustomerPhone = string.IsNullOrWhiteSpace(customerPhone) ? null : customerPhone,
                 Note = string.IsNullOrWhiteSpace(orderNote) ? null : orderNote,
                 EmployeeName = transactionEmployee!.Name,
+                IsDelivery = isDelivery,
+                DriverId = isDelivery ? selectedDriver?.Id : null,
                 Discount = applyDiscount ? discountAmount : 0,
                 Items = cartItems.Select(ci => new TransactionItem
                 {
@@ -950,5 +1026,23 @@
         }
 
         return product.ImageUrl;
+    }
+
+    public void Dispose()
+    {
+        CartService.CartItems = new List<TransactionItem>(cartItems);
+        CartService.SelectedCustomer = selectedCustomer;
+        CartService.CustomerName = customerName;
+        CartService.CustomerPhone = customerPhone;
+        CartService.OrderNote = orderNote;
+        CartService.PaymentMethod = paymentMethod;
+        CartService.AmountPaid = amountPaid;
+        CartService.ApplyDiscount = applyDiscount;
+        CartService.DiscountAmount = discountAmount;
+        CartService.PrintReceipt = printReceipt;
+        CartService.PrintFormat = printFormat;
+        CartService.IsDelivery = isDelivery;
+        CartService.SelectedDriver = selectedDriver;
+        CartService.DriverName = driverName;
     }
 }
