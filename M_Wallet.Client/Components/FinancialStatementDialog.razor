@@ -4,11 +4,13 @@
 @inject ReceiptService ReceiptService
 @inject IJSRuntime JSRuntime
 
+@* Statement viewer with date range and print *@
 <MudDialog>
     <TitleContent>
         <MudText Typo="Typo.h6">@Title</MudText>
     </TitleContent>
     <DialogContent>
+        @* Filters: date range + fuzzy search *@
         <MudGrid Class="mb-2">
             <MudItem xs="12" sm="4">
                 <MudDatePicker Label="From" @bind-Date="_dateFrom" Variant="Variant.Outlined" Margin="Margin.Dense" Clearable="true" MaxDate="@DateTime.Today" />
@@ -21,6 +23,7 @@
             </MudItem>
         </MudGrid>
 
+        @* Statement table *@
         <MudTable Items="@FilteredItems" Hover="true" Dense="true" FixedHeader="true" Height="400px" Breakpoint="Breakpoint.None">
             <HeaderContent>
                 <MudTh>Date</MudTh>
@@ -58,6 +61,7 @@
 
     private void Cancel() => MudDialog.Cancel();
 
+    // Generate printable HTML for the filtered statement
     private async Task PrintStatement()
     {
         // Extract customer name from Title "Statement - CustomerName"
@@ -67,6 +71,7 @@
         await JSRuntime.InvokeVoidAsync("printer.printHtml", html);
     }
 
+    // Color debit/credit values
     private string GetColor(decimal amount)
     {
         if (amount > 0) return "text-align: right; color: var(--mud-palette-success);";
@@ -74,6 +79,7 @@
         return "text-align: right;";
     }
 
+    // Apply date and fuzzy search filters
     private IEnumerable<StatementItem> FilteredItems
     {
         get

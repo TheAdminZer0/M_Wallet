@@ -8,6 +8,7 @@
 @inject HttpClient Http
 @inject M_Wallet.Client.Services.UserPreferencesService UserPreferencesService
 
+@* Product create/edit dialog *@
 <MudDialog>
     <TitleContent>
         <MudText Typo="Typo.h6">
@@ -15,6 +16,7 @@
         </MudText>
     </TitleContent>
     <DialogContent>
+        @* Basic product fields *@
         <MudGrid GutterSize="2" Class="mb-2">
             <MudItem xs="8">
                 <MudTextField @bind-Value="Product.Name" 
@@ -38,6 +40,7 @@
                       Variant="Variant.Outlined"
                   Class="mb-2" />
 
+        @* Pricing inputs *@
         <MudGrid GutterSize="2" Class="mb-2">
             <MudItem xs="12" sm="6">
                 <MudNumericField @bind-Value="Product.CostPrice" 
@@ -59,6 +62,7 @@
             </MudItem>
         </MudGrid>
 
+        @* Stockless/service toggles *@
         <MudGrid GutterSize="2" Class="mb-2">
             <MudItem xs="6">
                 <MudSwitch @bind-Value="Product.IsStockless" 
@@ -72,6 +76,7 @@
             </MudItem>
         </MudGrid>
 
+        @* Barcode management (generate/scan/add/remove) *@
         <MudStack Spacing="1" Class="mb-2">
             <div class="d-flex align-center gap-1">
                 <MudTooltip Text="Generate Random Barcode">
@@ -130,6 +135,7 @@
 
 
 
+        @* Image upload + preview *@
         <MudStack Direction="Row" AlignItems="AlignItems.Center" Spacing="2" Class="mb-2">
              <MudFileUpload T="IBrowserFile" FilesChanged="UploadFiles">
                  <ActivatorContent>
@@ -173,6 +179,7 @@
     [Parameter]
     public EventCallback<Product> OnSubmit { get; set; }
 
+    // Validate and return product payload
     private async Task Submit()
     {
         AddCurrentBarcode();
@@ -212,6 +219,7 @@
 
     private string _currentBarcodeValue = string.Empty;
 
+    // Generate random 13-digit barcode
     private void GenerateBarcode()
     {
         var builder = new StringBuilder(13);
@@ -223,6 +231,7 @@
         _currentBarcodeValue = builder.ToString();
     }
 
+    // Add current barcode field into list if unique
     private void AddCurrentBarcode()
     {
         if (!string.IsNullOrWhiteSpace(_currentBarcodeValue))
@@ -236,6 +245,7 @@
         }
     }
 
+    // Enter key adds barcode
     private void HandleBarcodeKeyDown(KeyboardEventArgs e)
     {
         if (e.Key == "Enter")
@@ -244,6 +254,7 @@
         }
     }
 
+    // Finalize current barcode and clear input
     private void StartNewBarcode()
     {
         AddCurrentBarcode();
@@ -254,6 +265,7 @@
         AddCurrentBarcode();
     }
 
+    // Remove a barcode chip
     private void RemoveBarcode(ProductBarcode barcode)
     {
         Product.Barcodes.Remove(barcode);
@@ -261,6 +273,7 @@
 
     private IDialogReference? _scannerDialogReference;
 
+    // Open camera scanner to capture barcode
     private async Task OpenScannerDialogAsync()
     {
         var parameters = new DialogParameters<BarcodeScannerDialog>
@@ -278,6 +291,7 @@
         _scannerDialogReference = await DialogService.ShowAsync<BarcodeScannerDialog>("Scan Barcode", parameters, options);
     }
 
+    // Scanner callback populates barcode list
     private async Task HandleBarcodeDetectedAsync(string code)
     {
         if (!string.IsNullOrWhiteSpace(code))
@@ -298,6 +312,7 @@
         return Task.CompletedTask;
     }
 
+    // Upload product image with optional client-side resize
     private async Task UploadFiles(IBrowserFile file)
     {
         if (file is null) return;

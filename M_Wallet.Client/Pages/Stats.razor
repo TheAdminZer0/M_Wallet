@@ -8,6 +8,8 @@
 
 <PageTitle>Statistics & Analytics</PageTitle>
 
+<!-- Sales/profit dashboards with charts and top products -->
+
 <MudText Typo="Typo.h3" GutterBottom="true">Statistics & Analytics</MudText>
 <MudText Class="mb-4">Overview of sales, profits, and business insights</MudText>
 
@@ -221,6 +223,7 @@ else
 }
 
 @code {
+    // Cached data and derived metrics used by charts
     private List<Transaction>? transactions;
     private List<Product>? products;
     private List<Payment>? payments;

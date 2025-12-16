@@ -7,10 +7,12 @@
 @inject ISnackbar Snackbar
 @inject CustomAuthenticationStateProvider AuthStateProvider
 
+@* Record customer deposit/withdrawal *@
 <MudDialog>
     <DialogContent>
         <MudText Class="mb-4">Record Payment for @Person.Name</MudText>
         
+        @* Payment form fields *@
         <MudGrid>
             <MudItem xs="12">
                 <MudToggleGroup T="string" @bind-Value="paymentType" Outline="true" Delimiters="true" Class="mb-4">
@@ -68,6 +70,7 @@
     private Person? currentEmployee;
     private bool isSystemUser => currentEmployee?.Role == "System";
 
+    // Preload current employee for authorization
     protected override async Task OnInitializedAsync()
     {
         currentEmployee = await AuthStateProvider.GetCurrentUserAsync();
@@ -77,11 +80,13 @@
         }
     }
 
+    // Pattern auth callback populates employee
     private void OnAuthorized(Person employee)
     {
         employeeName = employee.Name;
     }
 
+    // Validate and post payment (positive for deposit, negative for withdraw)
     private async Task Submit()
     {
         if (amount <= 0)

@@ -7,10 +7,12 @@
 @inject ISnackbar Snackbar
 @inject CustomAuthenticationStateProvider AuthStateProvider
 
+@* Record payment against a single transaction *@
 <MudDialog>
     <DialogContent>
         <MudText Class="mb-4">Recording payment for Order #@TransactionId</MudText>
         
+        @* Payment details form *@
         <MudGrid>
             <MudItem xs="12">
                 <MudNumericField @bind-Value="amount" Label="Payment Amount" Format="F2" Min="0.01m" Max="@BalanceDue" Adornment="Adornment.Start" AdornmentText="LD" Variant="Variant.Outlined" AutoFocus="true" />
@@ -63,6 +65,7 @@
     private Person? currentEmployee;
     private bool isSystemUser => currentEmployee?.Role == "System";
 
+    // Prefill amount and employee info on open
     protected override async Task OnInitializedAsync()
     {
         amount = BalanceDue;
@@ -73,6 +76,7 @@
         }
     }
 
+    // Pattern auth callback populates employee
     private void OnAuthorized(Person employee)
     {
         employeeName = employee.Name;
@@ -80,6 +84,7 @@
 
     private void Cancel() => MudDialog.Cancel();
 
+    // Validate and post payment to API
     private async Task Submit()
     {
         if (amount <= 0)

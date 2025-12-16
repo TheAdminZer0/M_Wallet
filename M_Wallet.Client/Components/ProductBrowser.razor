@@ -2,6 +2,7 @@
 @inject IDialogService DialogService
 @inject ISnackbar Snackbar
 
+@* Product browser used by POS with search, sort, view toggle *@
 <MudPaper Class="pa-4" Elevation="2" Style="@($"background-color:var(--mud-palette-gray-lighter); height: {Height}; display: flex; flex-direction: column;")">
     <!-- Toolbar -->
     <div class="d-flex align-center gap-2 mb-4">
@@ -63,6 +64,7 @@
         {
             @if (PinnedProducts.Any())
             {
+                @* Horizontal pinned products strip *@
                 <MudText Typo="Typo.h6" Class="mb-2">Pinned Products</MudText>
                 <MudGrid Spacing="3" Class="flex-nowrap overflow-x-auto pb-4 mb-2">
                     @foreach (var product in PinnedProducts)
@@ -320,11 +322,13 @@
     private bool isGridView = true;
     private IDialogReference? _searchScannerDialog;
 
+    // Determine available stock using override if provided
     private int GetStockLevel(Product product)
     {
         return GetAvailableStock?.Invoke(product) ?? product.StockQuantity;
     }
 
+    // Open product details dialog
     private async Task ShowProductDetails(Product product)
     {
         var parameters = new DialogParameters
@@ -335,6 +339,7 @@
         await DialogService.ShowAsync<ProductDetailsDialog>("Product Details", parameters, options);
     }
 
+    // Filter/sort pinned active products
     private IEnumerable<Product> PinnedProducts
     {
         get
@@ -366,6 +371,7 @@
         }
     }
 
+    // Filter/sort non-pinned active products
     private IEnumerable<Product> FilteredProducts
     {
         get
@@ -397,6 +403,7 @@
         }
     }
 
+    // Map sort key to display label
     private string GetSortLabel(string value)
     {
         switch (value)
@@ -408,6 +415,7 @@
         }
     }
 
+    // Update sort and reset paging
     private void OnSortChanged(string value)
     {
         sortBy = value;
@@ -419,6 +427,7 @@
         currentPage = page;
     }
 
+    // Propagate search text changes
     private async Task OnSearchChanged(string value)
     {
         SearchString = value;
@@ -426,6 +435,7 @@
         currentPage = 1;
     }
 
+    // Fallback image if none provided
     private string GetProductImage(Product? product)
     {
         if (product is null || string.IsNullOrWhiteSpace(product.ImageUrl))
@@ -435,6 +445,7 @@
         return product.ImageUrl;
     }
 
+    // Open scanner to search by barcode
     private async Task OpenSearchScannerAsync()
     {
         var parameters = new DialogParameters<M_Wallet.Client.Components.BarcodeScannerDialog>
@@ -452,6 +463,7 @@
         _searchScannerDialog = await DialogService.ShowAsync<M_Wallet.Client.Components.BarcodeScannerDialog>("Scan Product", parameters, options);
     }
 
+    // Scanner callback drives search
     private async Task HandleSearchBarcodeDetectedAsync(string code)
     {
         if (!string.IsNullOrWhiteSpace(code))

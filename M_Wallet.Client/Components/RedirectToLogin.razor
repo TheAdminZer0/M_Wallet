@@ -1,9 +1,11 @@
 @inject NavigationManager Navigation
 @using M_Wallet.Client.Components
 
+@* Redirect helper to send users to login preserving return URL *@
 <SplashScreen Text="Checking access..." />
 
 @code {
+    // Redirect to login unless already there, preserving return URL
     protected override void OnInitialized()
     {
         var uri = Navigation.Uri;

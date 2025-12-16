@@ -4,6 +4,7 @@
 @inject ISnackbar Snackbar
 @inject IDialogService DialogService
 
+@* Payment allocations history for a transaction *@
 <MudDialog>
     <DialogContent>
         @if (Transaction.PaymentAllocations == null || !Transaction.PaymentAllocations.Any())
@@ -12,6 +13,7 @@
         }
         else
         {
+            @* Payment list with delete actions *@
             <MudTable Items="@Transaction.PaymentAllocations.OrderByDescending(pa => pa.Payment?.PaymentDate)" Dense="true" Hover="true" Elevation="0">
                 <HeaderContent>
                     <MudTh>Date</MudTh>
@@ -63,6 +65,7 @@
 
     private void Close() => MudDialog.Close(DialogResult.Ok(true));
 
+    // Recompute profit for the transaction
     private decimal CalculateOrderProfit()
     {
         if (Transaction.Items == null) return 0;
@@ -74,6 +77,7 @@
         return grossProfit - Transaction.Discount;
     }
 
+    // Determine if this allocation closes the balance
     private bool IsCompletingPayment(PaymentAllocation allocation)
     {
         if (Transaction.PaymentAllocations == null || !Transaction.PaymentAllocations.Any())
@@ -98,6 +102,7 @@
         return false;
     }
 
+    // Delete a payment allocation via API
     private async Task DeletePayment(PaymentAllocation allocation)
     {
         if (allocation.Payment == null) return;

@@ -8,6 +8,8 @@
 
 <PageTitle>Purchases & Inventory</PageTitle>
 
+<!-- Purchase entry (invoice builder) and historical list -->
+
 <MudText Typo="Typo.h3" GutterBottom="true">Purchases & Inventory</MudText>
 <MudText Class="mb-4">Manage incoming stock and supplier invoices.</MudText>
 
@@ -318,6 +320,7 @@ else
 </style>
 
 @code {
+    // Page state: list vs creation, cached products/employees
     private List<Purchase>? purchases;
     private List<Product> allProducts = new();
     private List<string> uniqueEmployees = new();

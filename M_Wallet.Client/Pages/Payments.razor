@@ -10,6 +10,8 @@
 
 <PageTitle>Payments</PageTitle>
 
+@* Payments page: outstanding invoices + payment history *@
+
 <MudText Typo="Typo.h3" GutterBottom="true">Payments</MudText>
 <MudText Class="mb-4">Manage customer payments and outstanding invoices</MudText>
 
@@ -162,12 +164,14 @@
     private bool IsInvoiceColumnVisible(string title) => _invoiceColumns.FirstOrDefault(c => c.Title == title)?.IsVisible ?? true;
     private bool IsPaymentColumnVisible(string title) => _paymentColumns.FirstOrDefault(c => c.Title == title)?.IsVisible ?? true;
 
+    // Load transactions/payments via shared service
     protected override async Task OnInitializedAsync()
     {
         await TransactionService.RefreshDataAsync();
         await LoadData();
     }
 
+    // Refresh local copies from service
     private async Task LoadData()
     {
         try
@@ -191,6 +195,7 @@
         return t.TotalAmount - GetPaidAmount(t);
     }
 
+    // Search filter for invoices
     private bool FilterFunc(Transaction t)
     {
         if (string.IsNullOrWhiteSpace(searchString)) return true;
@@ -199,6 +204,7 @@
         return false;
     }
 
+    // Open payment dialog for an invoice
     private async Task OpenPaymentDialog(Transaction transaction)
     {
         var balance = GetBalanceDue(transaction);
@@ -218,6 +224,7 @@
         }
     }
 
+    // Delete a payment and reload lists
     private async Task DeletePayment(Payment payment)
     {
         var confirm = await DialogService.ShowMessageBox(

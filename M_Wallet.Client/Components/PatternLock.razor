@@ -1,6 +1,7 @@
 @inject IJSRuntime JSRuntime
 @using MudBlazor
 
+@* SVG-based pattern drawing surface *@
 <div class="pattern-lock-container" @ref="containerRef">
     <svg width="200" height="200" viewBox="0 0 300 300" class="pattern-svg">
         <!-- Preview Line (Dynamic) -->
@@ -76,6 +77,7 @@
     private bool IsError = false;
     private string ErrorMessage = "";
 
+    // Flash error and reset pattern
     public async Task ShowError(string message)
     {
         IsError = true;
@@ -90,6 +92,7 @@
         StateHasChanged();
     }
 
+    // Begin a new pattern stroke
     private async Task StartDrawing(int index)
     {
         if (IsError) return;
@@ -99,6 +102,7 @@
         await JSRuntime.InvokeVoidAsync("window.updatePatternLockDot", containerRef, index);
     }
 
+    // Continue drawing, filling skipped midpoints
     private async Task ContinueDrawing(int index)
     {
         if (isDrawing && !selectedIndices.Contains(index))
@@ -141,6 +145,7 @@
     }
 
     [JSInvokable]
+    // Finish pattern and emit to caller
     public async Task StopDrawing()
     {
         if (isDrawing)
@@ -158,6 +163,7 @@
         }
     }
 
+    // Build SVG polyline from selected dots
     private string GetPolylinePoints()
     {
         if (selectedIndices.Count < 2) return "";
@@ -172,6 +178,7 @@
         return string.Join(" ", points);
     }
 
+    // Wire up JS helpers on first render
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
@@ -254,6 +261,7 @@
     }
 
     [JSInvokable]
+    // JS invokes when pointer enters a dot
     public async Task OnDotEnter(int index)
     {
         await ContinueDrawing(index);

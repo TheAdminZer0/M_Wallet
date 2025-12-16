@@ -7,11 +7,13 @@
 
 @implements IAsyncDisposable
 
+@* Camera scanner surface used both as page and dialog *@
 <MudContainer MaxWidth="MaxWidth.Small" Class="pa-4">
     <MudPaper Class="pa-4" Elevation="3">
         <MudStack Spacing="2">
             <MudText Typo="Typo.h5">Camera Scanner</MudText>
 
+            @* Camera selector when multiple devices are available *@
             @if (_devices.Count > 1)
             {
                 <MudSelect T="string"
@@ -47,7 +49,7 @@
     [Parameter]
     public EventCallback OnCancel { get; set; }
 
-    // If used as a page, we might not have these callbacks set, so we handle navigation manually
+    // Distinguish dialog usage (callbacks) from standalone page
     private bool _isDialogMode => OnDetected.HasDelegate;
 
     private readonly string _videoElementId = $"barcode-video-{Guid.NewGuid():N}";
@@ -56,6 +58,7 @@
     private string? _selectedDeviceId;
     private string _statusMessage = "Initializing camera…";
 
+    // Initialize camera list and start scanning on first render
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (!firstRender)
@@ -93,6 +96,7 @@
         StateHasChanged();
     }
 
+    // Start JS-side camera scanning for the selected device
     private async Task StartScannerAsync()
     {
         if (string.IsNullOrWhiteSpace(_selectedDeviceId))
@@ -120,12 +124,14 @@
         await RestartScannerAsync();
     }
 
+    // Restart with a different camera
     private async Task RestartScannerAsync()
     {
         await StopScannerAsync();
         await StartScannerAsync();
     }
 
+    // Stop video stream in JS
     private async Task StopScannerAsync()
     {
         try
@@ -138,6 +144,7 @@
     }
 
     [JSInvokable]
+    // JS callback when a barcode is decoded
     public async Task OnBarcodeDetected(string code)
     {
         if (string.IsNullOrWhiteSpace(code))
@@ -161,6 +168,7 @@
         }
     }
 
+    // Close dialog or navigate back without result
     private async Task CancelAsync()
     {
         await StopScannerAsync();
@@ -179,6 +187,7 @@
         NavigationManager.NavigateTo("/");
     }
 
+    // Cleanup camera stream when leaving
     public async ValueTask DisposeAsync()
     {
         await StopScannerAsync();

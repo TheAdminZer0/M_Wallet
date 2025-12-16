@@ -17,6 +17,7 @@
 
 <PageTitle>POS - Point of Sale</PageTitle>
 
+<!-- Success overlay after a completed sale -->
 <MudOverlay Visible="showSuccessOverlay" DarkBackground="true" Absolute="false" ZIndex="2000" OnClick="@(() => showSuccessOverlay = false)">
     <MudCard Class="pa-8 d-flex flex-column align-center justify-center gap-4" Style="width: 400px; max-width: 90vw; position: relative;">
         <MudIconButton Icon="@Icons.Material.Filled.Close" 
@@ -73,7 +74,7 @@
 </MudOverlay>
 
 <MudGrid Spacing="2">
-    <!-- Main Product Area -->
+    <!-- Main product browser (POS grid) -->
     <MudItem xs="12" md="8">
         <ProductBrowser Products="@products" 
                         OnProductClicked="@AddToCart"
@@ -83,7 +84,7 @@
         </ProductBrowser>
     </MudItem>
 
-    <!-- Checkout Sidebar -->
+    <!-- Checkout sidebar: cart + customer/delivery details -->
     <MudItem xs="12" md="4">
        
         <MudPaper Class="pa-4" Elevation="2" Style="position: sticky; top: 16px; background-color:var(--mud-palette-gray-lighter);">
@@ -405,6 +406,8 @@
 
 @code {
 
+    // POS state (cart, customers, drivers, payments)
+
     private List<Product>? products;
     private List<Person> customers = new();
     private List<Person> drivers = new();
@@ -466,7 +469,7 @@
 
     protected override async Task OnInitializedAsync()
     {
-        // Load state from CartService
+        // Restore persisted cart and customer/driver state from CartService
         if (CartService.CartItems != null && CartService.CartItems.Any())
         {
             cartItems = new List<TransactionItem>(CartService.CartItems);

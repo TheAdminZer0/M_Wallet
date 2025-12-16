@@ -5,6 +5,7 @@
 @inject HttpClient Http
 @inject ISnackbar Snackbar
 
+@* Pattern-based authorization control *@
 <PatternLock @ref="patternLock" OnPatternComplete="VerifyPattern" />
 
 @code {
@@ -12,6 +13,7 @@
     
     private PatternLock? patternLock;
 
+    // Verify drawn pattern with backend and emit authorized person
     private async Task VerifyPattern(string pattern)
     {
         try

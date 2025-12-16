@@ -20,6 +20,8 @@
 
 <PageTitle>Transactions</PageTitle>
 
+@* Filters and top-of-page load state *@
+
 @if (transactions == null)
 {
     <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
@@ -147,6 +149,7 @@ else
 
     @if (!string.IsNullOrWhiteSpace(filterDriver) || deliveriesOnly)
     {
+        @* Driver-focused summary banner when filtering deliveries *@
         <MudPaper Class="mb-2 pa-2 px-3" Elevation="2">
             <div class="d-flex align-center justify-space-between flex-wrap gap-2">
                 <div class="d-flex align-center gap-2">
@@ -184,6 +187,7 @@ else
     }
 
     <MudTabs Elevation="2" Rounded="true" ApplyEffectsToContainer="true" PanelClass="pa-0">
+        @* Orders tab: main transactions grid with expandable item rows *@
         <MudTabPanel Text="Orders" Icon="@Icons.Material.Filled.Receipt">
             @if (FilteredTransactions.Count() != transactions.Count)
             {
@@ -245,6 +249,7 @@ else
                             @if (IsTransactionColumnVisible("Employee")) { <MudTh Style="@($"width:{GetColumnWidth("Employee")}")"><MudTableSortLabel SortBy="new Func<Transaction, object>(x => x.EmployeeName)">Employee</MudTableSortLabel></MudTh> }
                             @if (IsTransactionColumnVisible("Actions")) { <MudTh Style="@($"width:{GetColumnWidth("Actions")}")">Actions</MudTh> }
                         </HeaderContent>
+                        @* Main rows: transaction summary per order *@
                         <RowTemplate>
                             @if (IsTransactionColumnVisible("Order")) {
                                 <MudTd DataLabel="Order">
@@ -258,7 +263,7 @@ else
                             }
                             @if (IsTransactionColumnVisible("Date")) { <MudTd DataLabel="Date" Style="white-space: nowrap;">@context.TransactionDate.ToLocalTime().ToString("yyyy/MM/dd hh:mm tt")</MudTd> }
                             @if (IsTransactionColumnVisible("Items")) { <MudTd DataLabel="Items">@string.Join(", ", context.Items.Select(i => i.Product?.Name ?? "Unknown").Distinct())</MudTd> }
-                            @if (IsTransactionColumnVisible("Quantity")) { <MudTd DataLabel="Quantity">@context.Items.Sum(i => i.Quantity)</MudTd> }
+                            @if (IsTransactionColumnVisible("Quantity")) { <MudTd DataLabel="Quantity"><b>@context.Items.Sum(i => i.Quantity)</b></MudTd> }
                             @if (IsTransactionColumnVisible("Cost"))
                             {
                                 <MudTd DataLabel="Cost">
@@ -266,7 +271,7 @@ else
                                         var cost = CalculateOrderCost(context);
                                     }
                                     <MudChip T="string" Size="Size.Small" Variant="Variant.Text" Color="Color.Info">
-                                        @cost.ToString("F2")
+                                        <b>@cost.ToString("F2")</b>
                                     </MudChip>
                                 </MudTd>
                             }
@@ -277,14 +282,14 @@ else
                                         var profit = CalculateOrderProfit(context);
                                     }
                                     <MudChip T="string" Size="Size.Small" Variant="Variant.Text" Color="@(profit > 0 ? Color.Success : Color.Error)">
-                                        @profit.ToString("F2")
+                                        <b>@profit.ToString("F2")</b>
                                     </MudChip>
                                 </MudTd>
                             }
                             @if (IsTransactionColumnVisible("Total")) {
                                 <MudTd DataLabel="Total">
                                     <MudChip T="string" Size="Size.Small" Variant="Variant.Text" Color="Color.Success">
-                                        @context.TotalAmount.ToString("F2")
+                                        <b>@context.TotalAmount.ToString("F2")</b>
                                     </MudChip>
                                 </MudTd>
                             }
@@ -302,8 +307,8 @@ else
                                     }
                                 </MudTd>
                             }
-                            @if (IsTransactionColumnVisible("Payment Status")) {
-                                <MudTd DataLabel="Payment Status">
+                            @if (IsTransactionColumnVisible("Payment")) {
+                                <MudTd DataLabel="Payment">
                                     @{
                                         var paid = context.PaymentAllocations?.Sum(pa => pa.Amount) ?? 0;
                                         var status = "Unpaid";
@@ -328,8 +333,8 @@ else
                                     <MudChip T="string" Size="Size.Small" Variant="Variant.Filled" Color="@color" OnClick="@((e) => (status == "Paid" || status == "Canceled") ? null : OpenPaymentDialog(context))" Style="@((status == "Paid" || status == "Canceled") ? "" : "cursor: pointer;")">@status</MudChip>
                                 </MudTd>
                             }
-                            @if (IsTransactionColumnVisible("Delivery Status")) {
-                                <MudTd DataLabel="Delivery Status">
+                            @if (IsTransactionColumnVisible("Delivery")) {
+                                <MudTd DataLabel="Delivery">
                                     @if (context.IsDelivery)
                                     {
                                         var isFinalized = context.Status == TransactionStatus.Completed || context.Status == TransactionStatus.Canceled;
@@ -384,85 +389,80 @@ else
                                 </MudTd>
                             }
                         </RowTemplate>
+                        @* Expanded rows: line items under a transaction *@
                         <ChildRowContent Context="trans">
                             @if (expandedTransactions.Contains(trans.Id))
                             {
-                                <MudTr>
-                                    <td colspan="20" class="pa-0">
-                                        <MudCard Elevation="0" Class="pa-0 rounded-0" Style="position: relative; background-color: var(--mud-palette-background-grey); border-bottom: 1px solid var(--mud-palette-lines-default);">
-                                            <div style="position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background-color: var(--mud-palette-primary); z-index: 1;"></div>
-                                            <div class="d-flex flex-column">
-                                                @foreach (var item in trans.Items)
-                                                {
-                                                    <div class="d-flex flex-row align-center" style="border-bottom: 1px solid var(--mud-palette-divider);">
-                                                        @if (IsTransactionColumnVisible("Order")) { <div style="@($"width:{GetColumnWidth("Order")}")"></div> }
-                                                        @if (IsTransactionColumnVisible("Date")) { <div style="@($"width:{GetColumnWidth("Date")}")"></div> }
-                                                        @if (IsTransactionColumnVisible("Items")) {
-                                                            <div class="py-1 px-4" style="@($"width:{GetColumnWidth("Items")}")">
-                                                                <div class="d-flex align-center">
-                                                                    <MudText Typo="Typo.caption" Class="mr-2" Color="Color.Default">(@item.UnitPrice.ToString("F2"))</MudText>
-                                                                    @if (item.Product != null)
-                                                                    {
-                                                                        <MudIconButton Icon="@Icons.Material.Filled.Info"
-                                                                                       Color="Color.Default"
-                                                                                       Size="Size.Small"
-                                                                                       Class="mr-2"
-                                                                                       OnClick="@(() => ShowProductDetails(item.Product!))" />
-                                                                    }
-                                                                    <MudText>@item.Product?.Name</MudText>
-                                                                </div>
-                                                            </div>
-                                                        }
-                                                        @if (IsTransactionColumnVisible("Quantity")) { <div class="py-1 px-4" style="@($"width:{GetColumnWidth("Quantity")}")">@item.Quantity</div> }
-                                                        @if (IsTransactionColumnVisible("Cost"))
-                                                        {
-                                                            <div class="py-1 px-4" style="@($"width:{GetColumnWidth("Cost")}")">
-                                                                <MudText Typo="Typo.body2" Color="Color.Info">
-                                                                    @(((item.UnitCost > 0 ? item.UnitCost : item.Product?.CostPrice ?? 0) * item.Quantity).ToString("F2"))
-                                                                </MudText>
-                                                            </div>
-                                                        }
-                                                        @if (IsTransactionColumnVisible("Profit"))
-                                                        {
-                                                            <div class="py-1 px-4" style="@($"width:{GetColumnWidth("Profit")}")">
-                                                                @{
-                                                                    var cost = item.UnitCost > 0 ? item.UnitCost : (item.Product?.CostPrice ?? 0);
-                                                                    var itemProfit = (item.UnitPrice - cost) * item.Quantity;
-                                                                }
-                                                                <MudText Typo="Typo.body2" Color="@(itemProfit > 0 ? Color.Success : Color.Error)">
-                                                                    <b>@itemProfit.ToString("F2")</b>
-                                                                </MudText>
-                                                            </div>
-                                                        }
-                                                        @if (IsTransactionColumnVisible("Total")) {
-                                                            <div class="py-1 px-4" style="@($"width:{GetColumnWidth("Total")}")">
-                                                                <b>@item.Subtotal.ToString("F2")</b>
-                                                            </div>
-                                                        }
-                                                        @if (IsTransactionColumnVisible("Discount")) { <div style="@($"width:{GetColumnWidth("Discount")}")"></div> }
-                                                        @if (IsTransactionColumnVisible("Payment Status")) { <div style="@($"width:{GetColumnWidth("Payment Status")}")"></div> }
-                                                        @if (IsTransactionColumnVisible("Delivery Status")) { <div style="@($"width:{GetColumnWidth("Delivery Status")}")"></div> }
-                                                        @if (IsTransactionColumnVisible("Driver")) { <div style="@($"width:{GetColumnWidth("Driver")}")"></div> }
-                                                        @if (IsTransactionColumnVisible("Customer")) { <div style="@($"width:{GetColumnWidth("Customer")}")"></div> }
-                                                        @if (IsTransactionColumnVisible("Note")) { <div style="@($"width:{GetColumnWidth("Note")}")"></div> }
-                                                        @if (IsTransactionColumnVisible("Employee")) { <div style="@($"width:{GetColumnWidth("Employee")}")"></div> }
-                                                        @if (IsTransactionColumnVisible("Actions")) { <div style="@($"width:{GetColumnWidth("Actions")}")"></div> }
-                                                    </div>
-                                                }
-                                            </div>
-                                            @if (trans.Discount > 0)
-                                            {
-                                                <div class="d-flex justify-end mt-2 gap-4 px-4">
-                                                     <MudText Typo="Typo.body2"><b>Subtotal:</b> @((trans.TotalAmount + trans.Discount).ToString("F2"))</MudText>
-                                                     <MudText Typo="Typo.body2" Color="Color.Error"><b>Discount:</b> -@trans.Discount.ToString("F2")</MudText>
-                                                     <MudText Typo="Typo.body2" Color="Color.Primary"><b>Total:</b> @trans.TotalAmount.ToString("F2")</MudText>
+                                @foreach (var item in trans.Items)
+                                {
+                                    <MudTr Style="background-color: var(--mud-palette-background-grey);">
+                                        @if (IsTransactionColumnVisible("Order")) { 
+                                            <MudTd Style="border-left: 4px solid var(--mud-palette-primary);"></MudTd> 
+                                        }
+                                        @if (IsTransactionColumnVisible("Date")) { <MudTd></MudTd> }
+                                        @if (IsTransactionColumnVisible("Items")) {
+                                            <MudTd>
+                                                <div class="d-flex align-center">
+                                                    <MudText Typo="Typo.caption" Class="mr-2" Color="Color.Default">(@item.UnitPrice.ToString("F2"))</MudText>
+                                                    @if (item.Product != null)
+                                                    {
+                                                        <MudIconButton Icon="@Icons.Material.Filled.Info"
+                                                                       Color="Color.Default"
+                                                                       Size="Size.Small"
+                                                                       Class="mr-2"
+                                                                       OnClick="@(() => ShowProductDetails(item.Product!))" />
+                                                    }
+                                                    <MudText>@item.Product?.Name</MudText>
                                                 </div>
-                                            }
-                                        </MudCard>
-                                    </td>
-                                </MudTr>
+                                            </MudTd>
+                                        }
+                                        @if (IsTransactionColumnVisible("Quantity")) { <MudTd><b>@item.Quantity</b></MudTd> }
+                                        @if (IsTransactionColumnVisible("Cost"))
+                                        {
+                                            <MudTd>
+                                                <MudText Typo="Typo.body2" Color="Color.Info">
+                                                    <b>@(((item.UnitCost > 0 ? item.UnitCost : item.Product?.CostPrice ?? 0) * item.Quantity).ToString("F2"))</b>
+                                                </MudText>
+                                            </MudTd>
+                                        }
+                                        @if (IsTransactionColumnVisible("Profit"))
+                                        {
+                                            <MudTd>
+                                                @{
+                                                    var cost = item.UnitCost > 0 ? item.UnitCost : (item.Product?.CostPrice ?? 0);
+                                                    var itemProfit = (item.UnitPrice - cost) * item.Quantity;
+                                                }
+                                                <MudText Typo="Typo.body2" Color="@(itemProfit > 0 ? Color.Success : Color.Error)">
+                                                    <b>@itemProfit.ToString("F2")</b>
+                                                </MudText>
+                                            </MudTd>
+                                        }
+                                        @if (IsTransactionColumnVisible("Total")) { <MudTd><b>@item.Subtotal.ToString("F2")</b></MudTd> }
+                                        @if (IsTransactionColumnVisible("Discount")) { <MudTd></MudTd> }
+                                        @if (IsTransactionColumnVisible("Payment")) { <MudTd></MudTd> }
+                                        @if (IsTransactionColumnVisible("Delivery")) { <MudTd></MudTd> }
+                                        @if (IsTransactionColumnVisible("Driver")) { <MudTd></MudTd> }
+                                        @if (IsTransactionColumnVisible("Customer")) { <MudTd></MudTd> }
+                                        @if (IsTransactionColumnVisible("Note")) { <MudTd></MudTd> }
+                                        @if (IsTransactionColumnVisible("Employee")) { <MudTd></MudTd> }
+                                        @if (IsTransactionColumnVisible("Actions")) { <MudTd></MudTd> }
+                                    </MudTr>
+                                }
+                                @if (trans.Discount > 0)
+                                {
+                                    <MudTr Style="background-color: var(--mud-palette-background-grey);">
+                                        <td colspan="20">
+                                            <div class="d-flex justify-end gap-4 px-4 py-1" style="border-left: 4px solid var(--mud-palette-primary);">
+                                                <MudText Typo="Typo.body2"><b>Subtotal:</b> @((trans.TotalAmount + trans.Discount).ToString("F2"))</MudText>
+                                                <MudText Typo="Typo.body2" Color="Color.Error"><b>Discount:</b> -@trans.Discount.ToString("F2")</MudText>
+                                                <MudText Typo="Typo.body2" Color="Color.Primary"><b>Total:</b> @trans.TotalAmount.ToString("F2")</MudText>
+                                            </div>
+                                        </td>
+                                    </MudTr>
+                                }
                             }
                         </ChildRowContent>
+                        @* Footer aggregates for currently filtered set *@
                         <FooterContent>
                             @if (IsTransactionColumnVisible("Order")) { <MudTh Style="font-weight: bold; background: var(--mud-palette-background-gray);">@FilteredTransactions.Count() orders</MudTh> }
                             @if (IsTransactionColumnVisible("Date")) { <MudTh Style="background: var(--mud-palette-background-gray);"></MudTh> }
@@ -491,6 +491,7 @@ else
             </MudPaper>
         </MudTabPanel>
 
+        @* Payments tab: payment history list *@
         <MudTabPanel Text="Payments" Icon="@Icons.Material.Filled.History">
             @if (payments == null)
             {
@@ -575,6 +576,7 @@ else
             }
         </MudTabPanel>
 
+        @* Outstanding invoices tab: unpaid transactions *@
         <MudTabPanel Text="Outstanding Invoices" Icon="@Icons.Material.Filled.PendingActions">
             @{
                 var unpaidTransactions = FilteredTransactions.Where(t => (t.TotalAmount - (t.PaymentAllocations?.Sum(pa => pa.Amount) ?? 0)) > 0.01m).ToList();
@@ -634,6 +636,7 @@ else
 }
 
 @code {
+    // UI state and cached data
     private List<Transaction>? transactions;
     private Dictionary<int, Transaction> _transactionsById = new();
     private List<Payment>? payments;
@@ -644,6 +647,7 @@ else
     private HashSet<int> expandedTransactions = new();
     private bool expandAll = false;
 
+    // Column visibility configuration per tab
     private List<ColumnDefinition> _transactionColumns = new()
     {
         new() { Title = "Order", IsVisible = true },
@@ -654,8 +658,8 @@ else
         new() { Title = "Profit", IsVisible = false },
         new() { Title = "Total", IsVisible = true },
         new() { Title = "Discount", IsVisible = true },
-        new() { Title = "Payment Status", IsVisible = true },
-        new() { Title = "Delivery Status", IsVisible = true },
+        new() { Title = "Payment", IsVisible = true },
+        new() { Title = "Delivery", IsVisible = true },
         new() { Title = "Driver", IsVisible = true },
         new() { Title = "Customer", IsVisible = true },
         new() { Title = "Note", IsVisible = true },
@@ -702,6 +706,7 @@ else
     private TransactionStatus? filterStatus;
     private bool deliveriesOnly;
 
+    // Count of active filters for badge display
     private int ActiveFilterCount =>
         (filterFromDate.HasValue ? 1 : 0) +
         (filterToDate.HasValue ? 1 : 0) +
@@ -710,6 +715,7 @@ else
         (!string.IsNullOrWhiteSpace(filterEmployee) ? 1 : 0) +
         (!string.IsNullOrWhiteSpace(filterDriver) ? 1 : 0);
 
+    // Apply all active filters to transactions
     private IEnumerable<Transaction> FilteredTransactions
     {
         get
@@ -775,6 +781,7 @@ else
         }
     }
 
+    // Apply filters to payments list
     private IEnumerable<Payment> FilteredPayments
     {
         get
@@ -822,6 +829,7 @@ else
         }
     }
 
+    // Text search across transaction fields
     private bool SearchFilter(Transaction transaction)
     {
         if (string.IsNullOrWhiteSpace(searchString))
@@ -841,6 +849,7 @@ else
         return false;
     }
 
+    // Initial load: honor driver query parameter then fetch data
     protected override async Task OnInitializedAsync()
     {
         // Check for driver query parameter
@@ -862,6 +871,7 @@ else
         await LoadData();
     }
 
+    // Fetch transactions/payments and build quick lookups
     private async Task LoadData()
     {
         try
@@ -905,6 +915,7 @@ else
         }
     }
 
+    // Highlight expanded rows
     private string RowStyleFunc(Transaction transaction, int index)
     {
         if (expandedTransactions.Contains(transaction.Id))
@@ -914,6 +925,7 @@ else
         return string.Empty;
     }
 
+    // Toggle expansion on row click
     private void OnRowClick(TableRowClickEventArgs<Transaction> args)
     {
         if (args.Item != null)
@@ -922,6 +934,7 @@ else
         }
     }
 
+    // Expand/collapse single transaction
     private void ToggleExpanded(int transactionId)
     {
         if (expandedTransactions.Contains(transactionId))
@@ -934,6 +947,7 @@ else
         }
     }
 
+    // Expand/collapse all visible transactions
     private void ToggleExpandAll()
     {
         expandAll = !expandAll;
@@ -953,6 +967,7 @@ else
         }
     }
 
+    // Reset all filters to defaults
     private void ClearFilters()
     {
         filterFromDate = null;
@@ -982,7 +997,7 @@ else
     private int GetDriverCanceledCount() => GetDeliveryBaseSet().Count(t => t.Status == TransactionStatus.Canceled);
     private decimal GetDriverTotalAmount() => GetDeliveryBaseSet().Where(t => t.Status != TransactionStatus.Canceled).Sum(t => t.TotalAmount);
     
-    // Footer totals for filtered transactions
+    // Footer totals for filtered transactions (excludes canceled)
     private decimal GetFilteredTotal() => FilteredTransactions.Where(t => t.Status != TransactionStatus.Canceled).Sum(t => t.TotalAmount);
     private int GetFilteredQuantity() => FilteredTransactions.Where(t => t.Status != TransactionStatus.Canceled).Sum(t => t.Items.Sum(i => i.Quantity));
     private decimal GetFilteredCost() => FilteredTransactions.Where(t => t.Status != TransactionStatus.Canceled).Sum(t => t.Items.Sum(i => i.UnitCost * i.Quantity));
@@ -991,6 +1006,7 @@ else
 
     private IDialogReference? _searchScannerDialog;
 
+    // Open barcode scanner dialog for quick search
     private async Task OpenSearchScannerAsync()
     {
         var parameters = new DialogParameters<M_Wallet.Client.Components.BarcodeScannerDialog>
@@ -1025,12 +1041,14 @@ else
         return Task.CompletedTask;
     }
 
+    // Sum cost for an order using unit cost fallbacks
     private decimal CalculateOrderCost(Transaction transaction)
     {
         return transaction.Items.Sum(item => 
             (item.UnitCost > 0 ? item.UnitCost : (item.Product?.CostPrice ?? 0)) * item.Quantity);
     }
 
+    // Gross profit minus discount for an order
     private decimal CalculateOrderProfit(Transaction transaction)
     {
         if (transaction.Items == null) return 0;
@@ -1042,6 +1060,7 @@ else
         return grossProfit - transaction.Discount;
     }
 
+    // Autocomplete: unique products search
     private Task<IEnumerable<Product>> SearchProducts(string value, CancellationToken token)
     {
         var products = GetUniqueProducts();
@@ -1050,6 +1069,7 @@ else
             : products.Where(x => x.Name.Contains(value, StringComparison.InvariantCultureIgnoreCase)));
     }
 
+    // Autocomplete: customers search
     private Task<IEnumerable<string>> SearchCustomers(string value, CancellationToken token)
     {
         var customers = GetUniqueCustomers();
@@ -1094,6 +1114,7 @@ else
             .ToList();
     }
 
+    // Autocomplete: employees search
     private Task<IEnumerable<string>> SearchEmployees(string value, CancellationToken token)
     {
         var employees = GetUniqueEmployees();
@@ -1114,6 +1135,7 @@ else
             .ToList();
     }
 
+    // Autocomplete: drivers search
     private Task<IEnumerable<string>> SearchDrivers(string value, CancellationToken token)
     {
         var drivers = GetUniqueDrivers();
@@ -1122,6 +1144,7 @@ else
             : drivers.Where(x => x.Contains(value, StringComparison.InvariantCultureIgnoreCase)));
     }
 
+    // Open payment dialog for a transaction
     private async Task OpenPaymentDialog(Transaction transaction)
     {
         var paid = transaction.PaymentAllocations?.Sum(pa => pa.Amount) ?? 0;
@@ -1144,6 +1167,7 @@ else
         }
     }
 
+    // View payment history dialog
     private async Task ShowPaymentHistory(Transaction transaction)
     {
         var parameters = new DialogParameters { ["Transaction"] = transaction };
@@ -1158,6 +1182,7 @@ else
         }
     }
 
+    // Show product details dialog
     private async Task ShowProductDetails(Product product)
     {
         var parameters = new DialogParameters { ["Product"] = product };
@@ -1165,18 +1190,21 @@ else
         await DialogService.ShowAsync<ProductDetailsDialog>(product.Name, parameters, options);
     }
 
+    // Trigger receipt print (thermal)
     private async Task PrintReceipt(Transaction transaction)
     {
         var html = _receiptService.GenerateReceiptHtml(transaction);
         await JSRuntime.InvokeVoidAsync("printer.printHtml", html);
     }
 
+    // Trigger invoice print (A4)
     private async Task PrintInvoice(Transaction transaction)
     {
         var html = _receiptService.GenerateInvoiceHtml(transaction);
         await JSRuntime.InvokeVoidAsync("printer.printHtml", html);
     }
 
+    // Edit inline note for a transaction
     private async Task EditNote(Transaction transaction)
     {
         var parameters = new DialogParameters<M_Wallet.Client.Components.NoteDialog>
@@ -1215,6 +1243,7 @@ else
         }
     }
 
+    // Delete a transaction after confirmation
     private async Task DeleteTransaction(Transaction transaction)
     {
         bool? result = await DialogService.ShowMessageBox(
@@ -1248,6 +1277,7 @@ else
         }
     }
 
+    // Delete a payment after confirmation
     private async Task DeletePayment(Payment payment)
     {
         bool? result = await DialogService.ShowMessageBox(
@@ -1278,6 +1308,7 @@ else
         }
     }
 
+    // Compute realized profit when this payment fully completes a transaction
     private decimal GetRealizedProfit(Payment payment)
     {
         decimal totalRealizedProfit = 0;
@@ -1327,6 +1358,7 @@ else
         return totalRealizedProfit;
     }
 
+    // Map transaction status to icon color
     private Color GetStatusColor(TransactionStatus status)
     {
         return status switch
@@ -1338,6 +1370,7 @@ else
         };
     }
 
+    // Update status via API and refresh cached data
     private async Task UpdateStatus(Transaction transaction, TransactionStatus newStatus)
     {
         if (transaction.Status == newStatus) return;
@@ -1362,6 +1395,7 @@ else
         }
     }
 
+    // Open delivery status dialog (optionally with payment)
     private async Task OpenStatusDialog(Transaction transaction)
     {
         var parameters = new DialogParameters { ["Transaction"] = transaction };
@@ -1385,6 +1419,7 @@ else
         }
     }
 
+    // Create a payment and persist via API
     private async Task ProcessPayment(Transaction transaction, decimal amount, string method)
     {
         try
@@ -1426,6 +1461,7 @@ else
         }
     }
 
+    // Column width map for fixed layout table
     private string GetColumnWidth(string columnName)
     {
         return columnName switch

@@ -2,6 +2,7 @@
 @using MudBlazor
 @inject IDialogService DialogService
 
+@* Read-only product details with zoomable image *@
 <MudDialog>
     <DialogContent>
         <MudGrid>
@@ -47,6 +48,7 @@
 
                 @if (Product.Barcodes != null && Product.Barcodes.Any())
                 {
+                    @* List any barcodes on the product *@
                     <MudText Typo="Typo.body1" Class="mb-2"><strong>Barcodes:</strong></MudText>
                     <div class="d-flex flex-wrap gap-1">
                         @foreach (var barcode in Product.Barcodes)
@@ -69,6 +71,7 @@
 
     private void Cancel() => MudDialog.Cancel();
 
+    // Open large zoom dialog for the product image
     private async Task OpenZoomDialog()
     {
         if (string.IsNullOrEmpty(Product.ImageUrl)) return;

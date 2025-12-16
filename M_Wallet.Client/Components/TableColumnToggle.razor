@@ -3,6 +3,7 @@
 @using MudBlazor
 @inject UserPreferencesService UserPreferences
 
+@* Column visibility toggler persisted via user preferences *@
 <MudMenu Icon="@Icons.Material.Filled.Settings" Color="Color.Default" Dense="true" AnchorOrigin="Origin.TopLeft" TransformOrigin="Origin.BottomLeft" MaxHeight="@MaxHeight">
     @foreach (var col in Columns)
     {
@@ -23,6 +24,7 @@
     [Parameter] public string TableName { get; set; } = "";
     [Parameter] public int MaxHeight { get; set; } = 300;
 
+    // Load persisted column visibility and apply defaults
     protected override async Task OnInitializedAsync()
     {
         if (!string.IsNullOrEmpty(TableName))
@@ -50,6 +52,7 @@
         }
     }
 
+    // Persist column toggle and notify parent
     private async Task UpdateColumn(ColumnDefinition col, bool isVisible)
     {
         col.IsVisible = isVisible;

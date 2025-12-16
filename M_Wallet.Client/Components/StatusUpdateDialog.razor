@@ -2,6 +2,7 @@
 @using M_Wallet.Shared.Models
 @using MudBlazor
 
+@* Delivery status selector with optional payment capture *@
 <MudDialog>
     <DialogContent>
         <MudGrid Class="mb-4">
@@ -25,6 +26,7 @@
             </MudItem>
         </MudGrid>
 
+        @* Optional payment block when delivered with balance remaining *@
         @if (Status == TransactionStatus.Completed && Balance > 0)
         {
             <MudPaper Class="pa-4" Elevation="0" Outlined="true" Style="background-color: var(--mud-palette-background-grey);">
@@ -70,6 +72,7 @@
     private string PaymentMethod { get; set; } = "Cash";
     private decimal Balance { get; set; }
 
+    // Seed current status and balance
     protected override void OnInitialized()
     {
         Status = Transaction.Status;
@@ -79,6 +82,7 @@
         PaymentAmount = Balance;
     }
 
+    // Toggle selected status button
     private void SetStatus(TransactionStatus status)
     {
         Status = status;
@@ -86,6 +90,7 @@
 
     private void Cancel() => MudDialog.Cancel();
 
+    // Return selected status and payment choice
     private void Submit()
     {
         MudDialog.Close(DialogResult.Ok(new StatusUpdateResult 

@@ -10,6 +10,8 @@
 
 <PageTitle>Product Management</PageTitle>
 
+<!-- Product catalog management with search, barcode scan, and column toggles -->
+
 @if (products == null)
 {
     <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
@@ -223,6 +225,7 @@ else
         }
     }
 
+    // Dialog helpers for add/edit details
     private async Task OpenAddDialog()
     {
         var product = new Product();

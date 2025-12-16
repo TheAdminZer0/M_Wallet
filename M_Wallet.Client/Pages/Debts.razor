@@ -7,6 +7,8 @@
 
 <PageTitle>Financial Dashboard</PageTitle>
 
+@* Financial dashboard: assets, liabilities, cash flow *@
+
 <MudText Typo="Typo.h3" GutterBottom="true">Financial Dashboard</MudText>
 <MudText Class="mb-4">Overview of assets, liabilities, and cash flow.</MudText>
 
@@ -162,6 +164,7 @@ else
 </style>
 
 @code {
+    // State + fetched data sets
     private bool isLoading = true;
     private List<Purchase> purchases = new();
     private List<Product> products = new();
@@ -183,6 +186,7 @@ else
     private Dictionary<string, decimal> SupplierDebts = new();
     private Dictionary<string, decimal> EmployeeDebts = new();
 
+    // Load purchases/products/transactions/payments then calculate metrics
     protected override async Task OnInitializedAsync()
     {
         try
@@ -213,6 +217,7 @@ else
         }
     }
 
+    // Build supplier/employee debt summaries
     private void CalculateDebts()
     {
         SupplierDebts = purchases
@@ -226,6 +231,7 @@ else
             .ToDictionary(g => g.Key, g => g.Sum(p => p.TotalAmount));
     }
 
+    // Allocate payments into cost/profit/unallocated buckets
     private void CalculateFoundryBreakdown()
     {
         TotalRecoupedCost = 0;
@@ -300,6 +306,7 @@ else
         }
     }
 
+    // Statement for cash inflow/outflow (Foundry)
     private async Task ShowFoundryStatement()
     {
         var items = new List<StatementItem>();
@@ -325,6 +332,7 @@ else
         await ShowStatement("The Foundry Statement", items);
     }
 
+    // Statement for inventory value movement
     private async Task ShowInventoryStatement()
     {
         var items = new List<StatementItem>();
@@ -371,6 +379,7 @@ else
         await ShowStatement("Inventory Value Statement", items);
     }
 
+    // Helper to show statement dialog with running balance
     private async Task ShowStatement(string title, List<StatementItem> items)
     {
         items = items.OrderBy(i => i.Date).ToList();

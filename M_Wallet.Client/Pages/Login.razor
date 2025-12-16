@@ -7,6 +7,7 @@
 @inject CustomAuthenticationStateProvider AuthStateProvider
 @inject NavigationManager Navigation
 
+@* Login page with return URL support *@
 <MudContainer MaxWidth="MaxWidth.Small" Class="mt-16">
     @if (isCheckingAuth)
     {
@@ -41,6 +42,7 @@
     [SupplyParameterFromQuery]
     public string? ReturnUrl { get; set; }
 
+    // If already authenticated, skip to home/return URL
     protected override async Task OnInitializedAsync()
     {
         var authState = await AuthStateProvider.GetAuthenticationStateAsync();
@@ -50,6 +52,7 @@
         }
     }
 
+    // Turn off splash after initial render
     protected override void OnAfterRender(bool firstRender)
     {
         if (firstRender && isCheckingAuth)
@@ -59,6 +62,7 @@
         }
     }
 
+    // Attempt login and navigate accordingly
     private async Task DoLogin()
     {
         error = false;
@@ -73,6 +77,7 @@
         }
     }
 
+    // Redirect to requested page or home
     private void NavigateToReturnUrl()
     {
         if (!string.IsNullOrEmpty(ReturnUrl))

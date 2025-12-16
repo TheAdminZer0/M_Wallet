@@ -6,6 +6,7 @@
 @using MudBlazor
 @inherits ComponentBase
 
+@* Driver delivery queue with quick status/payment actions *@
 <div class="pa-4">
     <MudStack Spacing="2">
         <MudStack Direction="Row" Spacing="2" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.SpaceBetween">
@@ -31,6 +32,7 @@
         }
         else
         {
+            @* Pending deliveries list *@
             <MudList Dense="true" Class="pa-0" T="Transaction">
                 @foreach (var order in Pending)
                 {
@@ -78,11 +80,13 @@
     private int DeliveredCount => deliveries.Count(d => d.Status == TransactionStatus.Completed);
     private int CanceledCount => deliveries.Count(d => d.Status == TransactionStatus.Canceled);
 
+    // Load deliveries for the provided driver
     protected override async Task OnInitializedAsync()
     {
         await LoadDeliveries();
     }
 
+    // Fetch driver deliveries and prime default payment amounts
     private async Task LoadDeliveries()
     {
         if (Driver == null)
@@ -113,6 +117,7 @@
         }
     }
 
+    // Update transaction status via API
     private async Task UpdateStatusAsync(Transaction order, TransactionStatus newStatus)
     {
         try
@@ -134,6 +139,7 @@
         }
     }
 
+    // Optionally create payment then mark delivered
     private async Task MarkDeliveredAsync(Transaction order)
     {
         var amount = GetAmount(order);
@@ -169,6 +175,7 @@
         await UpdateStatusAsync(order, TransactionStatus.Completed);
     }
 
+    // Get cached editable amount per order
     private decimal GetAmount(Transaction order)
     {
         return paymentAmounts.TryGetValue(order.Id, out var amount) ? amount : order.TotalAmount;
