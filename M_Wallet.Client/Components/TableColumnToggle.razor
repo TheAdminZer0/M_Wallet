@@ -3,7 +3,7 @@
 @using MudBlazor
 @inject UserPreferencesService UserPreferences
 
-<MudMenu Icon="@Icons.Material.Filled.Settings" Color="Color.Default" Dense="true" AnchorOrigin="Origin.TopLeft" TransformOrigin="Origin.BottomLeft">
+<MudMenu Icon="@Icons.Material.Filled.Settings" Color="Color.Default" Dense="true" AnchorOrigin="Origin.TopLeft" TransformOrigin="Origin.BottomLeft" MaxHeight="@MaxHeight">
     @foreach (var col in Columns)
     {
         <MudMenuItem Style="min-width: 150px;">
@@ -21,6 +21,7 @@
     [Parameter] public List<ColumnDefinition> Columns { get; set; } = new();
     [Parameter] public EventCallback ColumnsChanged { get; set; }
     [Parameter] public string TableName { get; set; } = "";
+    [Parameter] public int MaxHeight { get; set; } = 300;
 
     protected override async Task OnInitializedAsync()
     {

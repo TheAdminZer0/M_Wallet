@@ -6,6 +6,7 @@
 @inject ReceiptService _receiptService
 @inject TransactionService TransactionService
 @inject CustomAuthenticationStateProvider AuthStateProvider
+@inject NavigationManager NavigationManager
 @using M_Wallet.Client.Models
 @using M_Wallet.Client.Services
 @using M_Wallet.Client.Components
@@ -25,18 +26,19 @@
 }
 else
 {
-    <!-- Filters Section -->
-    <MudPaper Class="mb-4 pa-1" Elevation="2">
-        
+    <!-- Filters Section - Collapsible -->
+    <MudPaper Class="mb-2 pa-2" Elevation="2" Style="overflow: visible;">
         <MudGrid Spacing="1" Class="align-center">
-            <MudItem xs="6" sm="4" md="2">
-                <MudDatePicker Label="From" 
-                               @bind-Date="filterFromDate" 
-                               Variant="Variant.Outlined"
-                               Margin="Margin.Dense"
-                               Clearable="true"
-                               MaxDate="@DateTime.Today" />
-            </MudItem>
+            @if (filtersExpanded)
+            {
+                <MudItem xs="6" sm="4" md="2">
+                    <MudDatePicker Label="From" 
+                                   @bind-Date="filterFromDate" 
+                                   Variant="Variant.Outlined"
+                                   Margin="Margin.Dense"
+                                   Clearable="true"
+                                   MaxDate="@DateTime.Today" />
+                </MudItem>
                 <MudItem xs="6" sm="4" md="2">
                     <MudDatePicker Label="To" 
                                    @bind-Date="filterToDate" 
@@ -59,7 +61,7 @@ else
                                      Virtualize="true"
                                      AdornmentIcon="@Icons.Material.Filled.Search" />
                 </MudItem>
-                <MudItem xs="6" sm="6" md="2">
+                <MudItem xs="6" sm="4" md="2">
                     <MudAutocomplete T="string" 
                                      Label="Customer" 
                                      @bind-Value="filterCustomer"
@@ -72,7 +74,7 @@ else
                                      Virtualize="true"
                                      AdornmentIcon="@Icons.Material.Filled.Search" />
                 </MudItem>
-                <MudItem xs="6" sm="6" md="2">
+                <MudItem xs="6" sm="4" md="2">
                     <MudAutocomplete T="string" 
                                      Label="Employee" 
                                      @bind-Value="filterEmployee"
@@ -85,7 +87,7 @@ else
                                      Virtualize="true"
                                      AdornmentIcon="@Icons.Material.Filled.Search" />
                 </MudItem>
-                <MudItem xs="6" sm="6" md="2">
+                <MudItem xs="5" sm="3" md="1">
                     <MudAutocomplete T="string" 
                                      Label="Driver" 
                                      @bind-Value="filterDriver"
@@ -98,24 +100,88 @@ else
                                      Virtualize="true"
                                      AdornmentIcon="@Icons.Material.Filled.Search" />
                 </MudItem>
-                <MudItem xs="6" sm="2" md="1" Class="d-flex justify-center align-center">
-                    <MudTooltip Text="Clear Filters">
+                <MudItem xs="1" sm="1" md="1" Class="d-flex justify-end align-center gap-1">
+                    @if (ActiveFilterCount > 0)
+                    {
                         <MudIconButton Icon="@Icons.Material.Filled.FilterAltOff" 
                                        Color="Color.Error" 
+                                       Size="Size.Small"
                                        OnClick="ClearFilters"
-                                       Size="Size.Medium" />
-                    </MudTooltip>
+                                       Title="Clear All Filters" />
+                    }
+                    <MudIconButton Icon="@Icons.Material.Filled.ExpandLess" 
+                                   Size="Size.Small"
+                                   OnClick="() => filtersExpanded = false"
+                                   Title="Collapse Filters" />
                 </MudItem>
-                <MudItem xs="6" sm="2" md="1" Class="d-flex justify-center align-center">
-                    <MudTooltip Text="@(showProfit ? "Hide Profit" : "Show Profit")">
-                        <MudIconButton Icon="@(showProfit ? Icons.Material.Filled.VisibilityOff : Icons.Material.Filled.Visibility)" 
-                                       Color="@(showProfit ? Color.Primary : Color.Default)" 
-                                       OnClick="ToggleProfitVisibility"
-                                       Size="Size.Medium" />
-                    </MudTooltip>
+            }
+            else
+            {
+                <MudItem xs="12" Class="d-flex align-center justify-space-between">
+                    <div class="d-flex align-center gap-2">
+                        <MudIcon Icon="@Icons.Material.Filled.FilterList" Size="Size.Small" Color="Color.Primary" />
+                        <MudText Typo="Typo.body2" Color="Color.Primary">Filters</MudText>
+                        @if (ActiveFilterCount > 0)
+                        {
+                            <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Filled">@ActiveFilterCount active</MudChip>
+                        }
+                    </div>
+                    <div class="d-flex align-center gap-1">
+                        @if (ActiveFilterCount > 0)
+                        {
+                            <MudIconButton Icon="@Icons.Material.Filled.FilterAltOff" 
+                                           Color="Color.Error" 
+                                           Size="Size.Small"
+                                           OnClick="ClearFilters"
+                                           Title="Clear All Filters" />
+                        }
+                        <MudIconButton Icon="@Icons.Material.Filled.ExpandMore" 
+                                       Size="Size.Small"
+                                       OnClick="() => filtersExpanded = true"
+                                       Title="Expand Filters" />
+                    </div>
                 </MudItem>
+            }
         </MudGrid>
     </MudPaper>
+
+    @if (!string.IsNullOrWhiteSpace(filterDriver) || deliveriesOnly)
+    {
+        <MudPaper Class="mb-2 pa-2 px-3" Elevation="2">
+            <div class="d-flex align-center justify-space-between flex-wrap gap-2">
+                <div class="d-flex align-center gap-2">
+                    <MudIcon Icon="@Icons.Material.Filled.LocalShipping" Color="Color.Primary" Size="Size.Small" />
+                    <MudText Typo="Typo.subtitle1" Class="font-weight-bold">@(string.IsNullOrWhiteSpace(filterDriver) ? "All Deliveries" : filterDriver)</MudText>
+                    @if (!string.IsNullOrWhiteSpace(filterDriver))
+                    {
+                        <MudButton Variant="Variant.Text" Size="Size.Small" OnClick="@(() => { filterDriver = null; deliveriesOnly = true; })">Show All Drivers</MudButton>
+                    }
+                    else
+                    {
+                        <MudButton Variant="Variant.Text" Size="Size.Small" Color="Color.Error" OnClick="@(() => { deliveriesOnly = false; filterStatus = null; })">Clear</MudButton>
+                    }
+                </div>
+                <div class="d-flex gap-2 align-center">
+                    <MudPaper @onclick="@(() => filterStatus = null)" Class="px-3 py-1 d-flex align-center gap-2 rounded cursor-pointer" Elevation="@(filterStatus == null ? 2 : 0)" Style="@(filterStatus == null ? "background: rgba(var(--mud-palette-primary-rgb), 0.25); outline: 2px solid var(--mud-palette-primary);" : "background: rgba(128,128,128,0.1);")">
+                        <MudText Typo="Typo.subtitle1" Class="font-weight-bold">@GetDeliveryTotalCount()</MudText>
+                        <MudText Typo="Typo.caption">All</MudText>
+                    </MudPaper>
+                    <MudPaper @onclick="@(() => filterStatus = TransactionStatus.Pending)" Class="px-3 py-1 d-flex align-center gap-2 rounded cursor-pointer" Elevation="@(filterStatus == TransactionStatus.Pending ? 2 : 0)" Style="@(filterStatus == TransactionStatus.Pending ? "background: rgba(var(--mud-palette-warning-rgb), 0.35); outline: 2px solid var(--mud-palette-warning);" : "background: rgba(var(--mud-palette-warning-rgb), 0.15);")">
+                        <MudText Typo="Typo.subtitle1" Style="color: var(--mud-palette-warning);" Class="font-weight-bold">@GetDriverPendingCount()</MudText>
+                        <MudText Typo="Typo.caption">Pending</MudText>
+                    </MudPaper>
+                    <MudPaper @onclick="@(() => filterStatus = TransactionStatus.Completed)" Class="px-3 py-1 d-flex align-center gap-2 rounded cursor-pointer" Elevation="@(filterStatus == TransactionStatus.Completed ? 2 : 0)" Style="@(filterStatus == TransactionStatus.Completed ? "background: rgba(var(--mud-palette-success-rgb), 0.35); outline: 2px solid var(--mud-palette-success);" : "background: rgba(var(--mud-palette-success-rgb), 0.15);")">
+                        <MudText Typo="Typo.subtitle1" Style="color: var(--mud-palette-success);" Class="font-weight-bold">@GetDriverDeliveredCount()</MudText>
+                        <MudText Typo="Typo.caption">Delivered</MudText>
+                    </MudPaper>
+                    <MudPaper @onclick="@(() => filterStatus = TransactionStatus.Canceled)" Class="px-3 py-1 d-flex align-center gap-2 rounded cursor-pointer" Elevation="@(filterStatus == TransactionStatus.Canceled ? 2 : 0)" Style="@(filterStatus == TransactionStatus.Canceled ? "background: rgba(var(--mud-palette-error-rgb), 0.35); outline: 2px solid var(--mud-palette-error);" : "background: rgba(var(--mud-palette-error-rgb), 0.15);")">
+                        <MudText Typo="Typo.subtitle1" Style="color: var(--mud-palette-error);" Class="font-weight-bold">@GetDriverCanceledCount()</MudText>
+                        <MudText Typo="Typo.caption">Canceled</MudText>
+                    </MudPaper>
+                </div>
+            </div>
+        </MudPaper>
+    }
 
     <MudTabs Elevation="2" Rounded="true" ApplyEffectsToContainer="true" PanelClass="pa-0">
         <MudTabPanel Text="Orders" Icon="@Icons.Material.Filled.Receipt">
@@ -140,14 +206,12 @@ else
                               T="Transaction"
                               Class="fixed-layout-table">
                         <ToolBarContent>
-                            <MudSpacer />
-                            <MudButton Variant="Variant.Outlined" 
-                                       Color="Color.Primary"
-                                       StartIcon="@(expandAll ? Icons.Material.Filled.UnfoldLess : Icons.Material.Filled.UnfoldMore)"
-                                       OnClick="ToggleExpandAll"
-                                       Class="mr-2">
-                                @(expandAll ? "Collapse All" : "Expand All")
-                            </MudButton>
+                            <MudIconButton Icon="@Icons.Material.Filled.QrCodeScanner"
+                                           Color="Color.Primary"
+                                           Size="Size.Medium"
+                                           Title="Scan barcode to search"
+                                           OnClick="OpenSearchScannerAsync"
+                                           Class="mr-2" />
                             <MudTextField @bind-Value="searchString" 
                                           Placeholder="Search" 
                                           Adornment="Adornment.Start" 
@@ -156,17 +220,21 @@ else
                                           Class="mt-0"
                                           Immediate="true">
                             </MudTextField>
+                            <MudIconButton Icon="@(expandAll ? Icons.Material.Filled.UnfoldLess : Icons.Material.Filled.UnfoldMore)"
+                                           Color="Color.Primary"
+                                           Size="Size.Medium"
+                                           OnClick="ToggleExpandAll"
+                                           Title="@(expandAll ? "Collapse All" : "Expand All")"
+                                           Class="ml-2" />
+                            <MudSpacer />
                         </ToolBarContent>
                         <HeaderContent>
-                            @if (IsTransactionColumnVisible("Order ID")) { <MudTh Style="@($"width:{GetColumnWidth("Order ID")}")"><MudTableSortLabel InitialDirection="SortDirection.Descending" SortBy="new Func<Transaction, object>(x => x.Id)">Order ID</MudTableSortLabel></MudTh> }
+                            @if (IsTransactionColumnVisible("Order")) { <MudTh Style="@($"width:{GetColumnWidth("Order")}")"><MudTableSortLabel InitialDirection="SortDirection.Descending" SortBy="new Func<Transaction, object>(x => x.Id)">Order</MudTableSortLabel></MudTh> }
                             @if (IsTransactionColumnVisible("Date")) { <MudTh Style="@($"width:{GetColumnWidth("Date")}")"><MudTableSortLabel SortBy="new Func<Transaction, object>(x => x.TransactionDate)">Date</MudTableSortLabel></MudTh> }
                             @if (IsTransactionColumnVisible("Items")) { <MudTh Style="@($"width:{GetColumnWidth("Items")}")">Items</MudTh> }
                             @if (IsTransactionColumnVisible("Quantity")) { <MudTh Style="@($"width:{GetColumnWidth("Quantity")}")"><MudTableSortLabel SortBy="new Func<Transaction, object>(x => x.Items.Sum(i => i.Quantity))">Quantity</MudTableSortLabel></MudTh> }
-                            @if (showProfit)
-                            {
-                                <MudTh Style="@($"width:{GetColumnWidth("Cost")}")">Cost (LD)</MudTh>
-                                <MudTh Style="@($"width:{GetColumnWidth("Profit")}")">Profit (LD)</MudTh>
-                            }
+                            @if (IsTransactionColumnVisible("Cost")) { <MudTh Style="@($"width:{GetColumnWidth("Cost")}")">Cost (LD)</MudTh> }
+                            @if (IsTransactionColumnVisible("Profit")) { <MudTh Style="@($"width:{GetColumnWidth("Profit")}")">Profit (LD)</MudTh> }
                             @if (IsTransactionColumnVisible("Total")) { <MudTh Style="@($"width:{GetColumnWidth("Total")}")"><MudTableSortLabel SortBy="new Func<Transaction, object>(x => x.TotalAmount)">Total (LD)</MudTableSortLabel></MudTh> }
                             @if (IsTransactionColumnVisible("Discount")) { <MudTh Style="@($"width:{GetColumnWidth("Discount")}")"><MudTableSortLabel SortBy="new Func<Transaction, object>(x => x.Discount)">Discount</MudTableSortLabel></MudTh> }
                             @if (IsTransactionColumnVisible("Payment")) { <MudTh Style="@($"width:{GetColumnWidth("Payment")}")">Payment</MudTh> }
@@ -178,8 +246,8 @@ else
                             @if (IsTransactionColumnVisible("Actions")) { <MudTh Style="@($"width:{GetColumnWidth("Actions")}")">Actions</MudTh> }
                         </HeaderContent>
                         <RowTemplate>
-                            @if (IsTransactionColumnVisible("Order ID")) {
-                                <MudTd DataLabel="Order ID">
+                            @if (IsTransactionColumnVisible("Order")) {
+                                <MudTd DataLabel="Order">
                                     <div class="d-flex align-center">
                                         <MudIcon Icon="@(expandedTransactions.Contains(context.Id) ? Icons.Material.Filled.ExpandLess : Icons.Material.Filled.ExpandMore)"
                                                  Size="Size.Small" 
@@ -191,7 +259,7 @@ else
                             @if (IsTransactionColumnVisible("Date")) { <MudTd DataLabel="Date" Style="white-space: nowrap;">@context.TransactionDate.ToLocalTime().ToString("yyyy/MM/dd hh:mm tt")</MudTd> }
                             @if (IsTransactionColumnVisible("Items")) { <MudTd DataLabel="Items">@string.Join(", ", context.Items.Select(i => i.Product?.Name ?? "Unknown").Distinct())</MudTd> }
                             @if (IsTransactionColumnVisible("Quantity")) { <MudTd DataLabel="Quantity">@context.Items.Sum(i => i.Quantity)</MudTd> }
-                            @if (showProfit)
+                            @if (IsTransactionColumnVisible("Cost"))
                             {
                                 <MudTd DataLabel="Cost">
                                     @{
@@ -201,6 +269,9 @@ else
                                         @cost.ToString("F2")
                                     </MudChip>
                                 </MudTd>
+                            }
+                            @if (IsTransactionColumnVisible("Profit"))
+                            {
                                 <MudTd DataLabel="Profit">
                                     @{
                                         var profit = CalculateOrderProfit(context);
@@ -324,7 +395,7 @@ else
                                                 @foreach (var item in trans.Items)
                                                 {
                                                     <div class="d-flex flex-row align-center" style="border-bottom: 1px solid var(--mud-palette-divider);">
-                                                        @if (IsTransactionColumnVisible("Order ID")) { <div style="@($"width:{GetColumnWidth("Order ID")}")"></div> }
+                                                        @if (IsTransactionColumnVisible("Order")) { <div style="@($"width:{GetColumnWidth("Order")}")"></div> }
                                                         @if (IsTransactionColumnVisible("Date")) { <div style="@($"width:{GetColumnWidth("Date")}")"></div> }
                                                         @if (IsTransactionColumnVisible("Items")) {
                                                             <div class="py-1 px-4" style="@($"width:{GetColumnWidth("Items")}")">
@@ -343,13 +414,16 @@ else
                                                             </div>
                                                         }
                                                         @if (IsTransactionColumnVisible("Quantity")) { <div class="py-1 px-4" style="@($"width:{GetColumnWidth("Quantity")}")">@item.Quantity</div> }
-                                                        @if (showProfit)
+                                                        @if (IsTransactionColumnVisible("Cost"))
                                                         {
                                                             <div class="py-1 px-4" style="@($"width:{GetColumnWidth("Cost")}")">
                                                                 <MudText Typo="Typo.body2" Color="Color.Info">
                                                                     @(((item.UnitCost > 0 ? item.UnitCost : item.Product?.CostPrice ?? 0) * item.Quantity).ToString("F2"))
                                                                 </MudText>
                                                             </div>
+                                                        }
+                                                        @if (IsTransactionColumnVisible("Profit"))
+                                                        {
                                                             <div class="py-1 px-4" style="@($"width:{GetColumnWidth("Profit")}")">
                                                                 @{
                                                                     var cost = item.UnitCost > 0 ? item.UnitCost : (item.Product?.CostPrice ?? 0);
@@ -389,9 +463,26 @@ else
                                 </MudTr>
                             }
                         </ChildRowContent>
+                        <FooterContent>
+                            @if (IsTransactionColumnVisible("Order")) { <MudTh Style="font-weight: bold; background: var(--mud-palette-background-gray);">@FilteredTransactions.Count() orders</MudTh> }
+                            @if (IsTransactionColumnVisible("Date")) { <MudTh Style="background: var(--mud-palette-background-gray);"></MudTh> }
+                            @if (IsTransactionColumnVisible("Items")) { <MudTh Style="background: var(--mud-palette-background-gray);"></MudTh> }
+                            @if (IsTransactionColumnVisible("Quantity")) { <MudTh Style="font-weight: bold; background: var(--mud-palette-background-gray);">@GetFilteredQuantity()</MudTh> }
+                            @if (IsTransactionColumnVisible("Cost")) { <MudTh Style="font-weight: bold; background: var(--mud-palette-background-gray);">@GetFilteredCost().ToString("N2")</MudTh> }
+                            @if (IsTransactionColumnVisible("Profit")) { <MudTh Style="font-weight: bold; background: var(--mud-palette-background-gray);">@GetFilteredProfit().ToString("N2")</MudTh> }
+                            @if (IsTransactionColumnVisible("Total")) { <MudTh Style="font-weight: bold; background: var(--mud-palette-background-gray);">@GetFilteredTotal().ToString("N2")</MudTh> }
+                            @if (IsTransactionColumnVisible("Discount")) { <MudTh Style="font-weight: bold; background: var(--mud-palette-background-gray);">@GetFilteredDiscount().ToString("N2")</MudTh> }
+                            @if (IsTransactionColumnVisible("Payment")) { <MudTh Style="background: var(--mud-palette-background-gray);"></MudTh> }
+                            @if (IsTransactionColumnVisible("Delivery")) { <MudTh Style="background: var(--mud-palette-background-gray);"></MudTh> }
+                            @if (IsTransactionColumnVisible("Driver")) { <MudTh Style="background: var(--mud-palette-background-gray);"></MudTh> }
+                            @if (IsTransactionColumnVisible("Customer")) { <MudTh Style="background: var(--mud-palette-background-gray);"></MudTh> }
+                            @if (IsTransactionColumnVisible("Note")) { <MudTh Style="background: var(--mud-palette-background-gray);"></MudTh> }
+                            @if (IsTransactionColumnVisible("Employee")) { <MudTh Style="background: var(--mud-palette-background-gray);"></MudTh> }
+                            @if (IsTransactionColumnVisible("Actions")) { <MudTh Style="background: var(--mud-palette-background-gray);"></MudTh> }
+                        </FooterContent>
                         <PagerContent>
                             <div class="d-flex align-center justify-space-between px-4 py-2">
-                                <TableColumnToggle Columns="@_transactionColumns" ColumnsChanged="StateHasChanged" TableName="Transactions" />
+                                <TableColumnToggle Columns="@_transactionColumns" ColumnsChanged="StateHasChanged" TableName="Transactions" MaxHeight="400" />
                                 <MudTablePager />
                             </div>
                         </PagerContent>
@@ -501,7 +592,7 @@ else
                         <MudTextField @bind-Value="searchString" Placeholder="Search" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium" Class="mt-0"></MudTextField>
                     </ToolBarContent>
                     <HeaderContent>
-                        @if (IsInvoiceColumnVisible("Order ID")) { <MudTh>Order ID</MudTh> }
+                        @if (IsInvoiceColumnVisible("Order")) { <MudTh>Order</MudTh> }
                         @if (IsInvoiceColumnVisible("Date")) { <MudTh>Date</MudTh> }
                         @if (IsInvoiceColumnVisible("Customer")) { <MudTh>Customer</MudTh> }
                         @if (IsInvoiceColumnVisible("Total")) { <MudTh>Total</MudTh> }
@@ -510,7 +601,7 @@ else
                         @if (IsInvoiceColumnVisible("Action")) { <MudTh>Action</MudTh> }
                     </HeaderContent>
                     <RowTemplate>
-                        @if (IsInvoiceColumnVisible("Order ID")) { <MudTd DataLabel="Order ID">#@context.Id</MudTd> }
+                        @if (IsInvoiceColumnVisible("Order")) { <MudTd DataLabel="Order">#@context.Id</MudTd> }
                         @if (IsInvoiceColumnVisible("Date")) { <MudTd DataLabel="Date" Style="white-space: nowrap;">@context.TransactionDate.ToLocalTime().ToString("yyyy/MM/dd")</MudTd> }
                         @if (IsInvoiceColumnVisible("Customer")) { <MudTd DataLabel="Customer">@(context.CustomerName ?? "Walk-in")</MudTd> }
                         @if (IsInvoiceColumnVisible("Total")) { <MudTd DataLabel="Total">LD @context.TotalAmount.ToString("F2")</MudTd> }
@@ -552,14 +643,15 @@ else
     private string paymentSearchString = "";
     private HashSet<int> expandedTransactions = new();
     private bool expandAll = false;
-    private bool showProfit = false;
 
     private List<ColumnDefinition> _transactionColumns = new()
     {
-        new() { Title = "Order ID", IsVisible = true },
+        new() { Title = "Order", IsVisible = true },
         new() { Title = "Date", IsVisible = true },
         new() { Title = "Items", IsVisible = true },
         new() { Title = "Quantity", IsVisible = true },
+        new() { Title = "Cost", IsVisible = false },
+        new() { Title = "Profit", IsVisible = false },
         new() { Title = "Total", IsVisible = true },
         new() { Title = "Discount", IsVisible = true },
         new() { Title = "Payment Status", IsVisible = true },
@@ -585,7 +677,7 @@ else
 
     private List<ColumnDefinition> _invoiceColumns = new()
     {
-        new() { Title = "Order ID", IsVisible = true },
+        new() { Title = "Order", IsVisible = true },
         new() { Title = "Date", IsVisible = true },
         new() { Title = "Customer", IsVisible = true },
         new() { Title = "Total", IsVisible = true },
@@ -600,12 +692,23 @@ else
 
 
     // Filter variables
+    private bool filtersExpanded = true;
     private DateTime? filterFromDate;
     private DateTime? filterToDate;
     private Product? selectedProductFilter;
     private string? filterCustomer;
     private string? filterEmployee;
     private string? filterDriver;
+    private TransactionStatus? filterStatus;
+    private bool deliveriesOnly;
+
+    private int ActiveFilterCount =>
+        (filterFromDate.HasValue ? 1 : 0) +
+        (filterToDate.HasValue ? 1 : 0) +
+        (selectedProductFilter != null ? 1 : 0) +
+        (!string.IsNullOrWhiteSpace(filterCustomer) ? 1 : 0) +
+        (!string.IsNullOrWhiteSpace(filterEmployee) ? 1 : 0) +
+        (!string.IsNullOrWhiteSpace(filterDriver) ? 1 : 0);
 
     private IEnumerable<Transaction> FilteredTransactions
     {
@@ -654,6 +757,18 @@ else
             if (!string.IsNullOrWhiteSpace(filterDriver))
             {
                 filtered = filtered.Where(t => (t.Driver?.Name ?? "") == filterDriver);
+            }
+
+            // Deliveries only filter (show all deliveries regardless of driver)
+            if (deliveriesOnly)
+            {
+                filtered = filtered.Where(t => t.IsDelivery);
+            }
+
+            // Status filter
+            if (filterStatus.HasValue)
+            {
+                filtered = filtered.Where(t => t.Status == filterStatus.Value);
             }
 
             return filtered;
@@ -728,6 +843,21 @@ else
 
     protected override async Task OnInitializedAsync()
     {
+        // Check for driver query parameter
+        var uri = NavigationManager.ToAbsoluteUri(NavigationManager.Uri);
+        var query = uri.Query;
+        if (!string.IsNullOrEmpty(query) && query.Contains("driver="))
+        {
+            var driverIndex = query.IndexOf("driver=") + 7;
+            var driverValue = query.Substring(driverIndex);
+            var ampersandIndex = driverValue.IndexOf('&');
+            if (ampersandIndex > 0)
+            {
+                driverValue = driverValue.Substring(0, ampersandIndex);
+            }
+            filterDriver = Uri.UnescapeDataString(driverValue);
+        }
+
         await TransactionService.RefreshDataAsync();
         await LoadData();
     }
@@ -831,11 +961,68 @@ else
         filterCustomer = null;
         filterEmployee = null;
         filterDriver = null;
+        filterStatus = null;
+        deliveriesOnly = false;
     }
 
-    private void ToggleProfitVisibility()
+    // Driver stats helpers - use base filtered set (without status filter) for counts
+    private IEnumerable<Transaction> GetDeliveryBaseSet()
     {
-        showProfit = !showProfit;
+        if (transactions == null) return Enumerable.Empty<Transaction>();
+        var filtered = transactions.AsEnumerable();
+        if (filterFromDate.HasValue) filtered = filtered.Where(t => t.TransactionDate.Date >= filterFromDate.Value.Date);
+        if (filterToDate.HasValue) filtered = filtered.Where(t => t.TransactionDate.Date <= filterToDate.Value.Date);
+        if (!string.IsNullOrWhiteSpace(filterDriver)) filtered = filtered.Where(t => (t.Driver?.Name ?? "") == filterDriver);
+        if (deliveriesOnly || !string.IsNullOrWhiteSpace(filterDriver)) filtered = filtered.Where(t => t.IsDelivery);
+        return filtered;
+    }
+    private int GetDeliveryTotalCount() => GetDeliveryBaseSet().Count();
+    private int GetDriverPendingCount() => GetDeliveryBaseSet().Count(t => t.Status == TransactionStatus.Pending);
+    private int GetDriverDeliveredCount() => GetDeliveryBaseSet().Count(t => t.Status == TransactionStatus.Completed);
+    private int GetDriverCanceledCount() => GetDeliveryBaseSet().Count(t => t.Status == TransactionStatus.Canceled);
+    private decimal GetDriverTotalAmount() => GetDeliveryBaseSet().Where(t => t.Status != TransactionStatus.Canceled).Sum(t => t.TotalAmount);
+    
+    // Footer totals for filtered transactions
+    private decimal GetFilteredTotal() => FilteredTransactions.Where(t => t.Status != TransactionStatus.Canceled).Sum(t => t.TotalAmount);
+    private int GetFilteredQuantity() => FilteredTransactions.Where(t => t.Status != TransactionStatus.Canceled).Sum(t => t.Items.Sum(i => i.Quantity));
+    private decimal GetFilteredCost() => FilteredTransactions.Where(t => t.Status != TransactionStatus.Canceled).Sum(t => t.Items.Sum(i => i.UnitCost * i.Quantity));
+    private decimal GetFilteredProfit() => FilteredTransactions.Where(t => t.Status != TransactionStatus.Canceled).Sum(t => t.Items.Sum(i => (i.UnitPrice - i.UnitCost) * i.Quantity) - t.Discount);
+    private decimal GetFilteredDiscount() => FilteredTransactions.Where(t => t.Status != TransactionStatus.Canceled).Sum(t => t.Discount);
+
+    private IDialogReference? _searchScannerDialog;
+
+    private async Task OpenSearchScannerAsync()
+    {
+        var parameters = new DialogParameters<M_Wallet.Client.Components.BarcodeScannerDialog>
+        {
+            { x => x.OnDetected, EventCallback.Factory.Create<string>(this, HandleSearchBarcodeDetectedAsync) },
+            { x => x.OnCancel, EventCallback.Factory.Create(this, CloseSearchScannerAsync) }
+        };
+
+        var options = new DialogOptions
+        {
+            FullScreen = true,
+            CloseButton = true
+        };
+
+        _searchScannerDialog = await DialogService.ShowAsync<M_Wallet.Client.Components.BarcodeScannerDialog>("Scan Product", parameters, options);
+    }
+
+    private async Task HandleSearchBarcodeDetectedAsync(string code)
+    {
+        if (!string.IsNullOrWhiteSpace(code))
+        {
+            searchString = code;
+            Snackbar.Add($"Searching for barcode {code}", Severity.Info);
+        }
+        await CloseSearchScannerAsync();
+    }
+
+    private Task CloseSearchScannerAsync()
+    {
+        _searchScannerDialog?.Close();
+        _searchScannerDialog = null;
+        return Task.CompletedTask;
     }
 
     private decimal CalculateOrderCost(Transaction transaction)
@@ -1243,8 +1430,8 @@ else
     {
         return columnName switch
         {
-            "Order ID" => "120px",
-            "Date" => "15%",
+            "Order" => "110px",
+            "Date" => "18%",
             "Items" => "20%",
             "Quantity" => "6%",
             "Cost" => "8%",

@@ -394,7 +394,7 @@
                            FullWidth="true"
                            Class="mt-2"
                            StartIcon="@Icons.Material.Filled.Clear"
-                           OnClick="ClearCart"
+                           OnClick="async () => await ClearCartAsync()"
                            Disabled="@isProcessing">
                     Clear Cart
                 </MudButton>
@@ -871,8 +871,11 @@
         UpdateAmountPaid();
     }
 
-    private async void ClearCart()
+    private async Task ClearCartAsync()
     {
+        // Clear shared cart state immediately so navigation to other pages doesn't restore stale orders
+        CartService.Clear();
+
         cartItems.Clear();
         await ClearCustomerSelection();
         orderNote = "";
@@ -1046,16 +1049,18 @@
                 showSuccessOverlay = true;
                 StateHasChanged();
                 
-                // Delay hiding
-                await Task.Delay(3000);
-                showSuccessOverlay = false;
+                // Clear immediately to avoid cart reloading when navigating away
+                await ClearCartAsync();
 
-                ClearCart();
-                
                 paymentMethod = "Cash";
                 amountPaid = 0;
                 applyDiscount = false;
                 discountAmount = 0;
+
+                // Delay hiding overlay after clearing state
+                await Task.Delay(3000);
+                showSuccessOverlay = false;
+
                 await ProductService.RefreshDataAsync(); // Refresh product stock
                 await LoadProducts(); // Reload products
                 await TransactionService.RefreshDataAsync(); // Refresh transactions list

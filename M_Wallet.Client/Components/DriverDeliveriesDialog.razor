@@ -1,0 +1,186 @@
+@using M_Wallet.Shared
+@using System.Net.Http.Json
+@using Microsoft.AspNetCore.Components
+@inject HttpClient Http
+@inject ISnackbar Snackbar
+@using MudBlazor
+@inherits ComponentBase
+
+<div class="pa-4">
+    <MudStack Spacing="2">
+        <MudStack Direction="Row" Spacing="2" AlignItems="AlignItems.Center" JustifyContent="JustifyContent.SpaceBetween">
+            <MudText Typo="Typo.h6">Deliveries - @Driver?.Name</MudText>
+            <div class="d-flex align-center gap-2">
+                <MudChip T="string" Color="Color.Warning" Variant="Variant.Filled" Size="Size.Small">Pending: @PendingCount</MudChip>
+                <MudChip T="string" Color="Color.Success" Variant="Variant.Filled" Size="Size.Small">Delivered: @DeliveredCount</MudChip>
+                <MudChip T="string" Color="Color.Error" Variant="Variant.Filled" Size="Size.Small">Canceled: @CanceledCount</MudChip>
+            </div>
+        </MudStack>
+
+        @if (isLoading)
+        {
+            <MudProgressLinear Indeterminate="true" Color="Color.Primary" />
+        }
+        else if (!string.IsNullOrWhiteSpace(errorMessage))
+        {
+            <MudAlert Severity="Severity.Error">@errorMessage</MudAlert>
+        }
+        else if (!Pending.Any())
+        {
+            <MudAlert Severity="Severity.Info">No pending deliveries.</MudAlert>
+        }
+        else
+        {
+            <MudList Dense="true" Class="pa-0" T="Transaction">
+                @foreach (var order in Pending)
+                {
+                    <MudListItem T="Transaction" Class="pa-2">
+                        <div class="d-flex flex-column flex-grow-1">
+                            <MudText Typo="Typo.subtitle2">Order #@order.Id</MudText>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">@order.TransactionDate.ToLocalTime().ToString("yyyy/MM/dd hh:mm tt")</MudText>
+                            <MudText Typo="Typo.body2">Customer: @(order.CustomerName ?? "Walk-in")</MudText>
+                        </div>
+                        <div class="d-flex align-center gap-2">
+                            <MudNumericField T="decimal"
+                                            Label="Amount"
+                                            Variant="Variant.Outlined"
+                                            Value="GetAmount(order)"
+                                            ValueChanged="(value) => OnAmountChanged(order, value)"
+                                            HideSpinButtons="true"
+                                            Class="total-field"
+                                            Min="0" />
+                            <MudButton Color="Color.Success" Variant="Variant.Filled" Size="Size.Small" OnClick="() => MarkDeliveredAsync(order)">Delivered</MudButton>
+                            <MudButton Color="Color.Error" Variant="Variant.Outlined" Size="Size.Small" OnClick="() => UpdateStatusAsync(order, TransactionStatus.Canceled)">Canceled</MudButton>
+                        </div>
+                    </MudListItem>
+                }
+            </MudList>
+        }
+
+        <MudStack Direction="Row" JustifyContent="JustifyContent.FlexEnd" Spacing="1">
+            <MudButton Variant="Variant.Text" Color="Color.Default" OnClick="Close">Close</MudButton>
+            <MudButton Variant="Variant.Outlined" Color="Color.Primary" OnClick="LoadDeliveries">Refresh</MudButton>
+        </MudStack>
+    </MudStack>
+</div>
+
+@code {
+    [Parameter] public Person? Driver { get; set; }
+    [CascadingParameter] public IMudDialogInstance? MudDialog { get; set; }
+
+    private List<Transaction> deliveries = new();
+    private bool isLoading;
+    private string? errorMessage;
+    private readonly Dictionary<int, decimal> paymentAmounts = new();
+
+    private IEnumerable<Transaction> Pending => deliveries.Where(d => d.Status == TransactionStatus.Pending);
+    private int PendingCount => deliveries.Count(d => d.Status == TransactionStatus.Pending);
+    private int DeliveredCount => deliveries.Count(d => d.Status == TransactionStatus.Completed);
+    private int CanceledCount => deliveries.Count(d => d.Status == TransactionStatus.Canceled);
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadDeliveries();
+    }
+
+    private async Task LoadDeliveries()
+    {
+        if (Driver == null)
+        {
+            errorMessage = "Driver not provided.";
+            return;
+        }
+
+        isLoading = true;
+        errorMessage = null;
+        try
+        {
+            var result = await Http.GetFromJsonAsync<List<Transaction>>($"api/transactions/driver/{Driver.Id}");
+            deliveries = result ?? new List<Transaction>();
+
+            foreach (var order in deliveries)
+            {
+                paymentAmounts[order.Id] = order.TotalAmount;
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = ex.Message;
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task UpdateStatusAsync(Transaction order, TransactionStatus newStatus)
+    {
+        try
+        {
+            var response = await Http.PutAsJsonAsync($"api/transactions/{order.Id}/status", newStatus);
+            if (response.IsSuccessStatusCode)
+            {
+                order.Status = newStatus;
+                Snackbar.Add($"Order #{order.Id} marked as {newStatus}.", Severity.Success);
+            }
+            else
+            {
+                Snackbar.Add($"Failed to update order #{order.Id}.", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task MarkDeliveredAsync(Transaction order)
+    {
+        var amount = GetAmount(order);
+
+        if (amount > 0)
+        {
+            var payment = new Payment
+            {
+                Amount = amount,
+                PaymentDate = DateTime.UtcNow,
+                PaymentMethod = "Cash",
+                CustomerName = order.CustomerName,
+                EmployeeName = Driver?.Name ?? "Driver",
+                PersonId = order.PersonId,
+                Allocations = new List<PaymentAllocation>
+                {
+                    new PaymentAllocation
+                    {
+                        TransactionId = order.Id,
+                        Amount = amount
+                    }
+                }
+            };
+
+            var paymentResponse = await Http.PostAsJsonAsync("api/payments", payment);
+            if (!paymentResponse.IsSuccessStatusCode)
+            {
+                Snackbar.Add($"Payment failed for order #{order.Id}.", Severity.Error);
+                return;
+            }
+        }
+
+        await UpdateStatusAsync(order, TransactionStatus.Completed);
+    }
+
+    private decimal GetAmount(Transaction order)
+    {
+        return paymentAmounts.TryGetValue(order.Id, out var amount) ? amount : order.TotalAmount;
+    }
+
+    private void OnAmountChanged(Transaction order, decimal value)
+    {
+        paymentAmounts[order.Id] = value;
+    }
+
+    private void Close()
+    {
+        MudDialog?.Close();
+    }
+}

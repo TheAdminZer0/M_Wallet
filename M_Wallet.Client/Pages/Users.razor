@@ -7,6 +7,7 @@
 @inject IDialogService DialogService
 @inject ISnackbar Snackbar
 @inject AuthenticationStateProvider AuthStateProvider
+@inject NavigationManager NavigationManager
 
 <PageTitle>Users</PageTitle>
 
@@ -465,6 +466,7 @@
 
     private void ShowDeliveries(Person user)
     {
-        Snackbar.Add("Delivery stats coming soon!", Severity.Info);
+        // Navigate to transactions page with driver filter pre-filled
+        NavigationManager.NavigateTo($"/transactions?driver={Uri.EscapeDataString(user.Name ?? "")}");
     }
 }

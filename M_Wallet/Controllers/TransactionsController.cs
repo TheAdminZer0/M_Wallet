@@ -54,6 +54,27 @@ public class TransactionsController : ControllerBase
             .ToListAsync();
     }
 
+    [HttpGet("driver/{driverId}")]
+    public async Task<ActionResult<IEnumerable<Transaction>>> GetDriverTransactions(int driverId, [FromQuery] TransactionStatus? status = null)
+    {
+        var query = _context.Transactions
+            .Include(t => t.Items)
+            .ThenInclude(i => i.Product)
+            .Include(t => t.Driver)
+            .Where(t => t.DriverId == driverId && t.IsDelivery);
+
+        if (status.HasValue)
+        {
+            query = query.Where(t => t.Status == status.Value);
+        }
+
+        var transactions = await query
+            .OrderByDescending(t => t.TransactionDate)
+            .ToListAsync();
+
+        return transactions;
+    }
+
     [HttpPost]
     public async Task<ActionResult<Transaction>> CreateTransaction(Transaction transaction)
     {
