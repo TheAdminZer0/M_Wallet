@@ -76,8 +76,7 @@
     protected override void OnInitialized()
     {
         Status = Transaction.Status;
-        var paid = Transaction.PaymentAllocations?.Sum(pa => pa.Amount) ?? 0;
-        Balance = Transaction.TotalAmount - paid;
+        Balance = Transaction.BalanceDue;
         if (Balance < 0) Balance = 0;
         PaymentAmount = Balance;
     }

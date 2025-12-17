@@ -38,28 +38,28 @@
                         <MudTextField @bind-Value="searchString" Placeholder="Search" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium" Class="mt-0"></MudTextField>
                     </ToolBarContent>
                     <HeaderContent>
-                        @if (IsInvoiceColumnVisible("Order ID")) { <MudTh>Order ID</MudTh> }
-                        @if (IsInvoiceColumnVisible("Date")) { <MudTh>Date</MudTh> }
-                        @if (IsInvoiceColumnVisible("Customer")) { <MudTh>Customer</MudTh> }
-                        @if (IsInvoiceColumnVisible("Total")) { <MudTh>Total</MudTh> }
-                        @if (IsInvoiceColumnVisible("Paid")) { <MudTh>Paid</MudTh> }
-                        @if (IsInvoiceColumnVisible("Balance")) { <MudTh>Balance</MudTh> }
-                        @if (IsInvoiceColumnVisible("Action")) { <MudTh>Action</MudTh> }
+                        @if (_invoiceColumns.IsVisible("Order ID")) { <MudTh>Order ID</MudTh> }
+                        @if (_invoiceColumns.IsVisible("Date")) { <MudTh>Date</MudTh> }
+                        @if (_invoiceColumns.IsVisible("Customer")) { <MudTh>Customer</MudTh> }
+                        @if (_invoiceColumns.IsVisible("Total")) { <MudTh>Total</MudTh> }
+                        @if (_invoiceColumns.IsVisible("Paid")) { <MudTh>Paid</MudTh> }
+                        @if (_invoiceColumns.IsVisible("Balance")) { <MudTh>Balance</MudTh> }
+                        @if (_invoiceColumns.IsVisible("Action")) { <MudTh>Action</MudTh> }
                     </HeaderContent>
                     <RowTemplate>
-                        @if (IsInvoiceColumnVisible("Order ID")) { <MudTd DataLabel="Order ID">#@context.Id</MudTd> }
-                        @if (IsInvoiceColumnVisible("Date")) { <MudTd DataLabel="Date" Style="white-space: nowrap;">@context.TransactionDate.ToLocalTime().ToString("yyyy/MM/dd")</MudTd> }
-                        @if (IsInvoiceColumnVisible("Customer")) { <MudTd DataLabel="Customer">@(context.CustomerName ?? "Walk-in")</MudTd> }
-                        @if (IsInvoiceColumnVisible("Total")) { <MudTd DataLabel="Total">LD @context.TotalAmount.ToString("F2")</MudTd> }
-                        @if (IsInvoiceColumnVisible("Paid")) { <MudTd DataLabel="Paid">LD @GetPaidAmount(context).ToString("F2")</MudTd> }
-                        @if (IsInvoiceColumnVisible("Balance")) {
+                        @if (_invoiceColumns.IsVisible("Order ID")) { <MudTd DataLabel="Order ID">#@context.Id</MudTd> }
+                        @if (_invoiceColumns.IsVisible("Date")) { <MudTd DataLabel="Date" Style="white-space: nowrap;">@context.TransactionDate.ToDateOnlyString()</MudTd> }
+                        @if (_invoiceColumns.IsVisible("Customer")) { <MudTd DataLabel="Customer">@(context.CustomerName ?? "Walk-in")</MudTd> }
+                        @if (_invoiceColumns.IsVisible("Total")) { <MudTd DataLabel="Total">LD @context.TotalAmount.ToString("F2")</MudTd> }
+                        @if (_invoiceColumns.IsVisible("Paid")) { <MudTd DataLabel="Paid">LD @GetPaidAmount(context).ToString("F2")</MudTd> }
+                        @if (_invoiceColumns.IsVisible("Balance")) {
                             <MudTd DataLabel="Balance">
                                 <MudText Color="Color.Error" Class="font-weight-bold">
                                     LD @GetBalanceDue(context).ToString("F2")
                                 </MudText>
                             </MudTd>
                         }
-                        @if (IsInvoiceColumnVisible("Action")) {
+                        @if (_invoiceColumns.IsVisible("Action")) {
                             <MudTd DataLabel="Action" Style="white-space: nowrap;">
                                 <MudButton Variant="Variant.Filled" Color="Color.Success" Size="Size.Small" OnClick="@(() => OpenPaymentDialog(context))">
                                     Pay
@@ -86,27 +86,27 @@
         {
             <MudTable Items="@payments" Hover="true" Dense="true" Breakpoint="Breakpoint.None">
                 <HeaderContent>
-                    @if (IsPaymentColumnVisible("Payment ID")) { <MudTh>Payment ID</MudTh> }
-                    @if (IsPaymentColumnVisible("Date")) { <MudTh>Date</MudTh> }
-                    @if (IsPaymentColumnVisible("Method")) { <MudTh>Method</MudTh> }
-                    @if (IsPaymentColumnVisible("Reference")) { <MudTh>Reference</MudTh> }
-                    @if (IsPaymentColumnVisible("Amount")) { <MudTh>Amount</MudTh> }
-                    @if (IsPaymentColumnVisible("Allocations")) { <MudTh>Allocations</MudTh> }
-                    @if (IsPaymentColumnVisible("Actions")) { <MudTh>Actions</MudTh> }
+                    @if (_paymentColumns.IsVisible("Payment ID")) { <MudTh>Payment ID</MudTh> }
+                    @if (_paymentColumns.IsVisible("Date")) { <MudTh>Date</MudTh> }
+                    @if (_paymentColumns.IsVisible("Method")) { <MudTh>Method</MudTh> }
+                    @if (_paymentColumns.IsVisible("Reference")) { <MudTh>Reference</MudTh> }
+                    @if (_paymentColumns.IsVisible("Amount")) { <MudTh>Amount</MudTh> }
+                    @if (_paymentColumns.IsVisible("Allocations")) { <MudTh>Allocations</MudTh> }
+                    @if (_paymentColumns.IsVisible("Actions")) { <MudTh>Actions</MudTh> }
                 </HeaderContent>
                 <RowTemplate>
-                    @if (IsPaymentColumnVisible("Payment ID")) { <MudTd>#@context.Id</MudTd> }
-                    @if (IsPaymentColumnVisible("Date")) { <MudTd Style="white-space: nowrap;">@context.PaymentDate.ToLocalTime().ToString("yyyy/MM/dd hh:mm tt")</MudTd> }
-                    @if (IsPaymentColumnVisible("Method")) { <MudTd>@context.PaymentMethod</MudTd> }
-                    @if (IsPaymentColumnVisible("Reference")) { <MudTd>@context.Reference</MudTd> }
-                    @if (IsPaymentColumnVisible("Amount")) {
+                    @if (_paymentColumns.IsVisible("Payment ID")) { <MudTd>#@context.Id</MudTd> }
+                    @if (_paymentColumns.IsVisible("Date")) { <MudTd Style="white-space: nowrap;">@context.PaymentDate.ToDisplayString()</MudTd> }
+                    @if (_paymentColumns.IsVisible("Method")) { <MudTd>@context.PaymentMethod</MudTd> }
+                    @if (_paymentColumns.IsVisible("Reference")) { <MudTd>@context.Reference</MudTd> }
+                    @if (_paymentColumns.IsVisible("Amount")) {
                         <MudTd>
                             <MudText Color="Color.Success" Class="font-weight-bold">
                                 LD @context.Amount.ToString("F2")
                             </MudText>
                         </MudTd>
                     }
-                    @if (IsPaymentColumnVisible("Allocations")) {
+                    @if (_paymentColumns.IsVisible("Allocations")) {
                         <MudTd>
                             @foreach(var alloc in context.Allocations)
                             {
@@ -114,7 +114,7 @@
                             }
                         </MudTd>
                     }
-                    @if (IsPaymentColumnVisible("Actions")) {
+                    @if (_paymentColumns.IsVisible("Actions")) {
                         <MudTd Style="white-space: nowrap;">
                             <MudIconButton Icon="@Icons.Material.Filled.Delete" 
                                            Color="Color.Error" 
@@ -161,9 +161,6 @@
         new() { Title = "Actions", IsVisible = true }
     };
 
-    private bool IsInvoiceColumnVisible(string title) => _invoiceColumns.FirstOrDefault(c => c.Title == title)?.IsVisible ?? true;
-    private bool IsPaymentColumnVisible(string title) => _paymentColumns.FirstOrDefault(c => c.Title == title)?.IsVisible ?? true;
-
     // Load transactions/payments via shared service
     protected override async Task OnInitializedAsync()
     {
@@ -187,12 +184,12 @@
 
     private decimal GetPaidAmount(Transaction t)
     {
-        return t.PaymentAllocations?.Sum(pa => pa.Amount) ?? 0;
+        return t.TotalPaid;
     }
 
     private decimal GetBalanceDue(Transaction t)
     {
-        return t.TotalAmount - GetPaidAmount(t);
+        return t.BalanceDue;
     }
 
     // Search filter for invoices

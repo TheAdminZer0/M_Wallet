@@ -39,7 +39,7 @@
                     <MudListItem T="Transaction" Class="pa-2">
                         <div class="d-flex flex-column flex-grow-1">
                             <MudText Typo="Typo.subtitle2">Order #@order.Id</MudText>
-                            <MudText Typo="Typo.caption" Color="Color.Secondary">@order.TransactionDate.ToLocalTime().ToString("yyyy/MM/dd hh:mm tt")</MudText>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">@order.TransactionDate.ToDisplayString()</MudText>
                             <MudText Typo="Typo.body2">Customer: @(order.CustomerName ?? "Walk-in")</MudText>
                         </div>
                         <div class="d-flex align-center gap-2">

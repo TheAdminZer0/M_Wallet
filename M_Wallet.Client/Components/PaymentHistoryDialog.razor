@@ -61,7 +61,7 @@
     [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = default!;
     [Parameter] public Transaction Transaction { get; set; } = default!;
 
-    private decimal Balance => Transaction.TotalAmount - (Transaction.PaymentAllocations?.Sum(pa => pa.Amount) ?? 0);
+    private decimal Balance => Transaction.BalanceDue;
 
     private void Close() => MudDialog.Close(DialogResult.Ok(true));
 

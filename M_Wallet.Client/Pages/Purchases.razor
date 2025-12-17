@@ -166,23 +166,23 @@ else
         <MudTable Items="@purchases" Hover="true" Dense="true" Breakpoint="Breakpoint.None" Loading="@(purchases == null)" OnRowClick="OnRowClick" T="Purchase">
             <HeaderContent>
                 <MudTh Style="width: 50px;"></MudTh>
-                @if (IsVisible("ID")) { <MudTh>ID</MudTh> }
-                @if (IsVisible("Date")) { <MudTh>Date</MudTh> }
-                @if (IsVisible("Supplier")) { <MudTh>Supplier</MudTh> }
-                @if (IsVisible("Items")) { <MudTh>Items</MudTh> }
-                @if (IsVisible("Total Amount")) { <MudTh>Total Amount</MudTh> }
-                @if (IsVisible("Actions")) { <MudTh>Actions</MudTh> }
+                @if (_purchaseColumns.IsVisible("ID")) { <MudTh>ID</MudTh> }
+                @if (_purchaseColumns.IsVisible("Date")) { <MudTh>Date</MudTh> }
+                @if (_purchaseColumns.IsVisible("Supplier")) { <MudTh>Supplier</MudTh> }
+                @if (_purchaseColumns.IsVisible("Items")) { <MudTh>Items</MudTh> }
+                @if (_purchaseColumns.IsVisible("Total Amount")) { <MudTh>Total Amount</MudTh> }
+                @if (_purchaseColumns.IsVisible("Actions")) { <MudTh>Actions</MudTh> }
             </HeaderContent>
             <RowTemplate>
                 <MudTd>
                     <MudIcon Icon="@(expandedPurchases.Contains(context.Id) ? Icons.Material.Filled.ExpandLess : Icons.Material.Filled.ExpandMore)" />
                 </MudTd>
-                @if (IsVisible("ID")) { <MudTd>#@context.Id</MudTd> }
-                @if (IsVisible("Date")) { <MudTd Style="white-space: nowrap;">@context.PurchaseDate.ToLocalTime().ToString("yyyy/MM/dd hh:mm tt")</MudTd> }
-                @if (IsVisible("Supplier")) { <MudTd>@(context.SupplierName ?? "-")</MudTd> }
-                @if (IsVisible("Items")) { <MudTd>@context.Items.Count</MudTd> }
-                @if (IsVisible("Total Amount")) { <MudTd>@context.TotalAmount.ToString("F2")</MudTd> }
-                @if (IsVisible("Actions")) {
+                @if (_purchaseColumns.IsVisible("ID")) { <MudTd>#@context.Id</MudTd> }
+                @if (_purchaseColumns.IsVisible("Date")) { <MudTd Style="white-space: nowrap;">@context.PurchaseDate.ToDisplayString()</MudTd> }
+                @if (_purchaseColumns.IsVisible("Supplier")) { <MudTd>@(context.SupplierName ?? "-")</MudTd> }
+                @if (_purchaseColumns.IsVisible("Items")) { <MudTd>@context.Items.Count</MudTd> }
+                @if (_purchaseColumns.IsVisible("Total Amount")) { <MudTd>@context.TotalAmount.ToString("F2")</MudTd> }
+                @if (_purchaseColumns.IsVisible("Actions")) {
                     <MudTd Style="white-space: nowrap;">
                         <MudIconButton Icon="@Icons.Material.Filled.Delete" 
                                        Color="Color.Error" 
@@ -233,7 +233,7 @@ else
             </ChildRowContent>
             <PagerContent>
                 <div class="d-flex align-center justify-space-between px-4 py-2">
-                    <TableColumnToggle Columns="@_columns" ColumnsChanged="StateHasChanged" TableName="Purchases" />
+                    <TableColumnToggle Columns="@_purchaseColumns" ColumnsChanged="StateHasChanged" TableName="Purchases" />
                     <MudTablePager />
                 </div>
             </PagerContent>
@@ -329,7 +329,7 @@ else
     private string searchString = "";
     private HashSet<int> expandedPurchases = new();
     
-    private List<ColumnDefinition> _columns = new()
+    private List<ColumnDefinition> _purchaseColumns = new()
     {
         new() { Title = "ID", IsVisible = true },
         new() { Title = "Date", IsVisible = true },
@@ -338,8 +338,6 @@ else
         new() { Title = "Total Amount", IsVisible = true },
         new() { Title = "Actions", IsVisible = true }
     };
-
-    private bool IsVisible(string title) => _columns.FirstOrDefault(c => c.Title == title)?.IsVisible ?? true;
 
     protected override async Task OnInitializedAsync()
     {

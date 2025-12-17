@@ -24,40 +24,40 @@
                     <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" OnClick="@(() => AddUser("Customer"))" Class="ml-4">Add Customer</MudButton>
                 </ToolBarContent>
                 <HeaderContent>
-                    @if (IsCustomerColumnVisible("Name")) { <MudTh><MudTableSortLabel SortBy="new Func<Person, object>(x => x.Name)">Name</MudTableSortLabel></MudTh> }
-                    @if (IsCustomerColumnVisible("Phone Number")) { <MudTh><MudTableSortLabel SortBy="new Func<Person, object>(x => x.PhoneNumber)">Phone Number</MudTableSortLabel></MudTh> }
-                    @if (IsCustomerColumnVisible("Balance")) { <MudTh><MudTableSortLabel SortBy="new Func<Person, object>(x => x.Balance)">Balance</MudTableSortLabel></MudTh> }
-                    @if (IsCustomerColumnVisible("Total Spent")) { <MudTh><MudTableSortLabel SortBy="new Func<Person, object>(x => x.TotalSpent)">Total Spent</MudTableSortLabel></MudTh> }
-                    @if (IsCustomerColumnVisible("Total Profit")) { <MudTh><MudTableSortLabel SortBy="new Func<Person, object>(x => x.TotalProfit)">Total Profit</MudTableSortLabel></MudTh> }
-                    @if (IsCustomerColumnVisible("Last Transaction")) { <MudTh><MudTableSortLabel SortBy="new Func<Person, object>(x => x.LastTransactionDate)">Last Transaction</MudTableSortLabel></MudTh> }
-                    @if (IsCustomerColumnVisible("Actions")) { <MudTh>Actions</MudTh> }
+                    @if (_customerColumns.IsVisible("Name")) { <MudTh><MudTableSortLabel SortBy="new Func<Person, object>(x => x.Name)">Name</MudTableSortLabel></MudTh> }
+                    @if (_customerColumns.IsVisible("Phone Number")) { <MudTh><MudTableSortLabel SortBy="new Func<Person, object>(x => x.PhoneNumber)">Phone Number</MudTableSortLabel></MudTh> }
+                    @if (_customerColumns.IsVisible("Balance")) { <MudTh><MudTableSortLabel SortBy="new Func<Person, object>(x => x.Balance)">Balance</MudTableSortLabel></MudTh> }
+                    @if (_customerColumns.IsVisible("Total Spent")) { <MudTh><MudTableSortLabel SortBy="new Func<Person, object>(x => x.TotalSpent)">Total Spent</MudTableSortLabel></MudTh> }
+                    @if (_customerColumns.IsVisible("Total Profit")) { <MudTh><MudTableSortLabel SortBy="new Func<Person, object>(x => x.TotalProfit)">Total Profit</MudTableSortLabel></MudTh> }
+                    @if (_customerColumns.IsVisible("Last Transaction")) { <MudTh><MudTableSortLabel SortBy="new Func<Person, object>(x => x.LastTransactionDate)">Last Transaction</MudTableSortLabel></MudTh> }
+                    @if (_customerColumns.IsVisible("Actions")) { <MudTh>Actions</MudTh> }
                 </HeaderContent>
                 <RowTemplate>
-                    @if (IsCustomerColumnVisible("Name")) { <MudTd DataLabel="Name">@context.Name</MudTd> }
-                    @if (IsCustomerColumnVisible("Phone Number")) { <MudTd DataLabel="Phone Number">@context.PhoneNumber</MudTd> }
-                    @if (IsCustomerColumnVisible("Balance")) { 
+                    @if (_customerColumns.IsVisible("Name")) { <MudTd DataLabel="Name">@context.Name</MudTd> }
+                    @if (_customerColumns.IsVisible("Phone Number")) { <MudTd DataLabel="Phone Number">@context.PhoneNumber</MudTd> }
+                    @if (_customerColumns.IsVisible("Balance")) { 
                         <MudTd DataLabel="Balance">
                             <MudText Color="@(context.Balance < 0 ? Color.Error : Color.Success)">
                                 @context.Balance.ToString("F2")
                             </MudText>
                         </MudTd> 
                     }
-                    @if (IsCustomerColumnVisible("Total Spent")) { 
+                    @if (_customerColumns.IsVisible("Total Spent")) { 
                         <MudTd DataLabel="Total Spent">
                             <MudText Color="Color.Primary">
                                 @context.TotalSpent.ToString("F2")
                             </MudText>
                         </MudTd> 
                     }
-                    @if (IsCustomerColumnVisible("Total Profit")) { 
+                    @if (_customerColumns.IsVisible("Total Profit")) { 
                         <MudTd DataLabel="Total Profit">
                             <MudText Color="@(context.TotalProfit < 0 ? Color.Error : Color.Success)">
                                 @context.TotalProfit.ToString("F2")
                             </MudText>
                         </MudTd> 
                     }
-                    @if (IsCustomerColumnVisible("Last Transaction")) { <MudTd DataLabel="Last Transaction" Style="white-space: nowrap;">@(context.LastTransactionDate?.ToLocalTime().ToString("yyyy/MM/dd hh:mm tt") ?? "-")</MudTd> }
-                    @if (IsCustomerColumnVisible("Actions")) {
+                    @if (_customerColumns.IsVisible("Last Transaction")) { <MudTd DataLabel="Last Transaction" Style="white-space: nowrap;">@context.LastTransactionDate.ToDisplayString()</MudTd> }
+                    @if (_customerColumns.IsVisible("Actions")) {
                         <MudTd DataLabel="Actions" Style="white-space: nowrap;">
                             <MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Primary" Size="Size.Small" OnClick="@(() => EditUser(context))" />
                             <MudIconButton Icon="@Icons.Material.Filled.AttachMoney" Color="Color.Success" Size="Size.Small" OnClick="@(() => OpenPaymentDialog(context))" Title="Payment" />
@@ -86,58 +86,58 @@
                     <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" OnClick="@(() => AddUser("Driver"))" Class="ml-4">Add Driver</MudButton>
                 </ToolBarContent>
                 <HeaderContent>
-                    @if (IsDriverColumnVisible("Name")) { <MudTh><MudTableSortLabel SortBy="new Func<Person, object>(x => x.Name)">Name</MudTableSortLabel></MudTh> }
-                    @if (IsDriverColumnVisible("Phone Number")) { <MudTh><MudTableSortLabel SortBy="new Func<Person, object>(x => x.PhoneNumber)">Phone Number</MudTableSortLabel></MudTh> }
-                    @if (IsDriverColumnVisible("Pending")) { <MudTh><MudTableSortLabel SortBy="new Func<Person, object>(x => x.PendingDeliveries)">Pending</MudTableSortLabel></MudTh> }
-                    @if (IsDriverColumnVisible("Completed")) { <MudTh><MudTableSortLabel SortBy="new Func<Person, object>(x => x.CompletedDeliveries)">Completed</MudTableSortLabel></MudTh> }
-                    @if (IsDriverColumnVisible("Canceled")) { <MudTh><MudTableSortLabel SortBy="new Func<Person, object>(x => x.CanceledDeliveries)">Canceled</MudTableSortLabel></MudTh> }
-                    @if (IsDriverColumnVisible("Balance")) { <MudTh><MudTableSortLabel SortBy="new Func<Person, object>(x => x.Balance)">Balance</MudTableSortLabel></MudTh> }
-                    @if (IsDriverColumnVisible("Total Spent")) { <MudTh><MudTableSortLabel SortBy="new Func<Person, object>(x => x.TotalSpent)">Total Spent</MudTableSortLabel></MudTh> }
-                    @if (IsDriverColumnVisible("Total Profit")) { <MudTh><MudTableSortLabel SortBy="new Func<Person, object>(x => x.TotalProfit)">Total Profit</MudTableSortLabel></MudTh> }
-                    @if (IsDriverColumnVisible("Last Transaction")) { <MudTh><MudTableSortLabel SortBy="new Func<Person, object>(x => x.LastTransactionDate)">Last Transaction</MudTableSortLabel></MudTh> }
-                    @if (IsDriverColumnVisible("Actions")) { <MudTh>Actions</MudTh> }
+                    @if (_driverColumns.IsVisible("Name")) { <MudTh><MudTableSortLabel SortBy="new Func<Person, object>(x => x.Name)">Name</MudTableSortLabel></MudTh> }
+                    @if (_driverColumns.IsVisible("Phone Number")) { <MudTh><MudTableSortLabel SortBy="new Func<Person, object>(x => x.PhoneNumber)">Phone Number</MudTableSortLabel></MudTh> }
+                    @if (_driverColumns.IsVisible("Pending")) { <MudTh><MudTableSortLabel SortBy="new Func<Person, object>(x => x.PendingDeliveries)">Pending</MudTableSortLabel></MudTh> }
+                    @if (_driverColumns.IsVisible("Completed")) { <MudTh><MudTableSortLabel SortBy="new Func<Person, object>(x => x.CompletedDeliveries)">Completed</MudTableSortLabel></MudTh> }
+                    @if (_driverColumns.IsVisible("Canceled")) { <MudTh><MudTableSortLabel SortBy="new Func<Person, object>(x => x.CanceledDeliveries)">Canceled</MudTableSortLabel></MudTh> }
+                    @if (_driverColumns.IsVisible("Balance")) { <MudTh><MudTableSortLabel SortBy="new Func<Person, object>(x => x.Balance)">Balance</MudTableSortLabel></MudTh> }
+                    @if (_driverColumns.IsVisible("Total Spent")) { <MudTh><MudTableSortLabel SortBy="new Func<Person, object>(x => x.TotalSpent)">Total Spent</MudTableSortLabel></MudTh> }
+                    @if (_driverColumns.IsVisible("Total Profit")) { <MudTh><MudTableSortLabel SortBy="new Func<Person, object>(x => x.TotalProfit)">Total Profit</MudTableSortLabel></MudTh> }
+                    @if (_driverColumns.IsVisible("Last Transaction")) { <MudTh><MudTableSortLabel SortBy="new Func<Person, object>(x => x.LastTransactionDate)">Last Transaction</MudTableSortLabel></MudTh> }
+                    @if (_driverColumns.IsVisible("Actions")) { <MudTh>Actions</MudTh> }
                 </HeaderContent>
                 <RowTemplate>
-                    @if (IsDriverColumnVisible("Name")) { <MudTd DataLabel="Name">@context.Name</MudTd> }
-                    @if (IsDriverColumnVisible("Phone Number")) { <MudTd DataLabel="Phone Number">@context.PhoneNumber</MudTd> }
-                    @if (IsDriverColumnVisible("Pending")) {
+                    @if (_driverColumns.IsVisible("Name")) { <MudTd DataLabel="Name">@context.Name</MudTd> }
+                    @if (_driverColumns.IsVisible("Phone Number")) { <MudTd DataLabel="Phone Number">@context.PhoneNumber</MudTd> }
+                    @if (_driverColumns.IsVisible("Pending")) {
                         <MudTd DataLabel="Pending">
                             <MudChip T="string" Color="Color.Warning" Size="Size.Small">@context.PendingDeliveries</MudChip>
                         </MudTd>
                     }
-                    @if (IsDriverColumnVisible("Completed")) {
+                    @if (_driverColumns.IsVisible("Completed")) {
                         <MudTd DataLabel="Completed">
                             <MudChip T="string" Color="Color.Success" Size="Size.Small">@context.CompletedDeliveries</MudChip>
                         </MudTd>
                     }
-                    @if (IsDriverColumnVisible("Canceled")) {
+                    @if (_driverColumns.IsVisible("Canceled")) {
                         <MudTd DataLabel="Canceled">
                             <MudChip T="string" Color="Color.Error" Size="Size.Small">@context.CanceledDeliveries</MudChip>
                         </MudTd>
                     }
-                    @if (IsDriverColumnVisible("Balance")) { 
+                    @if (_driverColumns.IsVisible("Balance")) { 
                         <MudTd DataLabel="Balance">
                             <MudText Color="@(context.Balance < 0 ? Color.Error : Color.Success)">
                                 @context.Balance.ToString("F2")
                             </MudText>
                         </MudTd> 
                     }
-                    @if (IsDriverColumnVisible("Total Spent")) { 
+                    @if (_driverColumns.IsVisible("Total Spent")) { 
                         <MudTd DataLabel="Total Spent">
                             <MudText Color="Color.Primary">
                                 @context.TotalSpent.ToString("F2")
                             </MudText>
                         </MudTd> 
                     }
-                    @if (IsDriverColumnVisible("Total Profit")) { 
+                    @if (_driverColumns.IsVisible("Total Profit")) { 
                         <MudTd DataLabel="Total Profit">
                             <MudText Color="@(context.TotalProfit < 0 ? Color.Error : Color.Success)">
                                 @context.TotalProfit.ToString("F2")
                             </MudText>
                         </MudTd> 
                     }
-                    @if (IsDriverColumnVisible("Last Transaction")) { <MudTd DataLabel="Last Transaction" Style="white-space: nowrap;">@(context.LastTransactionDate?.ToLocalTime().ToString("yyyy/MM/dd hh:mm tt") ?? "-")</MudTd> }
-                    @if (IsDriverColumnVisible("Actions")) {
+                    @if (_driverColumns.IsVisible("Last Transaction")) { <MudTd DataLabel="Last Transaction" Style="white-space: nowrap;">@context.LastTransactionDate.ToDisplayString()</MudTd> }
+                    @if (_driverColumns.IsVisible("Actions")) {
                         <MudTd DataLabel="Actions" Style="white-space: nowrap;">
                             <MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Primary" Size="Size.Small" OnClick="@(() => EditUser(context))" />
                             <MudIconButton Icon="@Icons.Material.Filled.ReceiptLong" Color="Color.Info" Size="Size.Small" OnClick="@(() => ShowStatement(context))" Title="Statement" />
@@ -223,44 +223,44 @@
                         <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" OnClick="@(() => AddUser("Employee"))" Class="ml-4">Add Employee</MudButton>
                     </ToolBarContent>
                     <HeaderContent>
-                        @if (IsEmployeeColumnVisible("Name")) { <MudTh><MudTableSortLabel SortBy="new Func<Person, object>(x => x.Name)">Name</MudTableSortLabel></MudTh> }
-                        @if (IsEmployeeColumnVisible("Role")) { <MudTh><MudTableSortLabel SortBy="new Func<Person, object>(x => x.Role)">Role</MudTableSortLabel></MudTh> }
-                        @if (IsEmployeeColumnVisible("Username")) { <MudTh><MudTableSortLabel SortBy="new Func<Person, object>(x => x.Username)">Username</MudTableSortLabel></MudTh> }
-                        @if (IsEmployeeColumnVisible("Passcode")) { <MudTh>Passcode</MudTh> }
-                        @if (IsEmployeeColumnVisible("Balance")) { <MudTh><MudTableSortLabel SortBy="new Func<Person, object>(x => x.Balance)">Balance</MudTableSortLabel></MudTh> }
-                        @if (IsEmployeeColumnVisible("Total Spent")) { <MudTh><MudTableSortLabel SortBy="new Func<Person, object>(x => x.TotalSpent)">Total Spent</MudTableSortLabel></MudTh> }
-                        @if (IsEmployeeColumnVisible("Total Profit")) { <MudTh><MudTableSortLabel SortBy="new Func<Person, object>(x => x.TotalProfit)">Total Profit</MudTableSortLabel></MudTh> }
-                        @if (IsEmployeeColumnVisible("Last Transaction")) { <MudTh><MudTableSortLabel SortBy="new Func<Person, object>(x => x.LastTransactionDate)">Last Transaction</MudTableSortLabel></MudTh> }
-                        @if (IsEmployeeColumnVisible("Actions")) { <MudTh>Actions</MudTh> }
+                        @if (_employeeColumns.IsVisible("Name")) { <MudTh><MudTableSortLabel SortBy="new Func<Person, object>(x => x.Name)">Name</MudTableSortLabel></MudTh> }
+                        @if (_employeeColumns.IsVisible("Role")) { <MudTh><MudTableSortLabel SortBy="new Func<Person, object>(x => x.Role)">Role</MudTableSortLabel></MudTh> }
+                        @if (_employeeColumns.IsVisible("Username")) { <MudTh><MudTableSortLabel SortBy="new Func<Person, object>(x => x.Username)">Username</MudTableSortLabel></MudTh> }
+                        @if (_employeeColumns.IsVisible("Passcode")) { <MudTh>Passcode</MudTh> }
+                        @if (_employeeColumns.IsVisible("Balance")) { <MudTh><MudTableSortLabel SortBy="new Func<Person, object>(x => x.Balance)">Balance</MudTableSortLabel></MudTh> }
+                        @if (_employeeColumns.IsVisible("Total Spent")) { <MudTh><MudTableSortLabel SortBy="new Func<Person, object>(x => x.TotalSpent)">Total Spent</MudTableSortLabel></MudTh> }
+                        @if (_employeeColumns.IsVisible("Total Profit")) { <MudTh><MudTableSortLabel SortBy="new Func<Person, object>(x => x.TotalProfit)">Total Profit</MudTableSortLabel></MudTh> }
+                        @if (_employeeColumns.IsVisible("Last Transaction")) { <MudTh><MudTableSortLabel SortBy="new Func<Person, object>(x => x.LastTransactionDate)">Last Transaction</MudTableSortLabel></MudTh> }
+                        @if (_employeeColumns.IsVisible("Actions")) { <MudTh>Actions</MudTh> }
                     </HeaderContent>
                     <RowTemplate Context="employeeContext">
-                        @if (IsEmployeeColumnVisible("Name")) { <MudTd DataLabel="Name">@employeeContext.Name</MudTd> }
-                        @if (IsEmployeeColumnVisible("Role")) { <MudTd DataLabel="Role">@employeeContext.Role</MudTd> }
-                        @if (IsEmployeeColumnVisible("Username")) { <MudTd DataLabel="Username">@employeeContext.Username</MudTd> }
-                        @if (IsEmployeeColumnVisible("Passcode")) { <MudTd DataLabel="Passcode">@employeeContext.Passcode</MudTd> }
-                        @if (IsEmployeeColumnVisible("Balance")) { 
+                        @if (_employeeColumns.IsVisible("Name")) { <MudTd DataLabel="Name">@employeeContext.Name</MudTd> }
+                        @if (_employeeColumns.IsVisible("Role")) { <MudTd DataLabel="Role">@employeeContext.Role</MudTd> }
+                        @if (_employeeColumns.IsVisible("Username")) { <MudTd DataLabel="Username">@employeeContext.Username</MudTd> }
+                        @if (_employeeColumns.IsVisible("Passcode")) { <MudTd DataLabel="Passcode">@employeeContext.Passcode</MudTd> }
+                        @if (_employeeColumns.IsVisible("Balance")) { 
                             <MudTd DataLabel="Balance">
                                 <MudText Color="@(employeeContext.Balance < 0 ? Color.Error : Color.Success)">
                                     @employeeContext.Balance.ToString("F2")
                                 </MudText>
                             </MudTd> 
                         }
-                        @if (IsEmployeeColumnVisible("Total Spent")) { 
+                        @if (_employeeColumns.IsVisible("Total Spent")) { 
                             <MudTd DataLabel="Total Spent">
                                 <MudText Color="Color.Primary">
                                     @employeeContext.TotalSpent.ToString("F2")
                                 </MudText>
                             </MudTd> 
                         }
-                        @if (IsEmployeeColumnVisible("Total Profit")) { 
+                        @if (_employeeColumns.IsVisible("Total Profit")) { 
                             <MudTd DataLabel="Total Profit">
                                 <MudText Color="@(employeeContext.TotalProfit < 0 ? Color.Error : Color.Success)">
                                     @employeeContext.TotalProfit.ToString("F2")
                                 </MudText>
                             </MudTd> 
                         }
-                        @if (IsEmployeeColumnVisible("Last Transaction")) { <MudTd DataLabel="Last Transaction" Style="white-space: nowrap;">@(employeeContext.LastTransactionDate?.ToLocalTime().ToString("yyyy/MM/dd hh:mm tt") ?? "-")</MudTd> }
-                        @if (IsEmployeeColumnVisible("Actions")) {
+                        @if (_employeeColumns.IsVisible("Last Transaction")) { <MudTd DataLabel="Last Transaction" Style="white-space: nowrap;">@employeeContext.LastTransactionDate.ToDisplayString()</MudTd> }
+                        @if (_employeeColumns.IsVisible("Actions")) {
                             <MudTd DataLabel="Actions" Style="white-space: nowrap;">
                                 <MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Primary" Size="Size.Small" OnClick="@(() => EditUser(employeeContext))" />
                                 <MudIconButton Icon="@Icons.Material.Filled.ReceiptLong" Color="Color.Info" Size="Size.Small" OnClick="@(() => ShowStatement(employeeContext))" Title="Statement" />
@@ -332,10 +332,6 @@
         new() { Title = "Last Transaction", IsVisible = true },
         new() { Title = "Actions", IsVisible = true }
     };
-
-    private bool IsCustomerColumnVisible(string title) => _customerColumns.FirstOrDefault(c => c.Title == title)?.IsVisible ?? true;
-    private bool IsDriverColumnVisible(string title) => _driverColumns.FirstOrDefault(c => c.Title == title)?.IsVisible ?? true;
-    private bool IsEmployeeColumnVisible(string title) => _employeeColumns.FirstOrDefault(c => c.Title == title)?.IsVisible ?? true;
 
     protected override async Task OnInitializedAsync()
     {

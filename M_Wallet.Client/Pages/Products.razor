@@ -1,4 +1,4 @@
-﻿@page "/products"
+@page "/products"
 @inject HttpClient Http
 @inject ISnackbar Snackbar
 @inject IDialogService DialogService
@@ -64,19 +64,19 @@ else
                   SortLabel="Sort By"
                   RowStyleFunc="RowStyleFunc">
             <HeaderContent>
-                @if (IsVisible("Actions")) { <MudTh Class="py-1 px-2">Actions</MudTh> }
-                @if (IsVisible("Name")) { <MudTh Class="py-1 px-2"><MudTableSortLabel InitialDirection="SortDirection.Ascending" SortBy="new Func<Product, object>(x => x.Name)">Name</MudTableSortLabel></MudTh> }
-                @if (IsVisible("Barcode")) { <MudTh Class="py-1 px-2">Barcode</MudTh> }
-                @if (IsVisible("Description")) { <MudTh Class="py-1 px-2">Description</MudTh> }
-                @if (IsVisible("Cost")) { <MudTh Class="py-1 px-2"><MudTableSortLabel SortBy="new Func<Product, object>(x => x.CostPrice)">Cost (LD)</MudTableSortLabel></MudTh> }
-                @if (IsVisible("Price")) { <MudTh Class="py-1 px-2"><MudTableSortLabel SortBy="new Func<Product, object>(x => x.Price)">Price (LD)</MudTableSortLabel></MudTh> }
-                @if (IsVisible("Profit")) { <MudTh Class="py-1 px-4"><MudTableSortLabel SortBy="new Func<Product, object>(x => x.Price - x.CostPrice)">Profit (LD)</MudTableSortLabel></MudTh> }
-                @if (IsVisible("Total Sold")) { <MudTh Class="py-1 px-2"><MudTableSortLabel SortBy="new Func<Product, object>(x => x.TotalSoldQuantity)">Total Sold</MudTableSortLabel></MudTh> }
-                @if (IsVisible("Stock")) { <MudTh Class="py-1 px-2"><MudTableSortLabel SortBy="new Func<Product, object>(x => x.StockQuantity)">Stock</MudTableSortLabel></MudTh> }
-                @if (IsVisible("Pinned")) { <MudTh Class="py-1 px-2"><MudTableSortLabel SortBy="new Func<Product, object>(x => x.IsPinned)">Pinned</MudTableSortLabel></MudTh> }
+                @if (_productColumns.IsVisible("Actions")) { <MudTh Class="py-1 px-2">Actions</MudTh> }
+                @if (_productColumns.IsVisible("Name")) { <MudTh Class="py-1 px-2"><MudTableSortLabel InitialDirection="SortDirection.Ascending" SortBy="new Func<Product, object>(x => x.Name)">Name</MudTableSortLabel></MudTh> }
+                @if (_productColumns.IsVisible("Barcode")) { <MudTh Class="py-1 px-2">Barcode</MudTh> }
+                @if (_productColumns.IsVisible("Description")) { <MudTh Class="py-1 px-2">Description</MudTh> }
+                @if (_productColumns.IsVisible("Cost")) { <MudTh Class="py-1 px-2"><MudTableSortLabel SortBy="new Func<Product, object>(x => x.CostPrice)">Cost (LD)</MudTableSortLabel></MudTh> }
+                @if (_productColumns.IsVisible("Price")) { <MudTh Class="py-1 px-2"><MudTableSortLabel SortBy="new Func<Product, object>(x => x.Price)">Price (LD)</MudTableSortLabel></MudTh> }
+                @if (_productColumns.IsVisible("Profit")) { <MudTh Class="py-1 px-4"><MudTableSortLabel SortBy="new Func<Product, object>(x => x.Price - x.CostPrice)">Profit (LD)</MudTableSortLabel></MudTh> }
+                @if (_productColumns.IsVisible("Total Sold")) { <MudTh Class="py-1 px-2"><MudTableSortLabel SortBy="new Func<Product, object>(x => x.TotalSoldQuantity)">Total Sold</MudTableSortLabel></MudTh> }
+                @if (_productColumns.IsVisible("Stock")) { <MudTh Class="py-1 px-2"><MudTableSortLabel SortBy="new Func<Product, object>(x => x.StockQuantity)">Stock</MudTableSortLabel></MudTh> }
+                @if (_productColumns.IsVisible("Pinned")) { <MudTh Class="py-1 px-2"><MudTableSortLabel SortBy="new Func<Product, object>(x => x.IsPinned)">Pinned</MudTableSortLabel></MudTh> }
             </HeaderContent>
             <RowTemplate>
-                @if (IsVisible("Actions")) {
+                @if (_productColumns.IsVisible("Actions")) {
                     <MudTd Class="py-1 px-2" Style="white-space: nowrap;">
                         <div class="d-flex">
                             <MudIconButton Icon="@Icons.Material.Filled.Edit"
@@ -90,7 +90,7 @@ else
                         </div>
                     </MudTd>
                 }
-                @if (IsVisible("Name")) {
+                @if (_productColumns.IsVisible("Name")) {
                     <MudTd Class="py-1 px-2">
                         <div class="d-flex align-center">
                             <MudIconButton Icon="@Icons.Material.Filled.Info"
@@ -102,7 +102,7 @@ else
                         </div>
                     </MudTd>
                 }
-                @if (IsVisible("Barcode")) {
+                @if (_productColumns.IsVisible("Barcode")) {
                     <MudTd Class="py-1 px-2">
                         @if (context.Barcodes.Any())
                         {
@@ -122,18 +122,18 @@ else
                         }
                     </MudTd>
                 }
-                @if (IsVisible("Description")) { <MudTd Class="py-1 px-2">@context.Description</MudTd> }
-                @if (IsVisible("Cost")) {
+                @if (_productColumns.IsVisible("Description")) { <MudTd Class="py-1 px-2">@context.Description</MudTd> }
+                @if (_productColumns.IsVisible("Cost")) {
                     <MudTd Class="py-1 px-2">
                         <MudChip T="string" Size="Size.Small" Variant="Variant.Text">@context.CostPrice.ToString("F2")</MudChip>
                     </MudTd>
                 }
-                @if (IsVisible("Price")) {
+                @if (_productColumns.IsVisible("Price")) {
                     <MudTd Class="py-1 px-2">
                         <MudChip T="string" Size="Size.Small" Variant="Variant.Text" Color="Color.Success">@context.Price.ToString("F2")</MudChip>
                     </MudTd>
                 }
-                @if (IsVisible("Profit")) {
+                @if (_productColumns.IsVisible("Profit")) {
                     <MudTd Class="py-1 px-4">
                         @{
                             var profit = context.Price - context.CostPrice;
@@ -144,15 +144,15 @@ else
                         </MudChip>
                     </MudTd>
                 }
-                @if (IsVisible("Total Sold")) { <MudTd Class="py-1 px-2">@context.TotalSoldQuantity</MudTd> }
-                @if (IsVisible("Stock")) {
+                @if (_productColumns.IsVisible("Total Sold")) { <MudTd Class="py-1 px-2">@context.TotalSoldQuantity</MudTd> }
+                @if (_productColumns.IsVisible("Stock")) {
                     <MudTd Class="py-1 px-2">
                         <MudChip T="string" Size="Size.Small" Variant="Variant.Text" Color="@(context.StockQuantity > 10 ? Color.Success : Color.Warning)">
-                            @(context.IsStockless ? "∞" : context.StockQuantity)
+                            @(context.IsStockless ? "8" : context.StockQuantity)
                         </MudChip>
                     </MudTd>
                 }
-                @if (IsVisible("Pinned")) {
+                @if (_productColumns.IsVisible("Pinned")) {
                     <MudTd Class="py-1 px-2">
                         <MudCheckBox T="bool" Value="@context.IsPinned" ValueChanged="@((bool val) => TogglePin(context, val))" Color="Color.Warning" CheckedIcon="@Icons.Material.Filled.PushPin" UncheckedIcon="@Icons.Material.Outlined.PushPin" Size="Size.Small" />
                     </MudTd>
@@ -160,7 +160,7 @@ else
             </RowTemplate>
             <PagerContent>
                 <div class="d-flex align-center justify-space-between px-4 py-2">
-                    <TableColumnToggle Columns="@_columns" ColumnsChanged="StateHasChanged" TableName="Products" />
+                    <TableColumnToggle Columns="@_productColumns" ColumnsChanged="StateHasChanged" TableName="Products" />
                     <MudTablePager />
                 </div>
             </PagerContent>
@@ -174,7 +174,7 @@ else
     private IDialogReference? _searchScannerDialog;
     private string searchString = "";
 
-    private List<ColumnDefinition> _columns = new()
+    private List<ColumnDefinition> _productColumns = new()
     {
         new() { Title = "Actions", IsVisible = true },
         new() { Title = "Name", IsVisible = true },
@@ -187,8 +187,6 @@ else
         new() { Title = "Stock", IsVisible = true },
         new() { Title = "Pinned", IsVisible = true }
     };
-
-    private bool IsVisible(string title) => _columns.FirstOrDefault(c => c.Title == title)?.IsVisible ?? true;
 
     private bool FilterFunc(Product product)
     {

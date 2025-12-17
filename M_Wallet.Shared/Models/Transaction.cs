@@ -22,6 +22,18 @@ public class Transaction
     public List<PaymentAllocation> PaymentAllocations { get; set; } = new();
     public TransactionStatus Status { get; set; } = TransactionStatus.Completed;
 
+    /// <summary>
+    /// Calculates the total amount paid towards this transaction.
+    /// </summary>
+    [System.ComponentModel.DataAnnotations.Schema.NotMapped]
+    public decimal TotalPaid => PaymentAllocations?.Sum(pa => pa.Amount) ?? 0;
+
+    /// <summary>
+    /// Calculates the remaining balance due (TotalAmount minus all payments).
+    /// </summary>
+    [System.ComponentModel.DataAnnotations.Schema.NotMapped]
+    public decimal BalanceDue => TotalAmount - TotalPaid;
+
     [System.ComponentModel.DataAnnotations.Schema.NotMapped]
     public string? DriverName { get; set; } // For creating new drivers during transaction
 

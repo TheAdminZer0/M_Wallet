@@ -3,8 +3,18 @@ using M_Wallet.Shared;
 
 namespace M_Wallet.Client.Services
 {
+    /// <summary>
+    /// Generates HTML for printing receipts and invoices.
+    /// Supports thermal printer format (80mm) and A4 invoice format.
+    /// </summary>
     public class ReceiptService
     {
+        /// <summary>
+        /// Generates thermal printer receipt HTML (80mm width).
+        /// Used for point-of-sale receipt printing.
+        /// </summary>
+        /// <param name="transaction">The transaction to generate a receipt for.</param>
+        /// <returns>HTML string formatted for thermal printers.</returns>
         public string GenerateReceiptHtml(Transaction transaction)
         {
             var sb = new StringBuilder();
@@ -76,14 +86,12 @@ namespace M_Wallet.Client.Services
             sb.Append($"<div class='total-row'><span>{transaction.TotalAmount:F2}</span><span>الإجمالي</span></div>");
             
             // Calculate Paid Amount
-            var paid = transaction.PaymentAllocations?.Sum(pa => pa.Amount) ?? 0;
-            if (paid > 0)
+            if (transaction.TotalPaid > 0)
             {
-                sb.Append($"<div class='sub-row'><span>{paid:F2}</span><span>المدفوع</span></div>");
-                var balance = transaction.TotalAmount - paid;
-                if (balance > 0.01m)
+                sb.Append($"<div class='sub-row'><span>{transaction.TotalPaid:F2}</span><span>المدفوع</span></div>");
+                if (transaction.BalanceDue > 0.01m)
                 {
-                    sb.Append($"<div class='sub-row'><span>{balance:F2}</span><span>المتبقي</span></div>");
+                    sb.Append($"<div class='sub-row'><span>{transaction.BalanceDue:F2}</span><span>المتبقي</span></div>");
                 }
             }
             
@@ -99,6 +107,12 @@ namespace M_Wallet.Client.Services
             return sb.ToString();
         }
 
+        /// <summary>
+        /// Generates A4 invoice HTML with full company branding.
+        /// Used for formal invoice printing and PDF generation.
+        /// </summary>
+        /// <param name="transaction">The transaction to generate an invoice for.</param>
+        /// <returns>HTML string formatted for A4 paper.</returns>
         public string GenerateInvoiceHtml(Transaction transaction)
         {
             var sb = new StringBuilder();
@@ -211,13 +225,10 @@ namespace M_Wallet.Client.Services
                 sb.Append($"<div class='total-row'><span>المجموع الفرعي</span><span>{transaction.TotalAmount:F2}</span></div>");
             }
             
-            var paid = transaction.PaymentAllocations?.Sum(pa => pa.Amount) ?? 0;
-            var balance = transaction.TotalAmount - paid;
-
-            sb.Append($"<div class='total-row'><span>المدفوع</span><span>{paid:F2}</span></div>");
-            if (balance > 0.01m)
+            sb.Append($"<div class='total-row'><span>المدفوع</span><span>{transaction.TotalPaid:F2}</span></div>");
+            if (transaction.BalanceDue > 0.01m)
             {
-                sb.Append($"<div class='total-row' style='color:red'><span>المتبقي</span><span>{balance:F2}</span></div>");
+                sb.Append($"<div class='total-row' style='color:red'><span>المتبقي</span><span>{transaction.BalanceDue:F2}</span></div>");
             }
             
             sb.Append($"<div class='total-row final'><span>الإجمالي</span><span>{transaction.TotalAmount:F2} د.ل</span></div>");

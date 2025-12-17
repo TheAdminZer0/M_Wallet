@@ -3,6 +3,10 @@ using M_Wallet.Shared;
 
 namespace M_Wallet.Client.Services;
 
+/// <summary>
+/// Service for caching product data with lazy initialization.
+/// Reduces API calls by caching products and providing refresh capability.
+/// </summary>
 public class ProductService
 {
     private readonly HttpClient _http;
@@ -15,6 +19,9 @@ public class ProductService
         _http = http;
     }
 
+    /// <summary>
+    /// Initializes the service and loads data if not already loaded.
+    /// </summary>
     public async Task InitializeAsync()
     {
         if (_isInitialized) return;
@@ -27,6 +34,9 @@ public class ProductService
         await _initializationTask;
     }
 
+    /// <summary>
+    /// Loads products from the API.
+    /// </summary>
     private async Task LoadDataInternalAsync()
     {
         try
@@ -40,6 +50,11 @@ public class ProductService
         }
     }
 
+    /// <summary>
+    /// Gets cached products, optionally forcing a refresh from the API.
+    /// </summary>
+    /// <param name="forceRefresh">If true, reloads data from API before returning.</param>
+    /// <returns>List of all active products.</returns>
     public async Task<List<Product>> GetProductsAsync(bool forceRefresh = false)
     {
         if (forceRefresh)
@@ -52,7 +67,10 @@ public class ProductService
         return _products ?? new List<Product>();
     }
 
-    // Helper to refresh data after an update (add/delete/edit)
+    /// <summary>
+    /// Forces a full data refresh from the API.
+    /// Call this after creating, updating, or deleting products.
+    /// </summary>
     public async Task RefreshDataAsync()
     {
         _isInitialized = false;

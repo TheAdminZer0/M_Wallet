@@ -3,6 +3,10 @@ using M_Wallet.Shared;
 
 namespace M_Wallet.Client.Services;
 
+/// <summary>
+/// Service for caching and providing transaction/payment data with lazy initialization.
+/// Reduces API calls by caching data and providing refresh capability.
+/// </summary>
 public class TransactionService
 {
     private readonly HttpClient _http;
@@ -16,6 +20,10 @@ public class TransactionService
         _http = http;
     }
 
+    /// <summary>
+    /// Initializes the service and loads data if not already loaded.
+    /// Uses a single initialization task to prevent duplicate API calls.
+    /// </summary>
     public async Task InitializeAsync()
     {
         if (_isInitialized) return;
@@ -28,6 +36,9 @@ public class TransactionService
         await _initializationTask;
     }
 
+    /// <summary>
+    /// Fetches transactions and payments from the API in parallel.
+    /// </summary>
     private async Task LoadDataInternalAsync()
     {
         try
@@ -49,6 +60,11 @@ public class TransactionService
         }
     }
 
+    /// <summary>
+    /// Gets cached transactions, optionally forcing a refresh from the API.
+    /// </summary>
+    /// <param name="forceRefresh">If true, reloads data from API before returning.</param>
+    /// <returns>List of all transactions with items and payment allocations.</returns>
     public async Task<List<Transaction>> GetTransactionsAsync(bool forceRefresh = false)
     {
         if (forceRefresh)
@@ -61,6 +77,11 @@ public class TransactionService
         return _transactions ?? new List<Transaction>();
     }
 
+    /// <summary>
+    /// Gets cached payments, optionally forcing a refresh from the API.
+    /// </summary>
+    /// <param name="forceRefresh">If true, reloads data from API before returning.</param>
+    /// <returns>List of all payments with allocations.</returns>
     public async Task<List<Payment>> GetPaymentsAsync(bool forceRefresh = false)
     {
         if (forceRefresh)
@@ -73,7 +94,10 @@ public class TransactionService
         return _payments ?? new List<Payment>();
     }
 
-    // Helper to refresh data after an update (add/delete)
+    /// <summary>
+    /// Forces a full refresh of all cached data from the API.
+    /// Call this after creating, updating, or deleting transactions/payments.
+    /// </summary>
     public async Task RefreshDataAsync()
     {
         _isInitialized = false;
