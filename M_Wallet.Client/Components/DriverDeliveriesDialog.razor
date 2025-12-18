@@ -1,8 +1,9 @@
 @using M_Wallet.Shared
 @using System.Net.Http.Json
 @using Microsoft.AspNetCore.Components
+@using M_Wallet.Client.Services
 @inject HttpClient Http
-@inject ISnackbar Snackbar
+@inject NotificationService Notify
 @using MudBlazor
 @inherits ComponentBase
 
@@ -126,16 +127,16 @@
             if (response.IsSuccessStatusCode)
             {
                 order.Status = newStatus;
-                Snackbar.Add($"Order #{order.Id} marked as {newStatus}.", Severity.Success);
+                Notify.Success($"Order #{order.Id} marked as {newStatus}.");
             }
             else
             {
-                Snackbar.Add($"Failed to update order #{order.Id}.", Severity.Error);
+                Notify.Error($"Failed to update order #{order.Id}.");
             }
         }
         catch (Exception ex)
         {
-            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+            Notify.Error($"Error: {ex.Message}");
         }
     }
 
@@ -167,7 +168,7 @@
             var paymentResponse = await Http.PostAsJsonAsync("api/payments", payment);
             if (!paymentResponse.IsSuccessStatusCode)
             {
-                Snackbar.Add($"Payment failed for order #{order.Id}.", Severity.Error);
+                Notify.Error($"Payment failed for order #{order.Id}.");
                 return;
             }
         }

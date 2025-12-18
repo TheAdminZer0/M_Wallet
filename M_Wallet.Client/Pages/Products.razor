@@ -1,12 +1,8 @@
 @page "/products"
 @inject HttpClient Http
-@inject ISnackbar Snackbar
+@inject NotificationService Notify
 @inject IDialogService DialogService
 @inject ProductService ProductService
-@using M_Wallet.Shared
-@using M_Wallet.Client.Components
-@using M_Wallet.Client.Models
-@using M_Wallet.Client.Services
 
 <PageTitle>Product Management</PageTitle>
 
@@ -219,7 +215,7 @@ else
         }
         catch (Exception ex)
         {
-            Snackbar.Add($"Error loading products: {ex.Message}", Severity.Error);
+            Notify.Error($"Error loading products: {ex.Message}");
         }
     }
 
@@ -292,18 +288,18 @@ else
 
             if (response.IsSuccessStatusCode)
             {
-                Snackbar.Add("Product added successfully!", Severity.Success);
+                Notify.Success("Product added successfully!");
                 await ProductService.RefreshDataAsync();
                 await LoadProducts();
             }
             else
             {
-                Snackbar.Add("Failed to add product", Severity.Error);
+                Notify.Error("Failed to add product");
             }
         }
         catch (Exception ex)
         {
-            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+            Notify.Error($"Error: {ex.Message}");
         }
     }
 
@@ -315,18 +311,18 @@ else
 
             if (response.IsSuccessStatusCode)
             {
-                Snackbar.Add("Product updated successfully!", Severity.Success);
+                Notify.Success("Product updated successfully!");
                 await ProductService.RefreshDataAsync();
                 await LoadProducts();
             }
             else
             {
-                Snackbar.Add("Failed to update product", Severity.Error);
+                Notify.Error("Failed to update product");
             }
         }
         catch (Exception ex)
         {
-            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+            Notify.Error($"Error: {ex.Message}");
         }
     }
 
@@ -338,18 +334,18 @@ else
             var response = await Http.PutAsJsonAsync($"api/products/{product.Id}", product);
             if (response.IsSuccessStatusCode)
             {
-                Snackbar.Add(isPinned ? "Product pinned" : "Product unpinned", Severity.Success);
+                Notify.Success(isPinned ? "Product pinned" : "Product unpinned");
             }
             else
             {
                 product.IsPinned = !isPinned;
-                Snackbar.Add("Failed to update pin status", Severity.Error);
+                Notify.Error("Failed to update pin status");
             }
         }
         catch (Exception ex)
         {
             product.IsPinned = !isPinned;
-            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+            Notify.Error($"Error: {ex.Message}");
         }
     }
 
@@ -369,19 +365,19 @@ else
 
             if (response.IsSuccessStatusCode)
             {
-                Snackbar.Add("Product deleted successfully", Severity.Success);
+                Notify.Success("Product deleted successfully");
                 await ProductService.RefreshDataAsync();
                 await LoadProducts();
             }
             else
             {
                 var error = await response.Content.ReadAsStringAsync();
-                Snackbar.Add($"Failed to delete product: {error}", Severity.Error);
+                Notify.Error($"Failed to delete product: {error}");
             }
         }
         catch (Exception ex)
         {
-            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+            Notify.Error($"Error: {ex.Message}");
         }
     }
 
@@ -422,7 +418,7 @@ else
         if (!string.IsNullOrWhiteSpace(code))
         {
             searchString = code;
-            Snackbar.Add($"Searching for barcode {code}", Severity.Info);
+            Notify.Info($"Searching for barcode {code}");
         }
 
         await CloseSearchScannerAsync();

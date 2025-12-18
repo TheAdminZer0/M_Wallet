@@ -39,15 +39,8 @@ public class ProductService
     /// </summary>
     private async Task LoadDataInternalAsync()
     {
-        try
-        {
-            _products = await _http.GetFromJsonAsync<List<Product>>("api/products");
-            _isInitialized = true;
-        }
-        catch (Exception)
-        {
-            throw;
-        }
+        _products = await _http.GetFromJsonAsync<List<Product>>("api/products");
+        _isInitialized = true;
     }
 
     /// <summary>

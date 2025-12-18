@@ -1,15 +1,12 @@
 @page "/transactions"
 @inject HttpClient Http
-@inject ISnackbar Snackbar
+@inject NotificationService Notify
 @inject IDialogService DialogService
 @inject IJSRuntime JSRuntime
 @inject ReceiptService _receiptService
 @inject TransactionService TransactionService
 @inject CustomAuthenticationStateProvider AuthStateProvider
 @inject NavigationManager NavigationManager
-@using M_Wallet.Client.Models
-@using M_Wallet.Client.Services
-@using M_Wallet.Client.Components
 
 <style>
     .fixed-layout-table .mud-table-container > table {
@@ -906,7 +903,7 @@ else
         }
         catch (Exception ex)
         {
-            Snackbar.Add($"Error loading data: {ex.Message}", Severity.Error);
+            Notify.Error($"Error loading data: {ex.Message}");
         }
     }
 
@@ -1024,7 +1021,7 @@ else
         if (!string.IsNullOrWhiteSpace(code))
         {
             searchString = code;
-            Snackbar.Add($"Searching for barcode {code}", Severity.Info);
+            Notify.Info($"Searching for barcode {code}");
         }
         await CloseSearchScannerAsync();
     }
@@ -1219,17 +1216,17 @@ else
                     var response = await Http.PutAsJsonAsync($"api/transactions/{transaction.Id}", transaction);
                     if (response.IsSuccessStatusCode)
                     {
-                        Snackbar.Add("Note updated", Severity.Success);
+                        Notify.Success("Note updated");
                     }
                     else
                     {
-                        Snackbar.Add("Failed to update note", Severity.Error);
+                        Notify.Error("Failed to update note");
                         await LoadData();
                     }
                 }
                 catch (Exception ex)
                 {
-                    Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+                    Notify.Error($"Error: {ex.Message}");
                 }
             }
         }
@@ -1253,18 +1250,18 @@ else
                 
                 if (response.IsSuccessStatusCode)
                 {
-                    Snackbar.Add("Transaction deleted", Severity.Success);
+                    Notify.Success("Transaction deleted");
                     await TransactionService.RefreshDataAsync();
                     await LoadData();
                 }
                 else
                 {
-                    Snackbar.Add("Failed to delete transaction", Severity.Error);
+                    Notify.Error("Failed to delete transaction");
                 }
             }
             catch (Exception ex)
             {
-                Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+                Notify.Error($"Error: {ex.Message}");
             }
         }
     }
@@ -1284,18 +1281,18 @@ else
                 var response = await Http.DeleteAsync($"api/payments/{payment.Id}");
                 if (response.IsSuccessStatusCode)
                 {
-                    Snackbar.Add("Payment deleted", Severity.Success);
+                    Notify.Success("Payment deleted");
                     await TransactionService.RefreshDataAsync();
                     await LoadData();
                 }
                 else
                 {
-                    Snackbar.Add("Failed to delete payment", Severity.Error);
+                    Notify.Error("Failed to delete payment");
                 }
             }
             catch (Exception ex)
             {
-                Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+                Notify.Error($"Error: {ex.Message}");
             }
         }
     }
@@ -1373,17 +1370,17 @@ else
             if (response.IsSuccessStatusCode)
             {
                 transaction.Status = newStatus;
-                Snackbar.Add($"Status updated to {newStatus}", Severity.Success);
+                Notify.Success($"Status updated to {newStatus}");
                 await TransactionService.RefreshDataAsync(); // Refresh to update stock if needed
             }
             else
             {
-                Snackbar.Add("Failed to update status", Severity.Error);
+                Notify.Error("Failed to update status");
             }
         }
         catch (Exception ex)
         {
-            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+            Notify.Error($"Error: {ex.Message}");
         }
     }
 
@@ -1438,18 +1435,18 @@ else
             var response = await Http.PostAsJsonAsync("api/payments", payment);
             if (response.IsSuccessStatusCode)
             {
-                Snackbar.Add("Payment recorded", Severity.Success);
+                Notify.Success("Payment recorded");
                 await TransactionService.RefreshDataAsync();
                 await LoadData();
             }
             else
             {
-                Snackbar.Add("Failed to record payment", Severity.Error);
+                Notify.Error("Failed to record payment");
             }
         }
         catch (Exception ex)
         {
-            Snackbar.Add($"Error recording payment: {ex.Message}", Severity.Error);
+            Notify.Error($"Error recording payment: {ex.Message}");
         }
     }
 

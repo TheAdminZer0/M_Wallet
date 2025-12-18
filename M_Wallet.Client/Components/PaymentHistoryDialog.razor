@@ -1,7 +1,5 @@
-@using M_Wallet.Shared
-@using MudBlazor
 @inject HttpClient Http
-@inject ISnackbar Snackbar
+@inject NotificationService Notify
 @inject IDialogService DialogService
 
 @* Payment allocations history for a transaction *@
@@ -119,18 +117,18 @@
                 var response = await Http.DeleteAsync($"api/payments/{allocation.Payment.Id}");
                 if (response.IsSuccessStatusCode)
                 {
-                    Snackbar.Add("Payment deleted successfully", Severity.Success);
+                    Notify.Success("Payment deleted successfully");
                     Transaction.PaymentAllocations.Remove(allocation);
                     StateHasChanged();
                 }
                 else
                 {
-                    Snackbar.Add("Failed to delete payment", Severity.Error);
+                    Notify.Error("Failed to delete payment");
                 }
             }
             catch (Exception ex)
             {
-                Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+                Notify.Error($"Error: {ex.Message}");
             }
         }
     }

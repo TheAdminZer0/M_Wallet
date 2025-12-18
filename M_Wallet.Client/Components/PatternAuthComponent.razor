@@ -1,9 +1,10 @@
 @namespace M_Wallet.Client.Components
 @using M_Wallet.Shared
 @using MudBlazor
+@using M_Wallet.Client.Services
 @using System.Net.Http.Json
 @inject HttpClient Http
-@inject ISnackbar Snackbar
+@inject NotificationService Notify
 
 @* Pattern-based authorization control *@
 <PatternLock @ref="patternLock" OnPatternComplete="VerifyPattern" />
@@ -35,13 +36,13 @@
                 }
                 else
                 {
-                    Snackbar.Add("Invalid Pattern", Severity.Error);
+                    Notify.Error("Invalid Pattern");
                 }
             }
         }
         catch (Exception ex)
         {
-            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+            Notify.Error($"Error: {ex.Message}");
         }
     }
 }

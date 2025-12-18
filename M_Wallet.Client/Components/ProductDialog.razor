@@ -1,12 +1,9 @@
-@using M_Wallet.Shared
-@using M_Wallet.Client.Components
-@using MudBlazor
 @using System.Security.Cryptography
 @using System.Text
-@inject ISnackbar Snackbar
+@inject NotificationService Notify
 @inject IDialogService DialogService
 @inject HttpClient Http
-@inject M_Wallet.Client.Services.UserPreferencesService UserPreferencesService
+@inject UserPreferencesService UserPreferencesService
 
 @* Product create/edit dialog *@
 <MudDialog>
@@ -187,25 +184,25 @@
         // Basic validation
         if (string.IsNullOrWhiteSpace(Product.Name))
         {
-            Snackbar.Add("Product name is required", Severity.Error);
+            Notify.Error("Product name is required");
             return;
         }
 
         if (Product.CostPrice < 0)
         {
-            Snackbar.Add("Cost price cannot be negative", Severity.Error);
+            Notify.Error("Cost price cannot be negative");
             return;
         }
 
         if (Product.Price <= 0)
         {
-            Snackbar.Add("Selling price must be greater than zero", Severity.Error);
+            Notify.Error("Selling price must be greater than zero");
             return;
         }
 
         if (Product.CostPrice > Product.Price)
         {
-            Snackbar.Add("Warning: Selling price is lower than cost price - you will lose money!", Severity.Warning);
+            Notify.Warning("Warning: Selling price is lower than cost price - you will lose money!");
         }
 
         // Invoke the submit callback
@@ -298,7 +295,7 @@
         {
             _currentBarcodeValue = code;
             AddCurrentBarcode();
-            Snackbar.Add($"Barcode captured: {code}", Severity.Success);
+            Notify.Success($"Barcode captured: {code}");
             StateHasChanged();
         }
 
@@ -320,7 +317,7 @@
         // Ensure product name is entered first
         if (string.IsNullOrWhiteSpace(Product.Name))
         {
-            Snackbar.Add("Please enter the Product Name before uploading an image.", Severity.Warning);
+            Notify.Warning("Please enter the Product Name before uploading an image.");
             return;
         }
 
@@ -378,16 +375,16 @@
                         try 
                         {
                             await Http.PutAsJsonAsync($"api/products/{Product.Id}", Product);
-                            Snackbar.Add("Image uploaded & saved", Severity.Success);
+                            Notify.Success("Image uploaded & saved");
                         }
                         catch
                         {
-                            Snackbar.Add("Image uploaded (Save failed)", Severity.Warning);
+                            Notify.Warning("Image uploaded (Save failed)");
                         }
                     }
                     else
                     {
-                        Snackbar.Add("Image uploaded successfully", Severity.Success);
+                        Notify.Success("Image uploaded successfully");
                     }
 
                     StateHasChanged();
@@ -395,12 +392,12 @@
             }
             else
             {
-                Snackbar.Add("Image upload failed", Severity.Error);
+                Notify.Error("Image upload failed");
             }
         }
         catch (Exception ex)
         {
-            Snackbar.Add($"Error uploading image: {ex.Message}", Severity.Error);
+            Notify.Error($"Error uploading image: {ex.Message}");
         }
     }
 

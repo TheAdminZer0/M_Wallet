@@ -1,0 +1,297 @@
+@page "/dev"
+@inject HttpClient Http
+@inject NotificationService Notify
+@inject ProductService ProductService
+@inject TransactionService TransactionService
+
+<MudContainer MaxWidth="MaxWidth.Small" Class="mt-4">
+    <MudPaper Class="pa-6">
+        <MudStack Spacing="4">
+            <MudText Typo="Typo.h4" Color="Color.Warning" Class="d-flex align-center gap-2">
+                <MudIcon Icon="@Icons.Material.Filled.DeveloperMode" />
+                Developer Tools
+            </MudText>
+            
+            <MudAlert Severity="Severity.Warning" Variant="Variant.Filled">
+                <MudText Typo="Typo.body2">
+                    <strong>WARNING:</strong> These actions are destructive and cannot be undone!
+                </MudText>
+            </MudAlert>
+
+            <MudDivider />
+
+            @* DELETE SECTION *@
+            <MudText Typo="Typo.h6" Color="Color.Error">
+                <MudIcon Icon="@Icons.Material.Filled.DeleteForever" Class="mr-2" />
+                Delete Data
+            </MudText>
+
+            <MudStack Row="true" Spacing="2" Class="flex-wrap">
+                <MudButton Variant="Variant.Filled" 
+                           Color="Color.Error" 
+                           StartIcon="@Icons.Material.Filled.Receipt"
+                           OnClick="DeleteAllOrders"
+                           Disabled="@isLoading">
+                    Delete All Orders
+                </MudButton>
+                
+                <MudButton Variant="Variant.Filled" 
+                           Color="Color.Error" 
+                           StartIcon="@Icons.Material.Filled.Payment"
+                           OnClick="DeleteAllPayments"
+                           Disabled="@isLoading">
+                    Delete All Payments
+                </MudButton>
+                
+                <MudButton Variant="Variant.Filled" 
+                           Color="Color.Error" 
+                           StartIcon="@Icons.Material.Filled.Inventory"
+                           OnClick="DeleteAllProducts"
+                           Disabled="@isLoading">
+                    Delete All Products
+                </MudButton>
+                    
+                    <MudButton Variant="Variant.Filled" 
+                               Color="Color.Error" 
+                               StartIcon="@Icons.Material.Filled.ListAlt"
+                               OnClick="DeleteAllAudits"
+                               Disabled="@isLoading">
+                        Delete All Audits
+                    </MudButton>
+            </MudStack>
+
+            <MudDivider />
+
+            @* SEED SECTION *@
+            <MudText Typo="Typo.h6" Color="Color.Success">
+                <MudIcon Icon="@Icons.Material.Filled.Add" Class="mr-2" />
+                Generate Test Data
+            </MudText>
+
+            <MudStack Row="true" Spacing="2" AlignItems="AlignItems.Center">
+                <MudNumericField @bind-Value="seedCount" 
+                                 Label="Count" 
+                                 Variant="Variant.Outlined" 
+                                 Min="1" Max="100"
+                                 Style="width: 100px;" />
+            </MudStack>
+
+            <MudStack Row="true" Spacing="2" Class="flex-wrap">
+                <MudButton Variant="Variant.Filled" 
+                           Color="Color.Success" 
+                           StartIcon="@Icons.Material.Filled.Inventory"
+                           OnClick="SeedProducts"
+                           Disabled="@isLoading">
+                    Add @seedCount Random Products
+                </MudButton>
+                
+                <MudButton Variant="Variant.Filled" 
+                           Color="Color.Success" 
+                           StartIcon="@Icons.Material.Filled.ShoppingCart"
+                           OnClick="SeedOrders"
+                           Disabled="@isLoading">
+                    Add @seedCount Random Orders
+                </MudButton>
+            </MudStack>
+
+            @if (isLoading)
+            {
+                <MudProgressLinear Color="Color.Primary" Indeterminate="true" />
+            }
+
+            @if (!string.IsNullOrEmpty(lastResult))
+            {
+                <MudAlert Severity="@lastSeverity" Variant="Variant.Outlined">
+                    @lastResult
+                </MudAlert>
+            }
+        </MudStack>
+    </MudPaper>
+</MudContainer>
+
+@code {
+    private bool isLoading = false;
+    private int seedCount = 10;
+    private string lastResult = "";
+    private Severity lastSeverity = Severity.Info;
+
+    private async Task DeleteAllOrders()
+    {
+        isLoading = true;
+        try
+        {
+            var response = await Http.DeleteAsync("api/dev/transactions");
+            if (response.IsSuccessStatusCode)
+            {
+                lastResult = "All orders deleted successfully!";
+                lastSeverity = Severity.Success;
+                await TransactionService.RefreshDataAsync();
+                Notify.Success("All orders deleted");
+            }
+            else
+            {
+                lastResult = $"Error: {await response.Content.ReadAsStringAsync()}";
+                lastSeverity = Severity.Error;
+            }
+        }
+        catch (Exception ex)
+        {
+            lastResult = $"Error: {ex.Message}";
+            lastSeverity = Severity.Error;
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task DeleteAllPayments()
+    {
+        isLoading = true;
+        try
+        {
+            var response = await Http.DeleteAsync("api/dev/payments");
+            if (response.IsSuccessStatusCode)
+            {
+                lastResult = "All payments deleted successfully!";
+                lastSeverity = Severity.Success;
+                await TransactionService.RefreshDataAsync();
+                Notify.Success("All payments deleted");
+            }
+            else
+            {
+                lastResult = $"Error: {await response.Content.ReadAsStringAsync()}";
+                lastSeverity = Severity.Error;
+            }
+        }
+        catch (Exception ex)
+        {
+            lastResult = $"Error: {ex.Message}";
+            lastSeverity = Severity.Error;
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task DeleteAllProducts()
+    {
+        isLoading = true;
+        try
+        {
+            var response = await Http.DeleteAsync("api/dev/products");
+            if (response.IsSuccessStatusCode)
+            {
+                lastResult = "All products deleted successfully!";
+                lastSeverity = Severity.Success;
+                await ProductService.RefreshDataAsync();
+                await TransactionService.RefreshDataAsync();
+                Notify.Success("All products deleted");
+            }
+            else
+            {
+                lastResult = $"Error: {await response.Content.ReadAsStringAsync()}";
+                lastSeverity = Severity.Error;
+            }
+        }
+        catch (Exception ex)
+        {
+            lastResult = $"Error: {ex.Message}";
+            lastSeverity = Severity.Error;
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task DeleteAllAudits()
+    {
+        isLoading = true;
+        try
+        {
+            var response = await Http.DeleteAsync("api/dev/audits");
+            if (response.IsSuccessStatusCode)
+            {
+                lastResult = "All audit logs deleted successfully!";
+                lastSeverity = Severity.Success;
+                Notify.Success("All audit logs deleted");
+            }
+            else
+            {
+                lastResult = $"Error: {await response.Content.ReadAsStringAsync()}";
+                lastSeverity = Severity.Error;
+            }
+        }
+        catch (Exception ex)
+        {
+            lastResult = $"Error: {ex.Message}";
+            lastSeverity = Severity.Error;
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task SeedProducts()
+    {
+        isLoading = true;
+        try
+        {
+            var response = await Http.PostAsync($"api/dev/seed/products?count={seedCount}", null);
+            if (response.IsSuccessStatusCode)
+            {
+                lastResult = $"{seedCount} random products created!";
+                lastSeverity = Severity.Success;
+                await ProductService.RefreshDataAsync();
+                Notify.Success($"{seedCount} products created");
+            }
+            else
+            {
+                lastResult = $"Error: {await response.Content.ReadAsStringAsync()}";
+                lastSeverity = Severity.Error;
+            }
+        }
+        catch (Exception ex)
+        {
+            lastResult = $"Error: {ex.Message}";
+            lastSeverity = Severity.Error;
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task SeedOrders()
+    {
+        isLoading = true;
+        try
+        {
+            var response = await Http.PostAsync($"api/dev/seed/orders?count={seedCount}", null);
+            if (response.IsSuccessStatusCode)
+            {
+                lastResult = $"{seedCount} random orders with payments created!";
+                lastSeverity = Severity.Success;
+                await TransactionService.RefreshDataAsync();
+                Notify.Success($"{seedCount} orders created");
+            }
+            else
+            {
+                lastResult = $"Error: {await response.Content.ReadAsStringAsync()}";
+                lastSeverity = Severity.Error;
+            }
+        }
+        catch (Exception ex)
+        {
+            lastResult = $"Error: {ex.Message}";
+            lastSeverity = Severity.Error;
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+}

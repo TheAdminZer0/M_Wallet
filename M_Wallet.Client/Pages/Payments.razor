@@ -1,12 +1,8 @@
 @page "/payments"
 @inject HttpClient Http
-@inject ISnackbar Snackbar
+@inject NotificationService Notify
 @inject IDialogService DialogService
 @inject TransactionService TransactionService
-@using M_Wallet.Shared
-@using M_Wallet.Client.Components
-@using M_Wallet.Client.Services
-@using M_Wallet.Client.Models
 
 <PageTitle>Payments</PageTitle>
 
@@ -178,7 +174,7 @@
         }
         catch (Exception ex)
         {
-            Snackbar.Add($"Error loading data: {ex.Message}", Severity.Error);
+            Notify.Error($"Error loading data: {ex.Message}");
         }
     }
 
@@ -236,18 +232,18 @@
                 var response = await Http.DeleteAsync($"api/payments/{payment.Id}");
                 if (response.IsSuccessStatusCode)
                 {
-                    Snackbar.Add("Payment deleted successfully", Severity.Success);
+                    Notify.Success("Payment deleted successfully");
                     await TransactionService.RefreshDataAsync();
                     await LoadData();
                 }
                 else
                 {
-                    Snackbar.Add("Failed to delete payment", Severity.Error);
+                    Notify.Error("Failed to delete payment");
                 }
             }
             catch (Exception ex)
             {
-                Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+                Notify.Error($"Error: {ex.Message}");
             }
         }
     }

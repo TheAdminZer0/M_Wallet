@@ -89,3 +89,81 @@
         width: 25%;
     }
 }
+
+/* Validation error highlight with jiggle animation */
+@keyframes jiggle {
+    0%, 100% { transform: translateX(0); }
+    20% { transform: translateX(-4px); }
+    40% { transform: translateX(4px); }
+    60% { transform: translateX(-4px); }
+    80% { transform: translateX(4px); }
+}
+
+.field-error {
+    animation: jiggle 0.4s ease-in-out;
+}
+
+.field-error .mud-input-outlined-border,
+.field-invalid .mud-input-outlined-border {
+    border-color: var(--mud-palette-error) !important;
+    border-width: 2px !important;
+}
+
+.field-error .mud-input-label,
+.field-invalid .mud-input-label {
+    color: var(--mud-palette-error) !important;
+}
+
+/* Persistent invalid state (no animation) */
+.field-invalid {
+    /* Just the styling, no jiggle */
+}
+
+/* Custom notification toast */
+.notification-toast {
+    position: fixed;
+    top: 12px;
+    right: 12px;
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    animation: slideIn 0.15s ease-out;
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateX(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+.notification-success {
+    background: #4caf50;
+    color: white;
+}
+
+.notification-warning {
+    background: #ff9800;
+    color: white;
+}
+
+.notification-error {
+    background: #f44336;
+    color: white;
+}
+
+.notification-info {
+    background: #2196f3;
+    color: white;
+}

@@ -1,11 +1,7 @@
 @page "/users"
-@using M_Wallet.Shared
-@using M_Wallet.Client.Components
-@using M_Wallet.Client.Models
-@using MudBlazor
 @inject HttpClient Http
 @inject IDialogService DialogService
-@inject ISnackbar Snackbar
+@inject NotificationService Notify
 @inject AuthenticationStateProvider AuthStateProvider
 @inject NavigationManager NavigationManager
 
@@ -349,11 +345,11 @@
         if (person.Role == "Admin")
         {
             isAdminVerified = true;
-            Snackbar.Add("Access Granted", Severity.Success);
+            Notify.Success("Access Granted");
         }
         else
         {
-            Snackbar.Add("Access Denied: Not an Admin", Severity.Error);
+            Notify.Error("Access Denied: Not an Admin");
         }
     }
 
@@ -365,7 +361,7 @@
         }
         catch (Exception ex)
         {
-            Snackbar.Add($"Error loading users: {ex.Message}", Severity.Error);
+            Notify.Error($"Error loading users: {ex.Message}");
         }
     }
 
@@ -425,12 +421,12 @@
             var response = await Http.DeleteAsync($"api/people/{user.Id}");
             if (response.IsSuccessStatusCode)
             {
-                Snackbar.Add("User deleted", Severity.Success);
+                Notify.Success("User deleted");
                 await LoadUsers();
             }
             else
             {
-                Snackbar.Add("Error deleting user", Severity.Error);
+                Notify.Error("Error deleting user");
             }
         }
     }
@@ -459,7 +455,7 @@
         }
         catch (Exception ex)
         {
-            Snackbar.Add($"Error loading statement: {ex.Message}", Severity.Error);
+            Notify.Error($"Error loading statement: {ex.Message}");
         }
     }
 

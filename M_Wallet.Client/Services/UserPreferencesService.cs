@@ -36,6 +36,7 @@ namespace M_Wallet.Client.Services
             new() { Title = "Users", Href = "users", Icon = Icons.Material.Filled.People },
             new() { Title = "History & Logs", Href = "logs", Icon = Icons.Material.Filled.History },
             new() { Title = "Settings", Href = "settings", Icon = Icons.Material.Filled.Settings },
+            new() { Title = "Dev Tools", Href = "dev", Icon = Icons.Material.Filled.DeveloperMode },
         };
 
         public UserPreferencesService(HttpClient http, AuthenticationStateProvider authStateProvider)
@@ -91,11 +92,9 @@ namespace M_Wallet.Client.Services
                 }
                 NotifyStateChanged();
             }
-            catch (Exception)
+            catch
             {
-                // Do NOT reset preferences on error, keep existing state or default
-                // _preferences = new UserPreferences(); 
-                // NotifyStateChanged();
+                // Keep existing state on error
             }
             return _preferences;
         }

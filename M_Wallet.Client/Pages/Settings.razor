@@ -1,10 +1,7 @@
 @page "/settings"
-@using M_Wallet.Shared
-@using M_Wallet.Client.Services
 @using M_Wallet.Shared.Models
-@using MudBlazor
 @inject HttpClient Http
-@inject ISnackbar Snackbar
+@inject NotificationService Notify
 @inject UserPreferencesService UserPreferencesService
 
 <MudText Typo="Typo.h4" Class="mb-4">Settings</MudText>
@@ -82,7 +79,7 @@
     private async Task SavePreferences()
     {
         await UserPreferencesService.SavePreferences(_preferences);
-        Snackbar.Add("Settings saved successfully", Severity.Success);
+        Notify.Success("Settings saved successfully");
     }
 
     private async Task CacheAllImages()
@@ -97,7 +94,7 @@
             var products = await Http.GetFromJsonAsync<List<Product>>("api/Products");
             if (products == null || !products.Any())
             {
-                Snackbar.Add("No products found to cache.", Severity.Info);
+                Notify.Info("No products found to cache.");
                 _isCaching = false;
                 return;
             }
@@ -129,11 +126,11 @@
                 StateHasChanged();
             }
 
-            Snackbar.Add($"Successfully cached {total} images for offline use!", Severity.Success);
+            Notify.Success($"Successfully cached {total} images for offline use!");
         }
         catch (Exception ex)
         {
-            Snackbar.Add($"Error caching images: {ex.Message}", Severity.Error);
+            Notify.Error($"Error caching images: {ex.Message}");
         }
         finally
         {

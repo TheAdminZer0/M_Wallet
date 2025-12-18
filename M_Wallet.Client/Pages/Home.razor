@@ -1,12 +1,9 @@
 ﻿@page "/"
 @implements IDisposable
-@using M_Wallet.Client.Components
 @using System.Text.Json
-@using M_Wallet.Client.Services
-@using M_Wallet.Shared
 @using M_Wallet.Shared.Models
 @inject HttpClient Http
-@inject ISnackbar Snackbar
+@inject NotificationService Notify
 @inject IJSRuntime JSRuntime
 @inject NavigationManager NavigationManager
 @inject ReceiptService _receiptService
@@ -260,7 +257,7 @@
                                          AdornmentIcon="@Icons.Material.Filled.Person"
                                          ReadOnly="@(selectedCustomer != null)" />
                     </div>
-                    <div style="flex: 1; min-width: 0;">
+                    <div style="flex: 1; min-width: 0;" class="@(customerPhoneJiggle ? "field-error" : "") @(customerPhoneInvalid ? "field-invalid" : "")">
                         <MudAutocomplete T="string"
                                          @ref="_phoneAutocomplete"
                                          Label="Phone Number"
@@ -318,7 +315,7 @@
                 @if (isDelivery)
                 {
                     <div class="d-flex gap-2 mb-2 align-center">
-                        <div style="flex: 1; min-width: 0;">
+                        <div style="flex: 1; min-width: 0;" class="@(driverNameJiggle ? "field-error" : "") @(driverNameInvalid ? "field-invalid" : "")">
                             <MudAutocomplete T="string"
                                              Label="Driver Name"
                                              Value="driverName"
@@ -331,7 +328,7 @@
                                              AdornmentIcon="@Icons.Material.Filled.LocalShipping"
                                              ReadOnly="@(selectedDriver != null)" />
                         </div>
-                        <div style="flex: 1; min-width: 0;">
+                        <div style="flex: 1; min-width: 0;" class="@(driverPhoneJiggle ? "field-error" : "") @(driverPhoneInvalid ? "field-invalid" : "")">
                             <MudAutocomplete T="string"
                                              Label="Driver Phone"
                                              Value="driverPhone"
@@ -514,6 +511,16 @@
     private bool keepDriverSelected = false;
 
     // =====================================================
+    // STATE: Validation Errors (persistent until fixed)
+    // =====================================================
+    private bool customerPhoneInvalid = false;
+    private bool driverPhoneInvalid = false;
+    private bool driverNameInvalid = false;
+    private bool customerPhoneJiggle = false;
+    private bool driverPhoneJiggle = false;
+    private bool driverNameJiggle = false;
+
+    // =====================================================
     // LIFECYCLE: Initialization
     // =====================================================
     protected override async Task OnInitializedAsync()
@@ -569,7 +576,7 @@
             }
             
             searchString = Uri.UnescapeDataString(scanCode);
-            Snackbar.Add($"Scanned: {searchString}", Severity.Success);
+            Notify.Success($"Scanned: {searchString}");
             NavigationManager.NavigateTo("/", replace: true);
         }
     }
@@ -579,37 +586,17 @@
     // =====================================================
     private async Task LoadProducts()
     {
-        try
-        {
-            products = await ProductService.GetProductsAsync();
-        }
-        catch (Exception)
-        {
-        }
+        products = await ProductService.GetProductsAsync();
     }
 
     private async Task LoadCustomers()
     {
-        try
-        {
-            customers = await Http.GetFromJsonAsync<List<Person>>("api/people?role=Customer") ?? new();
-        }
-        catch (Exception)
-        {
-            // Ignore errors
-        }
+        customers = await Http.GetFromJsonAsync<List<Person>>("api/people?role=Customer") ?? new();
     }
 
     private async Task LoadDrivers()
     {
-        try
-        {
-            drivers = await Http.GetFromJsonAsync<List<Person>>("api/people?role=Driver") ?? new();
-        }
-        catch (Exception)
-        {
-            // Ignore errors
-        }
+        drivers = await Http.GetFromJsonAsync<List<Person>>("api/people?role=Driver") ?? new();
     }
 
     private async Task LoadUnpaidOrderCount()
@@ -701,11 +688,15 @@
     private void OnDriverNameChanged(string value)
     {
         driverName = value;
+        // Clear validation error when user types
+        driverNameInvalid = false;
+        
         var match = drivers.FirstOrDefault(d => d.Name != null && d.Name.Equals(value, StringComparison.InvariantCultureIgnoreCase));
         if (match != null)
         {
             selectedDriver = match;
             driverPhone = match.PhoneNumber ?? "";
+            driverPhoneInvalid = false;
         }
         else
         {
@@ -716,11 +707,15 @@
     private void OnDriverPhoneChanged(string value)
     {
         driverPhone = value;
+        // Clear validation error when user types
+        driverPhoneInvalid = false;
+        
         var match = drivers.FirstOrDefault(d => d.PhoneNumber == value);
         if (match != null)
         {
             selectedDriver = match;
             driverName = match.Name;
+            driverNameInvalid = false;
         }
         else
         {
@@ -733,11 +728,16 @@
         selectedDriver = null;
         driverName = "";
         driverPhone = "";
+        driverNameInvalid = false;
+        driverPhoneInvalid = false;
     }
 
     private async Task OnCustomerPhoneChanged(string value)
     {
         customerPhone = value;
+        // Clear validation error when user types
+        customerPhoneInvalid = false;
+        
         var match = customers.FirstOrDefault(c => c.PhoneNumber == value);
         if (match != null)
         {
@@ -757,6 +757,7 @@
         selectedCustomer = null;
         customerName = "";
         customerPhone = "";
+        customerPhoneInvalid = false;
         unpaidOrderCount = 0;
         await Task.CompletedTask;
     }
@@ -1051,14 +1052,37 @@
 
         if (transactionEmployee == null)
         {
-            Snackbar.Add("Employee login required", Severity.Warning);
+            Notify.Warning("Employee login required");
             return;
         }
 
-        if (isDelivery && selectedDriver == null && string.IsNullOrWhiteSpace(driverName) && string.IsNullOrWhiteSpace(driverPhone))
+        // Validate phone numbers
+        if (!string.IsNullOrWhiteSpace(customerPhone) && !IsValidPhone(customerPhone))
         {
-            Snackbar.Add("Please select or enter a driver for delivery orders", Severity.Warning);
+            Notify.Warning("Invalid phone: 10 digits starting with 0, or + for international");
+            customerPhoneInvalid = true;
+            _ = TriggerJiggle(v => customerPhoneJiggle = v);
             return;
+        }
+
+        // Validate delivery requirements
+        if (isDelivery)
+        {
+            if (selectedDriver == null && string.IsNullOrWhiteSpace(driverName))
+            {
+                Notify.Warning("Driver name required for delivery");
+                driverNameInvalid = true;
+                _ = TriggerJiggle(v => driverNameJiggle = v);
+                return;
+            }
+
+            if (!string.IsNullOrWhiteSpace(driverPhone) && !IsValidPhone(driverPhone))
+            {
+                Notify.Warning("Invalid driver phone: 10 digits starting with 0, or + for international");
+                driverPhoneInvalid = true;
+                _ = TriggerJiggle(v => driverPhoneJiggle = v);
+                return;
+            }
         }
 
         isProcessing = true;
@@ -1126,7 +1150,7 @@
                     if (!paymentResponse.IsSuccessStatusCode)
                     {
                         var paymentError = await paymentResponse.Content.ReadAsStringAsync();
-                        Snackbar.Add($"Transaction created but payment failed: {paymentError}", Severity.Error);
+                        Notify.Error($"Transaction created but payment failed: {paymentError}");
                     }
                 }
 
@@ -1194,13 +1218,6 @@
                 await LoadProducts(); // Reload products
                 await TransactionService.RefreshDataAsync(); // Refresh transactions list
             }
-            else
-            {
-                var errorContent = await response.Content.ReadAsStringAsync();
-            }
-        }
-        catch (Exception)
-        {
         }
         finally
         {
@@ -1258,6 +1275,34 @@
         }
 
         return product.ImageUrl;
+    }
+
+    /// <summary>
+    /// Validates a phone number: must be 10 digits starting with 0, or start with + for international.
+    /// </summary>
+    private bool IsValidPhone(string? phone)
+    {
+        if (string.IsNullOrWhiteSpace(phone)) return true; // Empty is allowed
+        phone = phone.Trim();
+        
+        // International format: starts with +
+        if (phone.StartsWith("+")) return phone.Length >= 8;
+        
+        // Local format: 10 digits starting with 0
+        return phone.Length == 10 && phone.StartsWith("0") && phone.All(char.IsDigit);
+    }
+
+    /// <summary>
+    /// Triggers jiggle animation on a field, then clears jiggle after animation completes.
+    /// The persistent invalid state remains until user fixes the field.
+    /// </summary>
+    private async Task TriggerJiggle(Action<bool> setJiggle)
+    {
+        setJiggle(true);
+        StateHasChanged();
+        await Task.Delay(400); // Match CSS animation duration
+        setJiggle(false);
+        StateHasChanged();
     }
 
     // =====================================================

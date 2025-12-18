@@ -1,8 +1,9 @@
 @page "/BarcodeScanner"
 @using MudBlazor
 @using Microsoft.JSInterop
+@using M_Wallet.Client.Services
 @inject IJSRuntime JSRuntime
-@inject ISnackbar Snackbar
+@inject NotificationService Notify
 @inject NavigationManager NavigationManager
 
 @implements IAsyncDisposable
@@ -153,7 +154,7 @@
         }
 
         await StopScannerAsync();
-        Snackbar.Add($"Barcode captured: {code}", Severity.Success);
+        Notify.Success($"Barcode captured: {code}");
         
         if (_isDialogMode)
         {

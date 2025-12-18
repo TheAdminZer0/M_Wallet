@@ -1,10 +1,7 @@
 @page "/purchases"
 @inject HttpClient Http
-@inject ISnackbar Snackbar
+@inject NotificationService Notify
 @inject IDialogService DialogService
-@using M_Wallet.Shared
-@using M_Wallet.Client.Components
-@using M_Wallet.Client.Models
 
 <PageTitle>Purchases & Inventory</PageTitle>
 
@@ -365,7 +362,7 @@ else
         }
         catch (Exception ex)
         {
-            Snackbar.Add($"Error loading data: {ex.Message}", Severity.Error);
+            Notify.Error($"Error loading data: {ex.Message}");
         }
     }
 
@@ -473,19 +470,19 @@ else
             var response = await Http.PostAsJsonAsync("api/purchases", newPurchase);
             if (response.IsSuccessStatusCode)
             {
-                Snackbar.Add("Purchase saved successfully. Stock updated.", Severity.Success);
+                Notify.Success("Purchase saved successfully. Stock updated.");
                 isCreating = false;
                 await LoadData();
             }
             else
             {
                 var error = await response.Content.ReadAsStringAsync();
-                Snackbar.Add($"Error saving purchase: {error}", Severity.Error);
+                Notify.Error($"Error saving purchase: {error}");
             }
         }
         catch (Exception ex)
         {
-            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+            Notify.Error($"Error: {ex.Message}");
         }
     }
 
@@ -523,13 +520,13 @@ else
                     {
                         allProducts.Add(createdProduct);
                         SelectProduct(createdProduct); // Auto-select the new product
-                        Snackbar.Add("Product created!", Severity.Success);
+                        Notify.Success("Product created!");
                     }
                     dialog?.Close();
                 }
                 else 
                 {
-                    Snackbar.Add("Failed to create product", Severity.Error);
+                    Notify.Error("Failed to create product");
                 }
             })},
             { x => x.OnCancel, EventCallback.Factory.Create(this, () => dialog?.Close()) }
@@ -553,18 +550,18 @@ else
                 var response = await Http.DeleteAsync($"api/purchases/{purchase.Id}");
                 if (response.IsSuccessStatusCode)
                 {
-                    Snackbar.Add("Purchase deleted successfully", Severity.Success);
+                    Notify.Success("Purchase deleted successfully");
                     await LoadData();
                 }
                 else
                 {
                     var error = await response.Content.ReadAsStringAsync();
-                    Snackbar.Add($"Failed to delete purchase: {error}", Severity.Error);
+                    Notify.Error($"Failed to delete purchase: {error}");
                 }
             }
             catch (Exception ex)
             {
-                Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+                Notify.Error($"Error: {ex.Message}");
             }
         }
     }

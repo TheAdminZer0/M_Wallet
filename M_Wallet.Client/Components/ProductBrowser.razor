@@ -1,6 +1,5 @@
-@using M_Wallet.Shared
 @inject IDialogService DialogService
-@inject ISnackbar Snackbar
+@inject NotificationService Notify
 
 @* Product browser used by POS with search, sort, view toggle *@
 <MudPaper Class="pa-4" Elevation="2" Style="@($"background-color:var(--mud-palette-gray-lighter); height: {Height}; display: flex; flex-direction: column;")">
@@ -469,7 +468,7 @@
         if (!string.IsNullOrWhiteSpace(code))
         {
             await OnSearchChanged(code);
-            Snackbar.Add($"Searching for barcode {code}", Severity.Info);
+            Notify.Info($"Searching for barcode {code}");
         }
         await CloseSearchScannerAsync();
     }

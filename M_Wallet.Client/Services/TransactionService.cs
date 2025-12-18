@@ -41,23 +41,16 @@ public class TransactionService
     /// </summary>
     private async Task LoadDataInternalAsync()
     {
-        try
-        {
-            // Fetch in parallel
-            var transactionsTask = _http.GetFromJsonAsync<List<Transaction>>("api/transactions");
-            var paymentsTask = _http.GetFromJsonAsync<List<Payment>>("api/payments");
+        // Fetch in parallel
+        var transactionsTask = _http.GetFromJsonAsync<List<Transaction>>("api/transactions");
+        var paymentsTask = _http.GetFromJsonAsync<List<Payment>>("api/payments");
 
-            await Task.WhenAll(transactionsTask, paymentsTask);
+        await Task.WhenAll(transactionsTask, paymentsTask);
 
-            _transactions = await transactionsTask;
-            _payments = await paymentsTask;
-            
-            _isInitialized = true;
-        }
-        catch (Exception)
-        {
-            throw;
-        }
+        _transactions = await transactionsTask;
+        _payments = await paymentsTask;
+        
+        _isInitialized = true;
     }
 
     /// <summary>

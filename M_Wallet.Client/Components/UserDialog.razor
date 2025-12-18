@@ -1,6 +1,3 @@
-@using M_Wallet.Shared
-@using MudBlazor
-
 @* Create/edit person with role-specific fields *@
 <MudDialog>
     <DialogContent>
@@ -58,7 +55,7 @@
     private MudForm form;
     private bool success;
 
-    [Inject] ISnackbar Snackbar { get; set; }
+    [Inject] NotificationService Notify { get; set; }
 
     // Seed role when creating new user
     protected override void OnInitialized()
@@ -110,7 +107,7 @@
     private void SetPasscode(string pattern)
     {
         User.Passcode = pattern;
-        Snackbar.Add("Passcode set successfully", Severity.Success);
+        Notify.Success("Passcode set successfully");
         StateHasChanged();
     }
 }

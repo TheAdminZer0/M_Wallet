@@ -1,5 +1,4 @@
 using MudBlazor.Services;
-using M_Wallet.Client.Pages;
 using M_Wallet.Components;
 using Microsoft.EntityFrameworkCore;
 using M_Wallet.Data;
@@ -39,6 +38,8 @@ builder.Services.AddScoped<TransactionService>();
 builder.Services.AddScoped<ProductService>();
 builder.Services.AddScoped<CartService>();
 builder.Services.AddScoped<UserPreferencesService>();
+// Notification service used by client components during prerendering/server-side rendering
+builder.Services.AddSingleton<NotificationService>();
 
 // Add Authentication services
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)

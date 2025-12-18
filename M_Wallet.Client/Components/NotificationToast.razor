@@ -1,0 +1,39 @@
+@using M_Wallet.Client.Services
+@inject NotificationService Notify
+@implements IDisposable
+
+@if (Notify.IsVisible)
+{
+    <div class="notification-toast @GetTypeClass()" @onclick="Notify.Hide">
+        <MudIcon Icon="@GetIcon()" Size="Size.Small" />
+        <span>@Notify.CurrentMessage</span>
+    </div>
+}
+
+@code {
+    protected override void OnInitialized()
+    {
+        Notify.OnChange += StateHasChanged;
+    }
+
+    public void Dispose()
+    {
+        Notify.OnChange -= StateHasChanged;
+    }
+
+    private string GetTypeClass() => Notify.CurrentType switch
+    {
+        NotificationType.Success => "notification-success",
+        NotificationType.Warning => "notification-warning",
+        NotificationType.Error => "notification-error",
+        _ => "notification-info"
+    };
+
+    private string GetIcon() => Notify.CurrentType switch
+    {
+        NotificationType.Success => Icons.Material.Filled.Check,
+        NotificationType.Warning => Icons.Material.Filled.Warning,
+        NotificationType.Error => Icons.Material.Filled.Error,
+        _ => Icons.Material.Filled.Info
+    };
+}
