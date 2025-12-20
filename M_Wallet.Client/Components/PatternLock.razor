@@ -5,7 +5,7 @@
 <div class="pattern-lock-container" @ref="containerRef">
     <svg width="200" height="200" viewBox="0 0 300 300" class="pattern-svg">
         <!-- Preview Line (Dynamic) -->
-        <line id="pattern-preview-line" 
+          <line id="pattern-preview-line" 
               stroke="#1976d2" 
               stroke-width="10" 
               stroke-linecap="round" 
@@ -14,11 +14,11 @@
 
         <!-- Lines -->
         <polyline points="@GetPolylinePoints()" 
-                  fill="none" 
-                  stroke="@(IsError ? "#f44336" : "#1976d2")" 
-                  stroke-width="10" 
-                  stroke-linecap="round" 
-                  stroke-linejoin="round" />
+              fill="none" 
+              stroke="@(IsError ? "#f44336" : "#1976d2")" 
+              stroke-width="10" 
+              stroke-linecap="round" 
+              stroke-linejoin="round" />
         
         <!-- Dots -->
         @for (int i = 0; i < 9; i++)
@@ -28,13 +28,13 @@
             var y = (i / 3) * 100 + 50;
             var isActive = selectedIndices.Contains(index);
             
-            <circle cx="@x" cy="@y" r="20" 
+                <circle cx="@x" cy="@y" r="20" 
                     fill="@(isActive ? (IsError ? "#f44336" : "#1976d2") : "#e0e0e0")" 
                     class="pattern-dot" 
                     data-index="@index" />
             
             <!-- Invisible larger hit area -->
-            <circle cx="@x" cy="@y" r="40" 
+                <circle cx="@x" cy="@y" r="40" 
                     fill="transparent" 
                     @onmousedown="@(() => StartDrawing(index))" 
                     @onmouseenter="@(() => ContinueDrawing(index))"

@@ -2,7 +2,7 @@
 @inject NotificationService Notify
 
 @* Product browser used by POS with search, sort, view toggle *@
-<MudPaper Class="pa-4" Elevation="2" Style="@($"background-color:var(--mud-palette-gray-lighter); height: {Height}; display: flex; flex-direction: column;")">
+<MudPaper Class="pa-4" Elevation="2" Style="background-color:var(--mud-palette-gray-lighter); display: flex; flex-direction: column;">
     <!-- Toolbar -->
     <div class="d-flex align-center gap-2 mb-4">
         <MudIconButton Icon="@Icons.Material.Filled.QrCodeScanner"
@@ -48,7 +48,7 @@
     </div>
 
     <!-- Content -->
-    <div class="flex-grow-1 overflow-auto">
+    <div style="flex: 1 1 auto;">
         @if (Products == null)
         {
             <div class="d-flex justify-center pa-8">

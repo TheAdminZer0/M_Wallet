@@ -85,10 +85,15 @@
     <MudItem xs="12" md="4">
        
         <MudPaper Class="pa-4" Elevation="2" Style="position: sticky; top: 16px; background-color:var(--mud-palette-gray-lighter);">
-            <MudText Typo="Typo.h5" Class="mb-4">
-                <MudIcon Icon="@Icons.Material.Filled.ShoppingCart" Class="mr-2" />
-                Cart
-            </MudText>
+            <div class="d-flex align-center justify-space-between mb-3">
+                <MudText Typo="Typo.h5" Class="mb-0">
+                    <MudIcon Icon="@Icons.Material.Filled.ShoppingCart" Class="mr-2" />
+                    Cart
+                </MudText>
+                <MudButton Variant="Variant.Outlined" Color="Color.Error" Size="Size.Small" OnClick="async () => await ClearCartAsync()" Disabled="@isProcessing" StartIcon="@Icons.Material.Filled.Clear" Class="ml-2">
+                    Clear
+                </MudButton>
+            </div>
             
             @if (!cartItems.Any())
             {
@@ -383,21 +388,20 @@
                     <MudNumericField Value="discountAmount" ValueChanged="@((decimal val) => OnDiscountChanged(val))" Label="Discount Amount" Variant="Variant.Outlined" Margin="Margin.Dense" Class="mb-2" Min="0" />
                 }
 
-                <div class="d-flex justify-space-between align-center mb-4 pa-3" 
+                <div class="d-flex justify-space-between align-center mb-2 pa-2 px-3" 
                      style="background-color: var(--mud-palette-background-grey); border-radius: 8px;">
-                    <MudText Typo="Typo.h6">Total:</MudText>
-                    <MudText Typo="Typo.h5" Color="Color.Primary" Class="font-weight-bold cart-total-display">
-                        <span class="cart-amount">@CalculateTotal().ToString("F2")</span>
-                        <span class="cart-currency">LD</span>
+                    <MudText Typo="Typo.subtitle1" Class="font-weight-bold">Total:</MudText>
+                    <MudText Typo="Typo.h4" Color="Color.Primary" Class="font-weight-bold">
+                        <span style="font-weight: 800;">@CalculateTotal().ToString("F2")</span>
+                        <span style="font-size: 0.6em; opacity: 0.8;">LD</span>
                     </MudText>
                 </div>
 
                 @if (currentEmployee?.Role == "System")
                 {
-                     <MudPaper Class="pa-2 mb-3 d-flex flex-column align-center" Elevation="0" Style="background-color: transparent;">
-                        <MudText Typo="Typo.caption" Class="mb-1">Enter Pattern to Complete Sale</MudText>
+                    <div class="d-flex justify-center mt-1 mb-2">
                         <PatternAuthComponent OnAuthorized="CompleteCheckout" />
-                    </MudPaper>
+                    </div>
                 }
                 else
                 {
