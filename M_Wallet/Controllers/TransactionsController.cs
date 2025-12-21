@@ -428,4 +428,112 @@ public class TransactionsController : ControllerBase
 
         return NoContent();
     }
+
+    /// <summary>
+    /// Process a refund for a transaction. Creates a negative payment to offset existing payments
+    /// and restores stock for all items.
+    /// </summary>
+    [HttpPost("{id}/refund")]
+    public async Task<ActionResult> RefundTransaction(int id, [FromBody] RefundRequest request)
+    {
+        using var dbTransaction = await _context.Database.BeginTransactionAsync();
+        try
+        {
+            var transaction = await _context.Transactions
+                .Include(t => t.Items)
+                .Include(t => t.PaymentAllocations)
+                .FirstOrDefaultAsync(t => t.Id == id);
+
+            if (transaction == null)
+            {
+                return NotFound();
+            }
+
+            if (transaction.Status == TransactionStatus.Refunded)
+            {
+                return BadRequest("Transaction is already refunded.");
+            }
+
+            if (transaction.Status == TransactionStatus.Canceled)
+            {
+                return BadRequest("Cannot refund a canceled transaction.");
+            }
+
+            // Calculate total already paid
+            var totalPaid = transaction.PaymentAllocations?.Sum(pa => pa.Amount) ?? 0;
+
+            // Create a negative payment (refund) to offset the payments
+            if (totalPaid > 0)
+            {
+                var refundPayment = new Payment
+                {
+                    PaymentDate = DateTime.UtcNow,
+                    Amount = -totalPaid, // Negative amount for refund
+                    PaymentMethod = request.PaymentMethod ?? "Cash",
+                    Reference = $"Refund for Order #{transaction.Id}" + (!string.IsNullOrEmpty(request.Reason) ? $" - {request.Reason}" : ""),
+                    PersonId = transaction.PersonId,
+                    CustomerName = transaction.CustomerName,
+                    EmployeeName = request.EmployeeName ?? "System",
+                    Allocations = new List<PaymentAllocation>
+                    {
+                        new PaymentAllocation
+                        {
+                            TransactionId = transaction.Id,
+                            Amount = -totalPaid // Negative allocation
+                        }
+                    }
+                };
+
+                _context.Payments.Add(refundPayment);
+            }
+
+            // Restore stock for all items
+            foreach (var item in transaction.Items)
+            {
+                var product = await _context.Products.FindAsync(item.ProductId);
+                if (product != null)
+                {
+                    product.StockQuantity += item.Quantity;
+                }
+            }
+
+            // Update transaction status
+            transaction.Status = TransactionStatus.Refunded;
+
+            // Log the refund
+            var log = new AuditLog
+            {
+                Timestamp = DateTime.UtcNow,
+                Action = "Refund",
+                Entity = "Transaction",
+                EntityId = transaction.Id.ToString(),
+                EmployeeName = request.EmployeeName ?? "System",
+                Description = $"Refunded transaction #{transaction.Id} for {totalPaid:F2} LD",
+                Changes = System.Text.Json.JsonSerializer.Serialize(new
+                {
+                    RefundedAmount = totalPaid,
+                    Reason = request.Reason,
+                    ItemsRestored = transaction.Items.Select(i => new { i.ProductId, i.Quantity })
+                })
+            };
+            _context.AuditLogs.Add(log);
+
+            await _context.SaveChangesAsync();
+            await dbTransaction.CommitAsync();
+
+            return Ok(new { RefundedAmount = totalPaid, Message = "Transaction refunded successfully." });
+        }
+        catch (Exception ex)
+        {
+            await dbTransaction.RollbackAsync();
+            return StatusCode(500, $"Error processing refund: {ex.Message}");
+        }
+    }
+}
+
+public class RefundRequest
+{
+    public string? PaymentMethod { get; set; }
+    public string? Reason { get; set; }
+    public string? EmployeeName { get; set; }
 }

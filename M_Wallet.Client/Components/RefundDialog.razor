@@ -1,0 +1,84 @@
+@using MudBlazor
+@using M_Wallet.Shared.Models
+
+@* Refund confirmation dialog with reason and method *@
+<MudDialog>
+    <DialogContent>
+        <MudStack Spacing="3">
+            <MudAlert Severity="Severity.Warning" Dense="true">
+                <b>Refunding Order #@Transaction.Id</b><br/>
+                This will create a negative payment of <b>LD @TotalPaid.ToString("F2")</b> and return all items to stock.
+            </MudAlert>
+
+            <MudPaper Class="pa-3" Elevation="0" Outlined="true">
+                <MudText Typo="Typo.subtitle2" Class="mb-2">Order Summary</MudText>
+                <MudSimpleTable Dense="true" Hover="true" Style="background: transparent;">
+                    <tbody>
+                        @foreach (var item in Transaction.Items)
+                        {
+                            <tr>
+                                <td>@item.Product?.Name</td>
+                                <td style="text-align: right;">x@item.Quantity</td>
+                                <td style="text-align: right;">@item.Subtotal.ToString("F2")</td>
+                            </tr>
+                        }
+                    </tbody>
+                </MudSimpleTable>
+                <MudDivider Class="my-2" />
+                <div class="d-flex justify-space-between">
+                    <MudText Typo="Typo.body2"><b>Total</b></MudText>
+                    <MudText Typo="Typo.body2"><b>LD @Transaction.TotalAmount.ToString("F2")</b></MudText>
+                </div>
+                <div class="d-flex justify-space-between">
+                    <MudText Typo="Typo.body2">Paid</MudText>
+                    <MudText Typo="Typo.body2" Color="Color.Success">LD @TotalPaid.ToString("F2")</MudText>
+                </div>
+            </MudPaper>
+
+            <MudGrid Spacing="2">
+                <MudItem xs="12" sm="6">
+                    <MudSelect @bind-Value="PaymentMethod" Label="Refund Method" Variant="Variant.Outlined" Margin="Margin.Dense" Dense="true">
+                        <MudSelectItem Value="@("Cash")">Cash</MudSelectItem>
+                        <MudSelectItem Value="@("Card")">Card</MudSelectItem>
+                        <MudSelectItem Value="@("Transfer")">Transfer</MudSelectItem>
+                    </MudSelect>
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudTextField @bind-Value="Reason" Label="Reason (Optional)" Variant="Variant.Outlined" Margin="Margin.Dense" />
+                </MudItem>
+            </MudGrid>
+
+            <MudAlert Severity="Severity.Info" Dense="true">
+                Stock will be restored: @string.Join(", ", Transaction.Items.Select(i => $"{i.Product?.Name} (+{i.Quantity})"))
+            </MudAlert>
+        </MudStack>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton Color="Color.Error" Variant="Variant.Filled" StartIcon="@Icons.Material.Filled.Undo" OnClick="Submit">
+            Refund LD @TotalPaid.ToString("F2")
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = default!;
+    [Parameter] public Transaction Transaction { get; set; } = default!;
+
+    private string PaymentMethod { get; set; } = "Cash";
+    private string Reason { get; set; } = "";
+    private decimal TotalPaid => Transaction.TotalPaid;
+
+    private void Cancel() => MudDialog.Cancel();
+
+    private void Submit()
+    {
+        var result = new RefundDialogResult
+        {
+            PaymentMethod = PaymentMethod,
+            Reason = Reason
+        };
+        MudDialog.Close(DialogResult.Ok(result));
+    }
+}
+

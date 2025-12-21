@@ -16,6 +16,7 @@
                 <HeaderContent>
                     <MudTh>Date</MudTh>
                     <MudTh>Amount</MudTh>
+                    <MudTh>Realized Profit</MudTh>
                     <MudTh>Method</MudTh>
                     <MudTh>Reference</MudTh>
                     <MudTh>Actions</MudTh>
@@ -23,15 +24,29 @@
                 <RowTemplate>
                     <MudTd Style="white-space: nowrap;">@(context.Payment?.PaymentDate.ToLocalTime().ToString("g") ?? "-")</MudTd>
                     <MudTd>
-                        <div class="d-flex align-center">
+                        @if (context.Amount < 0)
+                        {
+                            <MudText Color="Color.Error" Class="font-weight-bold">@context.Amount.ToString("F2") (Refund)</MudText>
+                        }
+                        else
+                        {
                             <MudText>@context.Amount.ToString("F2")</MudText>
-                            @if (IsCompletingPayment(context))
-                            {
-                                <MudChip T="string" Size="Size.Small" Variant="Variant.Filled" Color="Color.Success" Class="ml-4">
-                                    Profit: @CalculateOrderProfit().ToString("F2")
-                                </MudChip>
-                            }
-                        </div>
+                        }
+                    </MudTd>
+                    <MudTd>
+                        @{
+                            var realizedProfit = GetAllocationRealizedProfit(context);
+                        }
+                        @if (realizedProfit != 0)
+                        {
+                            <MudChip T="string" Size="Size.Small" Variant="Variant.Filled" Color="@(realizedProfit > 0 ? Color.Success : Color.Error)">
+                                @realizedProfit.ToString("F2")
+                            </MudChip>
+                        }
+                        else
+                        {
+                            <MudText Color="Color.Default">-</MudText>
+                        }
                     </MudTd>
                     <MudTd>@(context.Payment?.PaymentMethod ?? "-")</MudTd>
                     <MudTd>@(context.Payment?.Reference ?? "-")</MudTd>
@@ -42,9 +57,16 @@
                                        OnClick="@(() => DeletePayment(context))" />
                     </MudTd>
                 </RowTemplate>
+                <FooterContent>
+                    <MudTh Style="font-weight: bold; background: var(--mud-palette-background-gray);"></MudTh>
+                    <MudTh Style="font-weight: bold; background: var(--mud-palette-background-gray);">@Transaction.PaymentAllocations.Sum(pa => pa.Amount).ToString("F2")</MudTh>
+                    <MudTh Style="font-weight: bold; background: var(--mud-palette-background-gray);">@GetTotalRealizedProfit().ToString("F2")</MudTh>
+                    <MudTh Style="background: var(--mud-palette-background-gray);"></MudTh>
+                    <MudTh Style="background: var(--mud-palette-background-gray);"></MudTh>
+                    <MudTh Style="background: var(--mud-palette-background-gray);"></MudTh>
+                </FooterContent>
             </MudTable>
             <div class="d-flex justify-end mt-4 gap-4">
-                <MudText Typo="Typo.subtitle1"><b>Total Paid:</b> @Transaction.PaymentAllocations.Sum(pa => pa.Amount).ToString("F2")</MudText>
                 <MudText Typo="Typo.subtitle1"><b>Total Amount:</b> @Transaction.TotalAmount.ToString("F2")</MudText>
                 <MudText Typo="Typo.subtitle1" Color="@(Balance > 0 ? Color.Error : Color.Success)"><b>Balance:</b> @Balance.ToString("F2")</MudText>
             </div>
@@ -75,14 +97,50 @@
         return grossProfit - Transaction.Discount;
     }
 
-    // Determine if this allocation closes the balance
+    // Get realized profit for a specific allocation
+    private decimal GetAllocationRealizedProfit(PaymentAllocation allocation)
+    {
+        if (Transaction.PaymentAllocations == null || !Transaction.PaymentAllocations.Any())
+            return 0;
+
+        var orderProfit = CalculateOrderProfit();
+        
+        // For refund payments (negative amounts), return negative profit
+        if (allocation.Amount < 0)
+        {
+            return -orderProfit;
+        }
+
+        // For regular payments, check if this allocation completes the order
+        if (IsCompletingPayment(allocation))
+        {
+            return orderProfit;
+        }
+
+        return 0;
+    }
+
+    // Get total realized profit across all allocations
+    private decimal GetTotalRealizedProfit()
+    {
+        if (Transaction.PaymentAllocations == null || !Transaction.PaymentAllocations.Any())
+            return 0;
+
+        return Transaction.PaymentAllocations.Sum(pa => GetAllocationRealizedProfit(pa));
+    }
+
+    // Determine if this allocation closes the balance (only for positive payments)
     private bool IsCompletingPayment(PaymentAllocation allocation)
     {
         if (Transaction.PaymentAllocations == null || !Transaction.PaymentAllocations.Any())
             return false;
 
+        // Refund payments don't complete an order
+        if (allocation.Amount < 0)
+            return false;
+
         var sortedPayments = Transaction.PaymentAllocations
-            .Where(pa => pa != null)
+            .Where(pa => pa != null && pa.Amount > 0) // Only consider positive payments
             .OrderBy(pa => pa.Payment?.PaymentDate ?? DateTime.MinValue)
             .ToList();
 

@@ -45,7 +45,8 @@ public enum TransactionStatus
 {
     Completed,
     Pending,
-    Canceled
+    Canceled,
+    Refunded
 }
 
 public class TransactionItem
