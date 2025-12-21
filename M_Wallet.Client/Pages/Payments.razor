@@ -45,7 +45,7 @@
                     <RowTemplate>
                         @if (_invoiceColumns.IsVisible("Order ID")) { <MudTd DataLabel="Order ID">#@context.Id</MudTd> }
                         @if (_invoiceColumns.IsVisible("Date")) { <MudTd DataLabel="Date" Style="white-space: nowrap;">@context.TransactionDate.ToDateOnlyString()</MudTd> }
-                        @if (_invoiceColumns.IsVisible("Customer")) { <MudTd DataLabel="Customer">@(context.CustomerName ?? "Walk-in")</MudTd> }
+                        @if (_invoiceColumns.IsVisible("Customer")) { <MudTd DataLabel="Customer"><TruncatedText Text="@(context.CustomerName ?? "Walk-in")" MaxLength="20" DialogTitle="Customer" /></MudTd> }
                         @if (_invoiceColumns.IsVisible("Total")) { <MudTd DataLabel="Total">LD @context.TotalAmount.ToString("F2")</MudTd> }
                         @if (_invoiceColumns.IsVisible("Paid")) { <MudTd DataLabel="Paid">LD @GetPaidAmount(context).ToString("F2")</MudTd> }
                         @if (_invoiceColumns.IsVisible("Balance")) {

@@ -33,7 +33,7 @@
             </HeaderContent>
             <RowTemplate>
                 <MudTd DataLabel="Date" Style="white-space: nowrap;">@context.Date.ToDisplayString()</MudTd>
-                <MudTd DataLabel="Description">@context.Description</MudTd>
+                <MudTd DataLabel="Description"><TruncatedText Text="@context.Description" MaxLength="35" DialogTitle="Description" /></MudTd>
                 <MudTd DataLabel="Change" Style="@GetColor(context.Amount)">@context.Amount.ToString("N2")</MudTd>
                 <MudTd DataLabel="Balance" Style="text-align: right; font-weight: bold;">@context.RunningBalance.ToString("N2")</MudTd>
             </RowTemplate>

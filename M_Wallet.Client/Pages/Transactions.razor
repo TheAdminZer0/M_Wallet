@@ -9,9 +9,18 @@
 @inject NavigationManager NavigationManager
 
 <style>
+    .fixed-layout-table .mud-table-container {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
     .fixed-layout-table .mud-table-container > table {
-        table-layout: fixed;
-        min-width: 1200px;
+        table-layout: auto;
+        min-width: 1400px;
+    }
+    .fixed-layout-table .mud-table-container > table td,
+    .fixed-layout-table .mud-table-container > table th {
+        white-space: nowrap;
+        padding: 8px 12px; /* vertical horizontal - adjust these values */
     }
 </style>
 
@@ -234,22 +243,22 @@ else
                             <MudSpacer />
                         </ToolBarContent>
                         <HeaderContent>
-                            @if (_transactionColumns.IsVisible("Order")) { <MudTh Style="@($"width:{GetColumnWidth("Order")}")"><MudTableSortLabel InitialDirection="SortDirection.Descending" SortBy="new Func<Transaction, object>(x => x.Id)">Order</MudTableSortLabel></MudTh> }
-                            @if (_transactionColumns.IsVisible("Date")) { <MudTh Style="@($"width:{GetColumnWidth("Date")}")"><MudTableSortLabel SortBy="new Func<Transaction, object>(x => x.TransactionDate)">Date</MudTableSortLabel></MudTh> }
-                            @if (_transactionColumns.IsVisible("Items")) { <MudTh Style="@($"width:{GetColumnWidth("Items")}")">Items</MudTh> }
-                            @if (_transactionColumns.IsVisible("Quantity")) { <MudTh Style="@($"width:{GetColumnWidth("Quantity")}")"><MudTableSortLabel SortBy="new Func<Transaction, object>(x => x.Items.Sum(i => i.Quantity))">Quantity</MudTableSortLabel></MudTh> }
-                            @if (_transactionColumns.IsVisible("Cost")) { <MudTh Style="@($"width:{GetColumnWidth("Cost")}")">Cost (LD)</MudTh> }
-                            @if (_transactionColumns.IsVisible("Profit")) { <MudTh Style="@($"width:{GetColumnWidth("Profit")}")">Profit (LD)</MudTh> }
-                            @if (_transactionColumns.IsVisible("Realized Profit")) { <MudTh Style="@($"width:{GetColumnWidth("Realized Profit")}")">Realized (LD)</MudTh> }
-                            @if (_transactionColumns.IsVisible("Total")) { <MudTh Style="@($"width:{GetColumnWidth("Total")}")"><MudTableSortLabel SortBy="new Func<Transaction, object>(x => x.TotalAmount)">Total (LD)</MudTableSortLabel></MudTh> }
-                            @if (_transactionColumns.IsVisible("Discount")) { <MudTh Style="@($"width:{GetColumnWidth("Discount")}")"><MudTableSortLabel SortBy="new Func<Transaction, object>(x => x.Discount)">Discount</MudTableSortLabel></MudTh> }
-                            @if (_transactionColumns.IsVisible("Payment")) { <MudTh Style="@($"width:{GetColumnWidth("Payment")}")">Payment</MudTh> }
-                            @if (_transactionColumns.IsVisible("Delivery")) { <MudTh Style="@($"width:{GetColumnWidth("Delivery")}")">Delivery</MudTh> }
-                            @if (_transactionColumns.IsVisible("Driver")) { <MudTh Style="@($"width:{GetColumnWidth("Driver")}")"><MudTableSortLabel SortBy="new Func<Transaction, object>(x => x.Driver?.Name ?? string.Empty)">Driver</MudTableSortLabel></MudTh> }
-                            @if (_transactionColumns.IsVisible("Customer")) { <MudTh Style="@($"width:{GetColumnWidth("Customer")}")"><MudTableSortLabel SortBy="new Func<Transaction, object>(x => x.CustomerName ?? string.Empty)">Customer</MudTableSortLabel></MudTh> }
-                            @if (_transactionColumns.IsVisible("Note")) { <MudTh Style="@($"width:{GetColumnWidth("Note")}")">Note</MudTh> }
-                            @if (_transactionColumns.IsVisible("Employee")) { <MudTh Style="@($"width:{GetColumnWidth("Employee")}")"><MudTableSortLabel SortBy="new Func<Transaction, object>(x => x.EmployeeName)">Employee</MudTableSortLabel></MudTh> }
-                            @if (_transactionColumns.IsVisible("Actions")) { <MudTh Style="@($"width:{GetColumnWidth("Actions")}")">Actions</MudTh> }
+                            @if (_transactionColumns.IsVisible("Order")) { <MudTh><MudTableSortLabel InitialDirection="SortDirection.Descending" SortBy="new Func<Transaction, object>(x => x.Id)">Order</MudTableSortLabel></MudTh> }
+                            @if (_transactionColumns.IsVisible("Date")) { <MudTh><MudTableSortLabel SortBy="new Func<Transaction, object>(x => x.TransactionDate)">Date</MudTableSortLabel></MudTh> }
+                            @if (_transactionColumns.IsVisible("Items")) { <MudTh>Items</MudTh> }
+                            @if (_transactionColumns.IsVisible("Quantity")) { <MudTh><MudTableSortLabel SortBy="new Func<Transaction, object>(x => x.Items.Sum(i => i.Quantity))">Qty</MudTableSortLabel></MudTh> }
+                            @if (_transactionColumns.IsVisible("Cost")) { <MudTh>Cost</MudTh> }
+                            @if (_transactionColumns.IsVisible("Profit")) { <MudTh>Profit</MudTh> }
+                            @if (_transactionColumns.IsVisible("Realized Profit")) { <MudTh>Realized</MudTh> }
+                            @if (_transactionColumns.IsVisible("Total")) { <MudTh><MudTableSortLabel SortBy="new Func<Transaction, object>(x => x.TotalAmount)">Total</MudTableSortLabel></MudTh> }
+                            @if (_transactionColumns.IsVisible("Discount")) { <MudTh><MudTableSortLabel SortBy="new Func<Transaction, object>(x => x.Discount)">Discount</MudTableSortLabel></MudTh> }
+                            @if (_transactionColumns.IsVisible("Payment")) { <MudTh>Payment</MudTh> }
+                            @if (_transactionColumns.IsVisible("Delivery")) { <MudTh>Delivery</MudTh> }
+                            @if (_transactionColumns.IsVisible("Driver")) { <MudTh><MudTableSortLabel SortBy="new Func<Transaction, object>(x => x.Driver?.Name ?? string.Empty)">Driver</MudTableSortLabel></MudTh> }
+                            @if (_transactionColumns.IsVisible("Customer")) { <MudTh><MudTableSortLabel SortBy="new Func<Transaction, object>(x => x.CustomerName ?? string.Empty)">Customer</MudTableSortLabel></MudTh> }
+                            @if (_transactionColumns.IsVisible("Note")) { <MudTh>Note</MudTh> }
+                            @if (_transactionColumns.IsVisible("Employee")) { <MudTh><MudTableSortLabel SortBy="new Func<Transaction, object>(x => x.EmployeeName)">Employee</MudTableSortLabel></MudTh> }
+                            @if (_transactionColumns.IsVisible("Actions")) { <MudTh>Actions</MudTh> }
                         </HeaderContent>
                         @* Main rows: transaction summary per order *@
                         <RowTemplate>
@@ -264,7 +273,7 @@ else
                                 </MudTd>
                             }
                             @if (_transactionColumns.IsVisible("Date")) { <MudTd DataLabel="Date" Style="white-space: nowrap;">@context.TransactionDate.ToDisplayString()</MudTd> }
-                            @if (_transactionColumns.IsVisible("Items")) { <MudTd DataLabel="Items">@string.Join(", ", context.Items.Select(i => i.Product?.Name ?? "Unknown").Distinct())</MudTd> }
+                            @if (_transactionColumns.IsVisible("Items")) { <MudTd DataLabel="Items"><TruncatedText Text="@string.Join(", ", context.Items.Select(i => i.Product?.Name ?? "Unknown").Distinct())" MaxLength="25" DialogTitle="Items" /></MudTd> }
                             @if (_transactionColumns.IsVisible("Quantity")) { <MudTd DataLabel="Quantity"><b>@context.Items.Sum(i => i.Quantity)</b></MudTd> }
                             @if (_transactionColumns.IsVisible("Cost"))
                             {
@@ -378,8 +387,8 @@ else
                                     }
                                 </MudTd>
                             }
-                            @if (_transactionColumns.IsVisible("Driver")) { <MudTd DataLabel="Driver">@(context.Driver?.Name ?? "-")</MudTd> }
-                            @if (_transactionColumns.IsVisible("Customer")) { <MudTd DataLabel="Customer">@(context.CustomerName ?? "Walk-in")</MudTd> }
+                            @if (_transactionColumns.IsVisible("Driver")) { <MudTd DataLabel="Driver"><TruncatedText Text="@(context.Driver?.Name ?? "-")" MaxLength="15" DialogTitle="Driver" /></MudTd> }
+                            @if (_transactionColumns.IsVisible("Customer")) { <MudTd DataLabel="Customer"><TruncatedText Text="@(context.CustomerName ?? "Walk-in")" MaxLength="15" DialogTitle="Customer" /></MudTd> }
                             @if (_transactionColumns.IsVisible("Note")) { 
                                 <MudTd DataLabel="Note">
                                     <div @onclick="@(() => EditNote(context))" style="cursor: pointer; display: flex; align-items: center;">
@@ -397,7 +406,7 @@ else
                                     </div>
                                 </MudTd> 
                             }
-                            @if (_transactionColumns.IsVisible("Employee")) { <MudTd DataLabel="Employee">@context.EmployeeName</MudTd> }
+                            @if (_transactionColumns.IsVisible("Employee")) { <MudTd DataLabel="Employee"><TruncatedText Text="@context.EmployeeName" MaxLength="15" DialogTitle="Employee" /></MudTd> }
                             @if (_transactionColumns.IsVisible("Actions")) {
                                 <MudTd DataLabel="Actions" Style="white-space: nowrap;">
                                     <div class="d-flex align-center">
@@ -574,8 +583,8 @@ else
                             </MudTd>
                         }
                         @if (_paymentColumns.IsVisible("Date")) { <MudTd DataLabel="Date" Style="white-space: nowrap;">@context.PaymentDate.ToDisplayString()</MudTd> }
-                        @if (_paymentColumns.IsVisible("Method")) { <MudTd DataLabel="Method" Class="d-none d-sm-table-cell">@context.PaymentMethod</MudTd> }
-                        @if (_paymentColumns.IsVisible("Reference")) { <MudTd DataLabel="Reference" Class="d-none d-sm-table-cell">@context.Reference</MudTd> }
+                        @if (_paymentColumns.IsVisible("Method")) { <MudTd DataLabel="Method" Class="d-none d-sm-table-cell"><TruncatedText Text="@context.PaymentMethod" MaxLength="15" DialogTitle="Payment Method" /></MudTd> }
+                        @if (_paymentColumns.IsVisible("Reference")) { <MudTd DataLabel="Reference" Class="d-none d-sm-table-cell"><TruncatedText Text="@context.Reference" MaxLength="20" DialogTitle="Reference" /></MudTd> }
                         @if (_paymentColumns.IsVisible("Amount")) {
                             <MudTd DataLabel="Amount">
                                 <MudText Color="Color.Success" Class="font-weight-bold">
@@ -648,7 +657,7 @@ else
                     <RowTemplate>
                         @if (_invoiceColumns.IsVisible("Order")) { <MudTd DataLabel="Order">#@context.Id</MudTd> }
                         @if (_invoiceColumns.IsVisible("Date")) { <MudTd DataLabel="Date" Style="white-space: nowrap;">@context.TransactionDate.ToDateOnlyString()</MudTd> }
-                        @if (_invoiceColumns.IsVisible("Customer")) { <MudTd DataLabel="Customer">@(context.CustomerName ?? "Walk-in")</MudTd> }
+                        @if (_invoiceColumns.IsVisible("Customer")) { <MudTd DataLabel="Customer"><TruncatedText Text="@(context.CustomerName ?? "Walk-in")" MaxLength="20" DialogTitle="Customer" /></MudTd> }
                         @if (_invoiceColumns.IsVisible("Total")) { <MudTd DataLabel="Total">LD @context.TotalAmount.ToString("F2")</MudTd> }
                         @if (_invoiceColumns.IsVisible("Paid")) { <MudTd DataLabel="Paid">LD @context.TotalPaid.ToString("F2")</MudTd> }
                         @if (_invoiceColumns.IsVisible("Balance")) {
@@ -1613,30 +1622,5 @@ else
         {
             Notify.Error($"Error recording payment: {ex.Message}");
         }
-    }
-
-    // Column width map for fixed layout table
-    private string GetColumnWidth(string columnName)
-    {
-        return columnName switch
-        {
-            "Order" => "110px",
-            "Date" => "18%",
-            "Items" => "20%",
-            "Quantity" => "6%",
-            "Cost" => "8%",
-            "Profit" => "8%",
-            "Realized Profit" => "8%",
-            "Total" => "12%",
-            "Discount" => "8%",
-            "Payment" => "8%",
-            "Delivery" => "8%",
-            "Driver" => "10%",
-            "Customer" => "10%",
-            "Note" => "10%",
-            "Employee" => "8%",
-            "Actions" => "5%",
-            _ => "auto"
-        };
     }
 }

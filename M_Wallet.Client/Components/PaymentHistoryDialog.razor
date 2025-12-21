@@ -48,8 +48,8 @@
                             <MudText Color="Color.Default">-</MudText>
                         }
                     </MudTd>
-                    <MudTd>@(context.Payment?.PaymentMethod ?? "-")</MudTd>
-                    <MudTd>@(context.Payment?.Reference ?? "-")</MudTd>
+                    <MudTd><TruncatedText Text="@(context.Payment?.PaymentMethod ?? "-")" MaxLength="15" DialogTitle="Payment Method" /></MudTd>
+                    <MudTd><TruncatedText Text="@(context.Payment?.Reference ?? "-")" MaxLength="20" DialogTitle="Reference" /></MudTd>
                     <MudTd Style="white-space: nowrap;">
                         <MudIconButton Icon="@Icons.Material.Filled.Delete" 
                                        Color="Color.Error" 

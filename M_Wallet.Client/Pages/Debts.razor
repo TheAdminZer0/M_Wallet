@@ -95,7 +95,7 @@ else
                                 <MudTh>Amount</MudTh>
                             </HeaderContent>
                             <RowTemplate>
-                                <MudTd DataLabel="Supplier">@context.Key</MudTd>
+                                <MudTd DataLabel="Supplier"><TruncatedText Text="@context.Key" MaxLength="20" DialogTitle="Supplier" /></MudTd>
                                 <MudTd DataLabel="Amount">@context.Value.ToString("N2")</MudTd>
                             </RowTemplate>
                         </MudTable>
@@ -124,7 +124,7 @@ else
                                 <MudTh>Amount</MudTh>
                             </HeaderContent>
                             <RowTemplate>
-                                <MudTd DataLabel="Employee">@context.Key</MudTd>
+                                <MudTd DataLabel="Employee"><TruncatedText Text="@context.Key" MaxLength="20" DialogTitle="Employee" /></MudTd>
                                 <MudTd DataLabel="Amount">@context.Value.ToString("N2")</MudTd>
                             </RowTemplate>
                         </MudTable>

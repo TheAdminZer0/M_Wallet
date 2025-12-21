@@ -29,9 +29,9 @@
                     <MudChip T="string" Color="@GetColor(context.Action)" Size="Size.Small">@context.Action</MudChip>
                 </MudTd>
             }
-            @if (_logColumns.IsVisible("Entity")) { <MudTd DataLabel="Entity">@context.Entity</MudTd> }
-            @if (_logColumns.IsVisible("Employee")) { <MudTd DataLabel="Employee">@context.EmployeeName</MudTd> }
-            @if (_logColumns.IsVisible("Description")) { <MudTd DataLabel="Description">@context.Description</MudTd> }
+            @if (_logColumns.IsVisible("Entity")) { <MudTd DataLabel="Entity"><TruncatedText Text="@context.Entity" MaxLength="20" DialogTitle="Entity" /></MudTd> }
+            @if (_logColumns.IsVisible("Employee")) { <MudTd DataLabel="Employee"><TruncatedText Text="@context.EmployeeName" MaxLength="20" DialogTitle="Employee" /></MudTd> }
+            @if (_logColumns.IsVisible("Description")) { <MudTd DataLabel="Description"><TruncatedText Text="@context.Description" MaxLength="40" DialogTitle="Description" /></MudTd> }
         </RowTemplate>
         <PagerContent>
             <div class="d-flex align-center justify-space-between px-4 py-2">

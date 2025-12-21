@@ -1,0 +1,26 @@
+@using MudBlazor
+
+@* Simple dialog to display full text content *@
+<MudDialog>
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            <MudIcon Icon="@Icons.Material.Filled.Article" Class="mr-2 mb-n1" />
+            @Title
+        </MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudText Style="white-space: pre-wrap; word-break: break-word;">@Text</MudText>
+    </DialogContent>
+    <DialogActions>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="Close">Close</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = default!;
+
+    [Parameter] public string Title { get; set; } = "Full Text";
+    [Parameter] public string Text { get; set; } = "";
+
+    private void Close() => MudDialog.Close();
+}

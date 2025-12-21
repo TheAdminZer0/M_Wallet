@@ -94,7 +94,7 @@ else
                                            Size="Size.Small"
                                            Class="mr-2"
                                            OnClick="@(() => ShowProductDetails(context))" />
-                            @context.Name
+                            <TruncatedText Text="@context.Name" MaxLength="25" DialogTitle="Product Name" />
                         </div>
                     </MudTd>
                 }
@@ -118,7 +118,7 @@ else
                         }
                     </MudTd>
                 }
-                @if (_productColumns.IsVisible("Description")) { <MudTd Class="py-1 px-2">@context.Description</MudTd> }
+                @if (_productColumns.IsVisible("Description")) { <MudTd Class="py-1 px-2"><TruncatedText Text="@context.Description" MaxLength="30" DialogTitle="Description" /></MudTd> }
                 @if (_productColumns.IsVisible("Cost")) {
                     <MudTd Class="py-1 px-2">
                         <MudChip T="string" Size="Size.Small" Variant="Variant.Text">@context.CostPrice.ToString("F2")</MudChip>

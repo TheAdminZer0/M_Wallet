@@ -243,7 +243,7 @@
                             @{
                                 var availableStock = GetStockLevel(context);
                             }
-                            <MudTd DataLabel="Name">@context.Name</MudTd>
+                            <MudTd DataLabel="Name"><TruncatedText Text="@context.Name" MaxLength="25" DialogTitle="Product Name" /></MudTd>
                             @if (ShowPublicPrice) { <MudTd DataLabel="Price">LD @context.Price.ToString("F2")</MudTd> }
                             @if (ShowCostPrice) { <MudTd DataLabel="Cost">LD @context.CostPrice.ToString("F2")</MudTd> }
                             @if (ShowStock) {

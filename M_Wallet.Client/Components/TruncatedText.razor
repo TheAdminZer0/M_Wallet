@@ -1,0 +1,79 @@
+@using MudBlazor
+@using M_Wallet.Client.Components
+@inject IDialogService DialogService
+
+@* Truncated text with show more icon - click opens dialog with full text *@
+<div class="d-flex align-center" style="@ContainerStyle">
+    @if (IsTruncated)
+    {
+        <MudTooltip Text="@Text" Placement="Placement.Top" Delay="300">
+            <MudText Typo="@Typo" Style="@TruncateStyle">@TruncatedValue</MudText>
+        </MudTooltip>
+        <MudIconButton Icon="@Icons.Material.Filled.MoreHoriz" 
+                       Size="Size.Small" 
+                       Color="Color.Default"
+                       Style="opacity: 0.6; min-width: 24px; padding: 2px;"
+                       OnClick="ShowFullText"
+                       Title="Show more" />
+    }
+    else
+    {
+        <MudText Typo="@Typo" Style="@TextStyle">@Text</MudText>
+    }
+</div>
+
+@code {
+    /// <summary>
+    /// The full text to display
+    /// </summary>
+    [Parameter] public string Text { get; set; } = "";
+
+    /// <summary>
+    /// Maximum number of characters before truncation (default: 30)
+    /// </summary>
+    [Parameter] public int MaxLength { get; set; } = 30;
+
+    /// <summary>
+    /// Dialog title when showing full text
+    /// </summary>
+    [Parameter] public string DialogTitle { get; set; } = "Full Text";
+
+    /// <summary>
+    /// Typography style for the text
+    /// </summary>
+    [Parameter] public Typo Typo { get; set; } = Typo.body2;
+
+    /// <summary>
+    /// Additional CSS style for the text
+    /// </summary>
+    [Parameter] public string TextStyle { get; set; } = "";
+
+    /// <summary>
+    /// Additional CSS style for the container
+    /// </summary>
+    [Parameter] public string ContainerStyle { get; set; } = "";
+
+    private bool IsTruncated => !string.IsNullOrEmpty(Text) && Text.Length > MaxLength;
+
+    private string TruncatedValue => IsTruncated ? Text.Substring(0, MaxLength) + "..." : Text ?? "";
+
+    private string TruncateStyle => $"white-space: nowrap; overflow: hidden; text-overflow: ellipsis; {TextStyle}";
+
+    private async Task ShowFullText()
+    {
+        var parameters = new DialogParameters<TextDialog>
+        {
+            { x => x.Title, DialogTitle },
+            { x => x.Text, Text }
+        };
+
+        var options = new DialogOptions
+        {
+            CloseButton = true,
+            MaxWidth = MaxWidth.Medium,
+            FullWidth = true
+        };
+
+        await DialogService.ShowAsync<TextDialog>(DialogTitle, parameters, options);
+    }
+}

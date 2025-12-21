@@ -176,7 +176,7 @@ else
                 </MudTd>
                 @if (_purchaseColumns.IsVisible("ID")) { <MudTd>#@context.Id</MudTd> }
                 @if (_purchaseColumns.IsVisible("Date")) { <MudTd Style="white-space: nowrap;">@context.PurchaseDate.ToDisplayString()</MudTd> }
-                @if (_purchaseColumns.IsVisible("Supplier")) { <MudTd>@(context.SupplierName ?? "-")</MudTd> }
+                @if (_purchaseColumns.IsVisible("Supplier")) { <MudTd><TruncatedText Text="@(context.SupplierName ?? "-")" MaxLength="20" DialogTitle="Supplier" /></MudTd> }
                 @if (_purchaseColumns.IsVisible("Items")) { <MudTd>@context.Items.Count</MudTd> }
                 @if (_purchaseColumns.IsVisible("Total Amount")) { <MudTd>@context.TotalAmount.ToString("F2")</MudTd> }
                 @if (_purchaseColumns.IsVisible("Actions")) {
@@ -213,7 +213,7 @@ else
                                                 <img src="@GetProductImage(itemContext.Product)" 
                                                      alt="@itemContext.Product?.Name" 
                                                      style="width: 24px; height: 24px; object-fit: cover; border-radius: 4px; margin-right: 8px;" />
-                                                @itemContext.Product?.Name
+                                                <TruncatedText Text="@itemContext.Product?.Name" MaxLength="25" DialogTitle="Product Name" />
                                             </div>
                                         </MudTd>
                                         <MudTd Class="pa-1">@itemContext.Quantity</MudTd>

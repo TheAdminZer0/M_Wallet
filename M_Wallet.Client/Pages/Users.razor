@@ -29,8 +29,8 @@
                     @if (_customerColumns.IsVisible("Actions")) { <MudTh>Actions</MudTh> }
                 </HeaderContent>
                 <RowTemplate>
-                    @if (_customerColumns.IsVisible("Name")) { <MudTd DataLabel="Name">@context.Name</MudTd> }
-                    @if (_customerColumns.IsVisible("Phone Number")) { <MudTd DataLabel="Phone Number">@context.PhoneNumber</MudTd> }
+                    @if (_customerColumns.IsVisible("Name")) { <MudTd DataLabel="Name"><TruncatedText Text="@context.Name" MaxLength="20" DialogTitle="Name" /></MudTd> }
+                    @if (_customerColumns.IsVisible("Phone Number")) { <MudTd DataLabel="Phone Number"><TruncatedText Text="@context.PhoneNumber" MaxLength="15" DialogTitle="Phone Number" /></MudTd> }
                     @if (_customerColumns.IsVisible("Balance")) { 
                         <MudTd DataLabel="Balance">
                             <MudText Color="@(context.Balance < 0 ? Color.Error : Color.Success)">
@@ -94,8 +94,8 @@
                     @if (_driverColumns.IsVisible("Actions")) { <MudTh>Actions</MudTh> }
                 </HeaderContent>
                 <RowTemplate>
-                    @if (_driverColumns.IsVisible("Name")) { <MudTd DataLabel="Name">@context.Name</MudTd> }
-                    @if (_driverColumns.IsVisible("Phone Number")) { <MudTd DataLabel="Phone Number">@context.PhoneNumber</MudTd> }
+                    @if (_driverColumns.IsVisible("Name")) { <MudTd DataLabel="Name"><TruncatedText Text="@context.Name" MaxLength="20" DialogTitle="Name" /></MudTd> }
+                    @if (_driverColumns.IsVisible("Phone Number")) { <MudTd DataLabel="Phone Number"><TruncatedText Text="@context.PhoneNumber" MaxLength="15" DialogTitle="Phone Number" /></MudTd> }
                     @if (_driverColumns.IsVisible("Pending")) {
                         <MudTd DataLabel="Pending">
                             <MudChip T="string" Color="Color.Warning" Size="Size.Small">@context.PendingDeliveries</MudChip>
@@ -172,9 +172,9 @@
                         <MudTh>Actions</MudTh>
                     </HeaderContent>
                     <RowTemplate Context="systemContext">
-                        <MudTd DataLabel="Name">@systemContext.Name</MudTd>
-                        <MudTd DataLabel="Role">@systemContext.Role</MudTd>
-                        <MudTd DataLabel="Username">@systemContext.Username</MudTd>
+                        <MudTd DataLabel="Name"><TruncatedText Text="@systemContext.Name" MaxLength="20" DialogTitle="Name" /></MudTd>
+                        <MudTd DataLabel="Role"><TruncatedText Text="@systemContext.Role" MaxLength="15" DialogTitle="Role" /></MudTd>
+                        <MudTd DataLabel="Username"><TruncatedText Text="@systemContext.Username" MaxLength="15" DialogTitle="Username" /></MudTd>
                         <MudTd DataLabel="Total Spent">
                             <MudText Color="Color.Primary">
                                 @systemContext.TotalSpent.ToString("F2")
@@ -230,10 +230,10 @@
                         @if (_employeeColumns.IsVisible("Actions")) { <MudTh>Actions</MudTh> }
                     </HeaderContent>
                     <RowTemplate Context="employeeContext">
-                        @if (_employeeColumns.IsVisible("Name")) { <MudTd DataLabel="Name">@employeeContext.Name</MudTd> }
-                        @if (_employeeColumns.IsVisible("Role")) { <MudTd DataLabel="Role">@employeeContext.Role</MudTd> }
-                        @if (_employeeColumns.IsVisible("Username")) { <MudTd DataLabel="Username">@employeeContext.Username</MudTd> }
-                        @if (_employeeColumns.IsVisible("Passcode")) { <MudTd DataLabel="Passcode">@employeeContext.Passcode</MudTd> }
+                        @if (_employeeColumns.IsVisible("Name")) { <MudTd DataLabel="Name"><TruncatedText Text="@employeeContext.Name" MaxLength="20" DialogTitle="Name" /></MudTd> }
+                        @if (_employeeColumns.IsVisible("Role")) { <MudTd DataLabel="Role"><TruncatedText Text="@employeeContext.Role" MaxLength="15" DialogTitle="Role" /></MudTd> }
+                        @if (_employeeColumns.IsVisible("Username")) { <MudTd DataLabel="Username"><TruncatedText Text="@employeeContext.Username" MaxLength="15" DialogTitle="Username" /></MudTd> }
+                        @if (_employeeColumns.IsVisible("Passcode")) { <MudTd DataLabel="Passcode"><TruncatedText Text="@employeeContext.Passcode" MaxLength="10" DialogTitle="Passcode" /></MudTd> }
                         @if (_employeeColumns.IsVisible("Balance")) { 
                             <MudTd DataLabel="Balance">
                                 <MudText Color="@(employeeContext.Balance < 0 ? Color.Error : Color.Success)">
