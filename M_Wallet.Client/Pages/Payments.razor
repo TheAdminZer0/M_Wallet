@@ -3,6 +3,7 @@
 @inject NotificationService Notify
 @inject IDialogService DialogService
 @inject TransactionService TransactionService
+@inject NavigationManager NavigationManager
 
 <PageTitle>Payments</PageTitle>
 
@@ -97,16 +98,16 @@
                     @if (_paymentColumns.IsVisible("Reference")) { <MudTd>@context.Reference</MudTd> }
                     @if (_paymentColumns.IsVisible("Amount")) {
                         <MudTd>
-                            <MudText Color="Color.Success" Class="font-weight-bold">
+                            <MudText Color="@(context.Amount >= 0 ? Color.Success : Color.Error)" Class="font-weight-bold">
                                 LD @context.Amount.ToString("F2")
                             </MudText>
                         </MudTd>
                     }
                     @if (_paymentColumns.IsVisible("Allocations")) {
                         <MudTd>
-                            @foreach(var alloc in context.Allocations)
+                            @foreach (var alloc in context.Allocations)
                             {
-                                <div>Order #@alloc.TransactionId: LD @alloc.Amount.ToString("F2")</div>
+                                <MudLink Href="@($"/transactions/{alloc.TransactionId}")" Class="mr-1">#@alloc.TransactionId</MudLink>
                             }
                         </MudTd>
                     }

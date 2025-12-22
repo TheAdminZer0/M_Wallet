@@ -1,4 +1,5 @@
 @page "/transactions"
+@page "/transactions/{SearchQuery}"
 @inject HttpClient Http
 @inject NotificationService Notify
 @inject IDialogService DialogService
@@ -196,7 +197,7 @@ else
         </MudPaper>
     }
 
-    <MudTabs Elevation="2" Rounded="true" ApplyEffectsToContainer="true" PanelClass="pa-0">
+    <MudTabs Elevation="2" Rounded="true" ApplyEffectsToContainer="true" PanelClass="pa-0" @bind-ActivePanelIndex="activeTabIndex">
         @* Orders tab: main transactions grid with expandable item rows *@
         <MudTabPanel Text="Orders" Icon="@Icons.Material.Filled.Receipt">
             @if (FilteredTransactions.Count() != transactions.Count)
@@ -505,14 +506,32 @@ else
                         </ChildRowContent>
                         @* Footer aggregates for currently filtered set *@
                         <FooterContent>
-                            @if (_transactionColumns.IsVisible("Order")) { <MudTh Style="font-weight: bold; background: var(--mud-palette-background-gray);">@FilteredTransactions.Count() orders</MudTh> }
+                            @if (_transactionColumns.IsVisible("Order")) { <MudTh Style="font-weight: bold; background: var(--mud-palette-background-gray);">@DisplayedTransactions.Count() orders</MudTh> }
                             @if (_transactionColumns.IsVisible("Date")) { <MudTh Style="background: var(--mud-palette-background-gray);"></MudTh> }
                             @if (_transactionColumns.IsVisible("Items")) { <MudTh Style="background: var(--mud-palette-background-gray);"></MudTh> }
                             @if (_transactionColumns.IsVisible("Quantity")) { <MudTh Style="font-weight: bold; background: var(--mud-palette-background-gray);">@GetFilteredQuantity()</MudTh> }
                             @if (_transactionColumns.IsVisible("Cost")) { <MudTh Style="font-weight: bold; background: var(--mud-palette-background-gray);">@GetFilteredCost().ToString("N2")</MudTh> }
-                            @if (_transactionColumns.IsVisible("Profit")) { <MudTh Style="font-weight: bold; background: var(--mud-palette-background-gray);">@GetFilteredProfit().ToString("N2")</MudTh> }
-                            @if (_transactionColumns.IsVisible("Realized Profit")) { <MudTh Style="font-weight: bold; background: var(--mud-palette-background-gray);">@GetFilteredRealizedProfit().ToString("N2")</MudTh> }
-                            @if (_transactionColumns.IsVisible("Total")) { <MudTh Style="font-weight: bold; background: var(--mud-palette-background-gray);">@GetFilteredTotal().ToString("N2")</MudTh> }
+                            @if (_transactionColumns.IsVisible("Profit")) { 
+                                <MudTh Style="font-weight: bold; background: var(--mud-palette-background-gray);">
+                                    <MudText Typo="Typo.body2" Class="font-weight-bold" Color="@(GetFilteredProfit() >= 0 ? Color.Success : Color.Error)">
+                                        @GetFilteredProfit().ToString("N2")
+                                    </MudText>
+                                </MudTh> 
+                            }
+                            @if (_transactionColumns.IsVisible("Realized Profit")) { 
+                                <MudTh Style="font-weight: bold; background: var(--mud-palette-background-gray);">
+                                    <MudText Typo="Typo.body2" Class="font-weight-bold" Color="@(GetFilteredRealizedProfit() >= 0 ? Color.Success : Color.Error)">
+                                        @GetFilteredRealizedProfit().ToString("N2")
+                                    </MudText>
+                                </MudTh> 
+                            }
+                            @if (_transactionColumns.IsVisible("Total")) { 
+                                <MudTh Style="font-weight: bold; background: var(--mud-palette-background-gray);">
+                                    <MudText Typo="Typo.body2" Class="font-weight-bold" Color="@(GetFilteredTotal() >= 0 ? Color.Success : Color.Error)">
+                                        @GetFilteredTotal().ToString("N2")
+                                    </MudText>
+                                </MudTh> 
+                            }
                             @if (_transactionColumns.IsVisible("Discount")) { <MudTh Style="font-weight: bold; background: var(--mud-palette-background-gray);">@GetFilteredDiscount().ToString("N2")</MudTh> }
                             @if (_transactionColumns.IsVisible("Payment")) { <MudTh Style="background: var(--mud-palette-background-gray);"></MudTh> }
                             @if (_transactionColumns.IsVisible("Delivery")) { <MudTh Style="background: var(--mud-palette-background-gray);"></MudTh> }
@@ -587,16 +606,17 @@ else
                         @if (_paymentColumns.IsVisible("Reference")) { <MudTd DataLabel="Reference" Class="d-none d-sm-table-cell"><TruncatedText Text="@context.Reference" MaxLength="20" DialogTitle="Reference" /></MudTd> }
                         @if (_paymentColumns.IsVisible("Amount")) {
                             <MudTd DataLabel="Amount">
-                                <MudText Color="Color.Success" Class="font-weight-bold">
+                                <MudText Color="@(context.Amount >= 0 ? Color.Success : Color.Error)" Class="font-weight-bold">
                                     LD @context.Amount.ToString("F2")
                                 </MudText>
                             </MudTd>
                         }
                         @if (_paymentColumns.IsVisible("Allocations")) {
                             <MudTd DataLabel="Allocations">
-                                <MudText Typo="Typo.body2">
-                                    @string.Join(", ", context.Allocations.Select(a => $"#{a.TransactionId}: {a.Amount:F2}"))
-                                </MudText>
+                                @foreach (var alloc in context.Allocations)
+                                {
+                                    <MudLink Href="@($"/transactions/{alloc.TransactionId}")" Class="mr-1">#@alloc.TransactionId</MudLink>
+                                }
                             </MudTd>
                         }
                         @if (_paymentColumns.IsVisible("Actions")) {
@@ -610,7 +630,13 @@ else
                     </RowTemplate>
                     <FooterContent>
                         @if (_paymentColumns.IsVisible("Payment ID")) { <MudTh Style="font-weight: bold; background: var(--mud-palette-background-gray);">@FilteredPayments.Count() payments</MudTh> }
-                        @if (_paymentColumns.IsVisible("Realized Profit")) { <MudTh Style="font-weight: bold; background: var(--mud-palette-background-gray);">@GetPaymentsTotalRealizedProfit().ToString("N2")</MudTh> }
+                        @if (_paymentColumns.IsVisible("Realized Profit")) { 
+                            <MudTh Style="font-weight: bold; background: var(--mud-palette-background-gray);">
+                                <MudText Typo="Typo.body2" Class="font-weight-bold" Color="@(GetPaymentsTotalRealizedProfit() >= 0 ? Color.Success : Color.Error)">
+                                    @GetPaymentsTotalRealizedProfit().ToString("N2")
+                                </MudText>
+                            </MudTh> 
+                        }
                         @if (_paymentColumns.IsVisible("Date")) { <MudTh Style="background: var(--mud-palette-background-gray);"></MudTh> }
                         @if (_paymentColumns.IsVisible("Method")) { <MudTh Style="background: var(--mud-palette-background-gray);" Class="d-none d-sm-table-cell"></MudTh> }
                         @if (_paymentColumns.IsVisible("Reference")) { <MudTh Style="background: var(--mud-palette-background-gray);" Class="d-none d-sm-table-cell"></MudTh> }
@@ -698,6 +724,11 @@ else
     private string paymentSearchString = "";
     private HashSet<int> expandedTransactions = new();
     private bool expandAll = false;
+
+    [Parameter]
+    public string? SearchQuery { get; set; }
+
+    private int activeTabIndex = 0;
 
     // Column visibility configuration per tab
     private List<ColumnDefinition> _transactionColumns = new()
@@ -901,6 +932,13 @@ else
     // Initial load: honor driver query parameter then fetch data
     protected override async Task OnInitializedAsync()
     {
+        // Check for search query from URL parameter
+        if (!string.IsNullOrEmpty(SearchQuery))
+        {
+            searchString = SearchQuery;
+            activeTabIndex = 0; // Switch to Orders tab
+        }
+        
         // Check for driver query parameter
         var uri = NavigationManager.ToAbsoluteUri(NavigationManager.Uri);
         var query = uri.Query;
@@ -918,6 +956,17 @@ else
 
         await TransactionService.RefreshDataAsync();
         await LoadData();
+    }
+
+    // Handle URL parameter changes when navigating to same page
+    protected override void OnParametersSet()
+    {
+        if (!string.IsNullOrEmpty(SearchQuery))
+        {
+            searchString = SearchQuery;
+            activeTabIndex = 0; // Switch to Orders tab
+            StateHasChanged();
+        }
     }
 
     // Fetch transactions/payments and build quick lookups
@@ -1048,12 +1097,14 @@ else
     private decimal GetDriverTotalAmount() => GetDeliveryBaseSet().Where(t => t.Status != TransactionStatus.Canceled && t.Status != TransactionStatus.Refunded).Sum(t => t.TotalAmount);
     
     // Footer totals for filtered transactions (excludes canceled and refunded)
-    private decimal GetFilteredTotal() => FilteredTransactions.Where(t => t.Status != TransactionStatus.Canceled && t.Status != TransactionStatus.Refunded).Sum(t => t.TotalAmount);
-    private int GetFilteredQuantity() => FilteredTransactions.Where(t => t.Status != TransactionStatus.Canceled && t.Status != TransactionStatus.Refunded).Sum(t => t.Items.Sum(i => i.Quantity));
-    private decimal GetFilteredCost() => FilteredTransactions.Where(t => t.Status != TransactionStatus.Canceled && t.Status != TransactionStatus.Refunded).Sum(t => t.Items.Sum(i => i.UnitCost * i.Quantity));
-    private decimal GetFilteredProfit() => FilteredTransactions.Where(t => t.Status != TransactionStatus.Canceled && t.Status != TransactionStatus.Refunded).Sum(t => t.Items.Sum(i => (i.UnitPrice - i.UnitCost) * i.Quantity) - t.Discount);
-    private decimal GetFilteredDiscount() => FilteredTransactions.Where(t => t.Status != TransactionStatus.Canceled && t.Status != TransactionStatus.Refunded).Sum(t => t.Discount);
-    private decimal GetFilteredRealizedProfit() => FilteredTransactions.Sum(t => GetTransactionRealizedProfit(t));
+    // Note: We must also apply the SearchFilter since FilteredTransactions doesn't include it
+    private IEnumerable<Transaction> DisplayedTransactions => FilteredTransactions.Where(SearchFilter);
+    private decimal GetFilteredTotal() => DisplayedTransactions.Where(t => t.Status != TransactionStatus.Canceled && t.Status != TransactionStatus.Refunded).Sum(t => t.TotalAmount);
+    private int GetFilteredQuantity() => DisplayedTransactions.Where(t => t.Status != TransactionStatus.Canceled && t.Status != TransactionStatus.Refunded).Sum(t => t.Items.Sum(i => i.Quantity));
+    private decimal GetFilteredCost() => DisplayedTransactions.Where(t => t.Status != TransactionStatus.Canceled && t.Status != TransactionStatus.Refunded).Sum(t => t.Items.Sum(i => i.UnitCost * i.Quantity));
+    private decimal GetFilteredProfit() => DisplayedTransactions.Where(t => t.Status != TransactionStatus.Canceled && t.Status != TransactionStatus.Refunded).Sum(t => t.Items.Sum(i => (i.UnitPrice - i.UnitCost) * i.Quantity) - t.Discount);
+    private decimal GetFilteredDiscount() => DisplayedTransactions.Where(t => t.Status != TransactionStatus.Canceled && t.Status != TransactionStatus.Refunded).Sum(t => t.Discount);
+    private decimal GetFilteredRealizedProfit() => DisplayedTransactions.Sum(t => GetTransactionRealizedProfit(t));
 
     // Footer totals for payments
     private decimal GetPaymentsTotalAmount() => FilteredPayments.Sum(p => p.Amount);
