@@ -242,6 +242,49 @@ public class TransactionsController : ControllerBase
             _context.Transactions.Add(transaction);
             await _context.SaveChangesAsync();
 
+            // AUTO-ALLOCATION: If customer has positive balance (credit), automatically apply it to this order
+            if (transaction.PersonId.HasValue && transaction.TotalAmount > 0)
+            {
+                // Get customer's payments and their unallocated amounts
+                var customerPayments = await _context.Payments
+                    .Include(p => p.Allocations)
+                    .Where(p => p.PersonId == transaction.PersonId && p.Amount > 0) // Only positive payments
+                    .OrderBy(p => p.PaymentDate) // FIFO: oldest first
+                    .ToListAsync();
+                
+                var orderBalanceDue = transaction.TotalAmount;
+                var autoAllocations = new List<string>();
+                
+                foreach (var payment in customerPayments)
+                {
+                    if (orderBalanceDue <= 0) break;
+                    
+                    var paymentAllocated = payment.Allocations?.Sum(a => a.Amount) ?? 0;
+                    var paymentUnallocated = payment.Amount - paymentAllocated;
+                    
+                    if (paymentUnallocated > 0)
+                    {
+                        var allocationAmount = Math.Min(paymentUnallocated, orderBalanceDue);
+                        
+                        var newAllocation = new PaymentAllocation
+                        {
+                            PaymentId = payment.Id,
+                            TransactionId = transaction.Id,
+                            Amount = allocationAmount
+                        };
+                        _context.PaymentAllocations.Add(newAllocation);
+                        
+                        orderBalanceDue -= allocationAmount;
+                        autoAllocations.Add($"Auto-allocated {allocationAmount:F2} LD from payment #{payment.Id}");
+                    }
+                }
+                
+                if (autoAllocations.Any())
+                {
+                    await _context.SaveChangesAsync();
+                }
+            }
+
             // Log the sale
             var itemDetails = string.Join(", ", productNames);
             var customerDisplay = string.IsNullOrWhiteSpace(transaction.CustomerName) ? "Walk-in" : transaction.CustomerName;
@@ -394,7 +437,7 @@ public class TransactionsController : ControllerBase
     }
 
     [HttpPut("{id}")]
-    public async Task<IActionResult> UpdateTransaction(int id, Transaction transaction)
+    public async Task<IActionResult> UpdateTransaction(int id, Transaction transaction, [FromHeader(Name = "X-Authorized-By")] string? authorizedBy = null)
     {
         if (id != transaction.Id)
         {
@@ -407,8 +450,180 @@ public class TransactionsController : ControllerBase
             return NotFound();
         }
 
-        // Only allow updating the Note for now
-        existingTransaction.Note = transaction.Note;
+        // Track changes for audit log
+        var changes = new List<string>();
+
+        // Update Note
+        if (existingTransaction.Note != transaction.Note)
+        {
+            changes.Add($"Note: '{existingTransaction.Note ?? "(empty)"}' -> '{transaction.Note ?? "(empty)"}'");
+            existingTransaction.Note = transaction.Note;
+        }
+        
+        // Update customer
+        if (transaction.PersonId != existingTransaction.PersonId)
+        {
+            var oldCustomer = existingTransaction.CustomerName ?? "Walk-in";
+            
+            if (transaction.PersonId.HasValue)
+            {
+                var person = await _context.People.FindAsync(transaction.PersonId.Value);
+                if (person != null)
+                {
+                    existingTransaction.PersonId = person.Id;
+                    existingTransaction.CustomerName = person.Name;
+                    changes.Add($"Customer: '{oldCustomer}' -> '{person.Name}'");
+                    
+                    // Also update payments linked to this transaction
+                    // Only update payment's PersonId if ALL allocations for that payment 
+                    // belong to transactions with the same customer (or this transaction)
+                    var paymentAllocations = await _context.PaymentAllocations
+                        .Include(pa => pa.Payment)
+                        .Where(pa => pa.TransactionId == id)
+                        .ToListAsync();
+                    
+                    foreach (var allocation in paymentAllocations)
+                    {
+                        if (allocation.Payment != null)
+                        {
+                            // Check if this payment is shared with other transactions
+                            var otherAllocations = await _context.PaymentAllocations
+                                .Include(pa => pa.Transaction)
+                                .Where(pa => pa.PaymentId == allocation.PaymentId && pa.TransactionId != id)
+                                .ToListAsync();
+                            
+                            // Only update if payment is exclusively for this transaction
+                            // OR all other allocations are for the same customer
+                            var canUpdate = otherAllocations.Count == 0 || 
+                                otherAllocations.All(oa => oa.Transaction?.PersonId == person.Id);
+                            
+                            if (canUpdate)
+                            {
+                                allocation.Payment.PersonId = person.Id;
+                                allocation.Payment.CustomerName = person.Name;
+                            }
+                            // If payment is shared with other customers, leave PersonId as is
+                            // The allocations still correctly track where the money goes
+                        }
+                    }
+                    
+                    // AUTO-ALLOCATION: If customer has positive balance and this order has balance due,
+                    // automatically allocate from customer's excess payments
+                    var existingPaidAmount = await _context.PaymentAllocations
+                        .Where(pa => pa.TransactionId == id)
+                        .SumAsync(pa => pa.Amount);
+                    
+                    var orderBalanceDue = existingTransaction.TotalAmount - existingPaidAmount;
+                    
+                    if (orderBalanceDue > 0)
+                    {
+                        // Get customer's payments and their total allocated amounts
+                        var customerPayments = await _context.Payments
+                            .Include(p => p.Allocations)
+                            .Where(p => p.PersonId == person.Id && p.Amount > 0) // Only positive payments
+                            .OrderBy(p => p.PaymentDate) // FIFO: oldest first
+                            .ToListAsync();
+                        
+                        foreach (var payment in customerPayments)
+                        {
+                            if (orderBalanceDue <= 0) break;
+                            
+                            var paymentAllocated = payment.Allocations?.Sum(a => a.Amount) ?? 0;
+                            var paymentUnallocated = payment.Amount - paymentAllocated;
+                            
+                            if (paymentUnallocated > 0)
+                            {
+                                var allocationAmount = Math.Min(paymentUnallocated, orderBalanceDue);
+                                
+                                var newAllocation = new PaymentAllocation
+                                {
+                                    PaymentId = payment.Id,
+                                    TransactionId = id,
+                                    Amount = allocationAmount
+                                };
+                                _context.PaymentAllocations.Add(newAllocation);
+                                
+                                orderBalanceDue -= allocationAmount;
+                                changes.Add($"Auto-allocated {allocationAmount:F2} LD from payment #{payment.Id}");
+                            }
+                        }
+                    }
+                }
+            }
+            else
+            {
+                existingTransaction.PersonId = null;
+                existingTransaction.CustomerName = null;
+                changes.Add($"Customer: '{oldCustomer}' -> 'Walk-in'");
+                
+                // Also clear customer from payments linked to this transaction
+                // Only if the payment is exclusively for this transaction
+                var paymentAllocations = await _context.PaymentAllocations
+                    .Include(pa => pa.Payment)
+                    .Where(pa => pa.TransactionId == id)
+                    .ToListAsync();
+                
+                foreach (var allocation in paymentAllocations)
+                {
+                    if (allocation.Payment != null)
+                    {
+                        // Check if this payment is shared with other transactions
+                        var otherAllocations = await _context.PaymentAllocations
+                            .Where(pa => pa.PaymentId == allocation.PaymentId && pa.TransactionId != id)
+                            .ToListAsync();
+                        
+                        // Only clear if payment is exclusively for this transaction
+                        if (otherAllocations.Count == 0)
+                        {
+                            allocation.Payment.PersonId = null;
+                            allocation.Payment.CustomerName = null;
+                        }
+                    }
+                }
+            }
+        }
+
+        // Update driver
+        if (transaction.DriverId != existingTransaction.DriverId)
+        {
+            if (transaction.DriverId.HasValue)
+            {
+                var driver = await _context.People.FindAsync(transaction.DriverId.Value);
+                if (driver != null)
+                {
+                    changes.Add($"Driver: '{existingTransaction.Driver?.Name ?? "None"}' -> '{driver.Name}'");
+                    existingTransaction.DriverId = driver.Id;
+                }
+            }
+            else
+            {
+                changes.Add($"Driver: '{existingTransaction.Driver?.Name ?? "None"}' -> 'None'");
+                existingTransaction.DriverId = null;
+            }
+        }
+
+        // Update employee (admin only - validated on client)
+        if (!string.IsNullOrEmpty(transaction.EmployeeName) && transaction.EmployeeName != existingTransaction.EmployeeName)
+        {
+            changes.Add($"Employee: '{existingTransaction.EmployeeName}' -> '{transaction.EmployeeName}'");
+            existingTransaction.EmployeeName = transaction.EmployeeName;
+        }
+
+        // Log changes if any - use authorizedBy header for audit
+        if (changes.Any())
+        {
+            var log = new AuditLog
+            {
+                Timestamp = DateTime.UtcNow,
+                Action = "Update",
+                Entity = "Transaction",
+                EntityId = transaction.Id.ToString(),
+                EmployeeName = authorizedBy ?? transaction.EmployeeName ?? existingTransaction.EmployeeName,
+                Description = $"Updated transaction #{transaction.Id}",
+                Changes = string.Join("; ", changes)
+            };
+            _context.AuditLogs.Add(log);
+        }
 
         try
         {

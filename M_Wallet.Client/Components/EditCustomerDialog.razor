@@ -1,0 +1,90 @@
+@using MudBlazor
+@using M_Wallet.Shared
+@using System.Net.Http.Json
+@inject HttpClient Http
+
+@* Dialog to edit/assign customer to an existing order *@
+<MudDialog>
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            <MudIcon Icon="@Icons.Material.Filled.PersonAdd" Class="mr-2 mb-n1" />
+            Link Customer to Order #@Transaction.Id
+        </MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudText Class="mb-4" Typo="Typo.body2" Color="Color.Secondary">
+            Current: @(string.IsNullOrEmpty(Transaction.CustomerName) ? "Walk-in" : Transaction.CustomerName)
+        </MudText>
+
+        <MudAutocomplete T="Person"
+                         Label="Select Customer"
+                         @bind-Value="selectedCustomer"
+                         SearchFunc="SearchCustomers"
+                         ToStringFunc="@(p => p?.Name ?? "Walk-in")"
+                         Variant="Variant.Outlined"
+                         Clearable="true"
+                         ResetValueOnEmptyText="true"
+                         MaxItems="20"
+                         Immediate="true"
+                         DebounceInterval="300"
+                         AdornmentIcon="@Icons.Material.Filled.Search" />
+        
+        <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mt-2">
+            Clear the field to set as Walk-in customer.
+        </MudText>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="Submit">Save</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = default!;
+
+    [Parameter] public Transaction Transaction { get; set; } = new();
+
+    private Person? selectedCustomer;
+    private List<Person> customers = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Load customers
+        try
+        {
+            var allPeople = await Http.GetFromJsonAsync<List<Person>>("api/people") ?? new();
+            customers = allPeople.Where(p => p.Role == "Customer").OrderBy(p => p.Name).ToList();
+
+            // Pre-select current customer if any
+            if (Transaction.PersonId.HasValue)
+            {
+                selectedCustomer = customers.FirstOrDefault(c => c.Id == Transaction.PersonId.Value);
+            }
+        }
+        catch
+        {
+            customers = new();
+        }
+    }
+
+    private Task<IEnumerable<Person>> SearchCustomers(string? value, CancellationToken token)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return Task.FromResult(customers.AsEnumerable());
+        }
+
+        var filtered = customers.Where(c => 
+            (c.Name?.Contains(value, StringComparison.OrdinalIgnoreCase) ?? false) ||
+            (c.PhoneNumber?.Contains(value, StringComparison.OrdinalIgnoreCase) ?? false));
+
+        return Task.FromResult(filtered);
+    }
+
+    private void Submit()
+    {
+        MudDialog.Close(DialogResult.Ok(selectedCustomer));
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+}

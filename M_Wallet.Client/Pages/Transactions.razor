@@ -1,5 +1,6 @@
 @page "/transactions"
 @page "/transactions/{SearchQuery}"
+@using System.Net.Http.Json
 @inject HttpClient Http
 @inject NotificationService Notify
 @inject IDialogService DialogService
@@ -392,25 +393,25 @@ else
                             @if (_transactionColumns.IsVisible("Customer")) { <MudTd DataLabel="Customer"><TruncatedText Text="@(context.CustomerName ?? "Walk-in")" MaxLength="15" DialogTitle="Customer" /></MudTd> }
                             @if (_transactionColumns.IsVisible("Note")) { 
                                 <MudTd DataLabel="Note">
-                                    <div @onclick="@(() => EditNote(context))" style="cursor: pointer; display: flex; align-items: center;">
-                                        @if (!string.IsNullOrEmpty(context.Note))
-                                        {
-                                            <MudText Typo="Typo.body2" Style="max-width: 150px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
-                                                @context.Note
-                                            </MudText>
-                                            <MudIcon Icon="@Icons.Material.Filled.Edit" Size="Size.Small" Class="ml-1" Color="Color.Default" Style="opacity: 0.5;" />
-                                        }
-                                        else
-                                        {
-                                            <MudIcon Icon="@Icons.Material.Filled.AddComment" Size="Size.Small" Color="Color.Default" Style="opacity: 0.3;" />
-                                        }
-                                    </div>
+                                    @if (!string.IsNullOrEmpty(context.Note))
+                                    {
+                                        <TruncatedText Text="@context.Note" MaxLength="20" DialogTitle="Note" />
+                                    }
+                                    else
+                                    {
+                                        <MudText Typo="Typo.body2" Color="Color.Default">-</MudText>
+                                    }
                                 </MudTd> 
                             }
                             @if (_transactionColumns.IsVisible("Employee")) { <MudTd DataLabel="Employee"><TruncatedText Text="@context.EmployeeName" MaxLength="15" DialogTitle="Employee" /></MudTd> }
                             @if (_transactionColumns.IsVisible("Actions")) {
                                 <MudTd DataLabel="Actions" Style="white-space: nowrap;">
                                     <div class="d-flex align-center">
+                                        <MudIconButton Icon="@Icons.Material.Filled.Edit" 
+                                                       Color="Color.Primary" 
+                                                       Size="Size.Small"
+                                                       Title="Edit Order"
+                                                       OnClick="@(() => OpenEditTransactionDialog(context))" />
                                         <MudMenu Icon="@Icons.Material.Filled.Print" Color="Color.Info" Size="Size.Small" Dense="true">
                                             <MudMenuItem OnClick="@(() => PrintReceipt(context))">Print Receipt (Thermal)</MudMenuItem>
                                             <MudMenuItem OnClick="@(() => PrintInvoice(context))">Print Invoice (A4)</MudMenuItem>
@@ -1307,34 +1308,70 @@ else
         await JSRuntime.InvokeVoidAsync("printer.printHtml", html);
     }
 
-    // Edit inline note for a transaction
-    private async Task EditNote(Transaction transaction)
+    // Unified edit dialog for transaction
+    private async Task OpenEditTransactionDialog(Transaction transaction)
     {
-        var parameters = new DialogParameters<M_Wallet.Client.Components.NoteDialog>
+        var parameters = new DialogParameters<M_Wallet.Client.Components.EditTransactionDialog>
         {
-            { x => x.Note, transaction.Note ?? "" }
+            { x => x.Transaction, transaction }
         };
 
         var options = new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.Small, FullWidth = true };
-        var dialog = await DialogService.ShowAsync<M_Wallet.Client.Components.NoteDialog>("Edit Note", parameters, options);
+        var dialog = await DialogService.ShowAsync<M_Wallet.Client.Components.EditTransactionDialog>($"Edit Order #{transaction.Id}", parameters, options);
         var result = await dialog.Result;
 
-        if (!result.Canceled)
+        if (!result.Canceled && result.Data is M_Wallet.Client.Components.EditTransactionDialog.EditTransactionResult editResult)
         {
-            var newNote = result.Data as string;
-            if (transaction.Note != newNote)
+            var hasChanges = false;
+
+            // Update transaction with new values
+            if (transaction.PersonId != editResult.PersonId)
             {
-                transaction.Note = newNote;
+                transaction.PersonId = editResult.PersonId;
+                transaction.CustomerName = editResult.CustomerName;
+                hasChanges = true;
+            }
+
+            if (transaction.Note != editResult.Note)
+            {
+                transaction.Note = editResult.Note;
+                hasChanges = true;
+            }
+
+            if (transaction.DriverId != editResult.DriverId)
+            {
+                transaction.DriverId = editResult.DriverId;
+                hasChanges = true;
+            }
+
+            if (editResult.EmployeeChanged && !string.IsNullOrEmpty(editResult.EmployeeName))
+            {
+                transaction.EmployeeName = editResult.EmployeeName;
+                hasChanges = true;
+            }
+
+            if (hasChanges)
+            {
                 try
                 {
-                    var response = await Http.PutAsJsonAsync($"api/transactions/{transaction.Id}", transaction);
+                    // Create request with authorized employee header
+                    var request = new HttpRequestMessage(HttpMethod.Put, $"api/transactions/{transaction.Id}");
+                    request.Content = JsonContent.Create(transaction);
+                    if (!string.IsNullOrEmpty(editResult.AuthorizedBy))
+                    {
+                        request.Headers.Add("X-Authorized-By", editResult.AuthorizedBy);
+                    }
+                    
+                    var response = await Http.SendAsync(request);
                     if (response.IsSuccessStatusCode)
                     {
-                        Notify.Success("Note updated");
+                        Notify.Success("Order updated");
+                        await TransactionService.RefreshDataAsync();
+                        await LoadData();
                     }
                     else
                     {
-                        Notify.Error("Failed to update note");
+                        Notify.Error("Failed to update order");
                         await LoadData();
                     }
                 }

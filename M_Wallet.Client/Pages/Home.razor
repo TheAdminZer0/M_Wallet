@@ -14,6 +14,23 @@
 
 <PageTitle>POS - Point of Sale</PageTitle>
 
+<!-- Edit authentication dialog -->
+<MudDialog @bind-Visible="showEditAuthDialog" Options="@(new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.Small })">
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            <MudIcon Icon="@Icons.Material.Filled.Lock" Class="mr-2" />
+            Authentication Required
+        </MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudText Class="mb-4">Enter pattern to edit cart item</MudText>
+        <PatternAuthComponent OnAuthorized="OnEditAuthorized" />
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="CancelEditAuth" Color="Color.Default">Cancel</MudButton>
+    </DialogActions>
+</MudDialog>
+
 <!-- Success overlay after a completed sale -->
 <MudOverlay Visible="showSuccessOverlay" DarkBackground="true" Absolute="false" ZIndex="2000" OnClick="@(() => showSuccessOverlay = false)">
     <MudCard Class="pa-8 d-flex flex-column align-center justify-center gap-4" Style="width: 400px; max-width: 90vw; position: relative;">
@@ -146,6 +163,13 @@
                                             @if (editingItem == item)
                                             {
                                                 <div class="d-flex flex-column gap-1">
+                                                    @if (editingEmployee != null)
+                                                    {
+                                                        <MudText Typo="Typo.caption" Color="Color.Info" Style="font-size: 0.65rem;">
+                                                            <MudIcon Icon="@Icons.Material.Filled.Person" Size="Size.Small" Style="font-size: 12px;" />
+                                                            @editingEmployee.Name
+                                                        </MudText>
+                                                    }
                                                     <MudTextField @ref="priceInputRef"
                                                                   Value="@editingPriceValue"
                                                                   Label="Price"
@@ -485,6 +509,11 @@
     private string editingPriceValue = "";
     private string editingCostValue = "";
     private MudTextField<string>? priceInputRef;
+    
+    // Edit authentication - tracks who is authorized to edit
+    private bool showEditAuthDialog = false;
+    private TransactionItem? pendingEditItem = null;
+    private Person? editingEmployee = null;
 
     // =====================================================
     // STATE: Delivery Options
@@ -870,29 +899,50 @@
     // =====================================================
     private async Task StartEditingAsync(TransactionItem item)
     {
-        editingItem = item;
-        editingPriceValue = item.UnitPrice.ToString("F2");
-        editingCostValue = item.UnitCost.ToString("F2");
+        // Require pattern authentication before allowing edits
+        pendingEditItem = item;
+        showEditAuthDialog = true;
+        await Task.CompletedTask;
+    }
+
+    private async Task OnEditAuthorized(Person employee)
+    {
+        showEditAuthDialog = false;
+        editingEmployee = employee;
         
-        // Wait a tick for the input to render, then select all text
-        await Task.Delay(50);
-        if (priceInputRef != null)
+        if (pendingEditItem != null)
         {
-            try
+            editingItem = pendingEditItem;
+            editingPriceValue = pendingEditItem.UnitPrice.ToString("F2");
+            editingCostValue = pendingEditItem.UnitCost.ToString("F2");
+            pendingEditItem = null;
+            
+            // Wait a tick for the input to render, then select all text
+            await Task.Delay(50);
+            if (priceInputRef != null)
             {
-                await JSRuntime.InvokeVoidAsync("eval", 
-                    @"setTimeout(() => { 
-                        const input = document.activeElement; 
-                        if (input && input.tagName === 'INPUT') { 
-                            input.select(); 
-                        }
-                    }, 10);");
-            }
-            catch
-            {
-                // Ignore if JS fails
+                try
+                {
+                    await JSRuntime.InvokeVoidAsync("eval", 
+                        @"setTimeout(() => { 
+                            const input = document.activeElement; 
+                            if (input && input.tagName === 'INPUT') { 
+                                input.select(); 
+                            }
+                        }, 10);");
+                }
+                catch
+                {
+                    // Ignore if JS fails
+                }
             }
         }
+    }
+
+    private void CancelEditAuth()
+    {
+        showEditAuthDialog = false;
+        pendingEditItem = null;
     }
 
     private void HandleKeyDown(KeyboardEventArgs e)
@@ -957,9 +1007,17 @@
 
     private void FinishEditing()
     {
+        // Log the edit if employee and item are known
+        if (editingEmployee != null && editingItem != null)
+        {
+            // The edit is tracked - editingEmployee made the change
+            Console.WriteLine($"Edit by {editingEmployee.Name}: {editingItem.Product?.Name} - Price: {editingItem.UnitPrice}");
+        }
+        
         editingItem = null;
         editingPriceValue = "";
         editingCostValue = "";
+        editingEmployee = null;
     }
 
     private void ResetItemPrice(TransactionItem item)

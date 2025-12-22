@@ -1,0 +1,276 @@
+@using MudBlazor
+@using M_Wallet.Shared
+@using M_Wallet.Client.Services
+@using System.Net.Http.Json
+@inject HttpClient Http
+@inject NotificationService Notify
+
+@* Unified dialog to edit transaction details *@
+<MudDialog>
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            <MudIcon Icon="@Icons.Material.Filled.Edit" Class="mr-2 mb-n1" />
+            Edit Order #@Transaction.Id
+        </MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudStack Spacing="3">
+            @* Customer Field *@
+            <MudAutocomplete T="Person"
+                             Label="Customer"
+                             @bind-Value="selectedCustomer"
+                             SearchFunc="SearchCustomers"
+                             ToStringFunc="@(p => p?.Name ?? "Walk-in")"
+                             Variant="Variant.Outlined"
+                             Clearable="true"
+                             ResetValueOnEmptyText="true"
+                             MaxItems="20"
+                             Immediate="true"
+                             DebounceInterval="300"
+                             AdornmentIcon="@Icons.Material.Filled.Person"
+                             HelperText="Clear to set as Walk-in" />
+
+            @* Note Field *@
+            <MudTextField @bind-Value="note"
+                          Label="Note"
+                          Variant="Variant.Outlined"
+                          Lines="2"
+                          Clearable="true"
+                          AdornmentIcon="@Icons.Material.Filled.Notes" />
+
+            @* Driver Field (only for deliveries) *@
+            @if (Transaction.IsDelivery)
+            {
+                <MudAutocomplete T="Person"
+                                 Label="Driver"
+                                 @bind-Value="selectedDriver"
+                                 SearchFunc="SearchDrivers"
+                                 ToStringFunc="@(p => p?.Name ?? "No Driver")"
+                                 Variant="Variant.Outlined"
+                                 Clearable="true"
+                                 ResetValueOnEmptyText="true"
+                                 MaxItems="20"
+                                 Immediate="true"
+                                 DebounceInterval="300"
+                                 AdornmentIcon="@Icons.Material.Filled.LocalShipping" />
+            }
+
+            @* Employee Field (Admin Only) *@
+            <MudPaper Elevation="0" Class="pa-3" Style="border: 1px solid var(--mud-palette-lines-default); border-radius: 4px;">
+                <MudStack Spacing="2">
+                    <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">
+                            <MudIcon Icon="@Icons.Material.Filled.Lock" Size="Size.Small" Class="mr-1 mb-n1" />
+                            Employee (Admin Only)
+                        </MudText>
+                        @if (!isAdminVerified)
+                        {
+                            <MudButton Size="Size.Small" 
+                                       Variant="Variant.Outlined" 
+                                       Color="Color.Warning"
+                                       OnClick="@(() => showPatternAuth = true)">
+                                Unlock
+                            </MudButton>
+                        }
+                        else
+                        {
+                            <MudChip T="string" Size="Size.Small" Color="Color.Success" Variant="Variant.Filled">Unlocked</MudChip>
+                        }
+                    </MudStack>
+
+                    @if (showPatternAuth && !isAdminVerified)
+                    {
+                        <PatternAuthComponent OnAuthorized="OnAdminAuthorized" />
+                    }
+
+                    @if (isAdminVerified)
+                    {
+                        <MudAutocomplete T="Person"
+                                         Label="Employee"
+                                         @bind-Value="selectedEmployee"
+                                         SearchFunc="SearchEmployees"
+                                         ToStringFunc="@(p => p?.Name ?? "")"
+                                         Variant="Variant.Outlined"
+                                         Clearable="false"
+                                         MaxItems="20"
+                                         Immediate="true"
+                                         DebounceInterval="300"
+                                         AdornmentIcon="@Icons.Material.Filled.Badge" />
+                    }
+                    else
+                    {
+                        <MudTextField Value="@Transaction.EmployeeName"
+                                      Label="Employee"
+                                      Variant="Variant.Outlined"
+                                      ReadOnly="true"
+                                      Disabled="true" />
+                    }
+                </MudStack>
+            </MudPaper>
+
+            @* Pattern Authentication for Saving *@
+            @if (!isSaveAuthorized)
+            {
+                <MudPaper Elevation="0" Class="pa-3" Style="border: 2px solid var(--mud-palette-primary); border-radius: 4px; background-color: var(--mud-palette-background-grey);">
+                    <MudStack Spacing="2" AlignItems="AlignItems.Center">
+                        <MudText Typo="Typo.body2" Color="Color.Primary" Class="font-weight-bold">
+                            <MudIcon Icon="@Icons.Material.Filled.Security" Size="Size.Small" Class="mr-1 mb-n1" />
+                            Enter pattern to save changes
+                        </MudText>
+                        <PatternAuthComponent OnAuthorized="OnSaveAuthorized" />
+                    </MudStack>
+                </MudPaper>
+            }
+            else
+            {
+                <MudAlert Severity="Severity.Success" Dense="true" Class="mt-2">
+                    <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Size="Size.Small" Class="mr-1" />
+                    Authorized by: <b>@authorizedEmployee?.Name</b>
+                </MudAlert>
+            }
+        </MudStack>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton Color="Color.Primary" 
+                   Variant="Variant.Filled" 
+                   OnClick="Submit"
+                   Disabled="@(!isSaveAuthorized)">
+            Save Changes
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = default!;
+
+    [Parameter] public Transaction Transaction { get; set; } = new();
+
+    private Person? selectedCustomer;
+    private Person? selectedDriver;
+    private Person? selectedEmployee;
+    private string? note;
+    private bool isAdminVerified = false;
+    private bool showPatternAuth = false;
+    
+    // Save authorization - tracks who authorized the edit
+    private bool isSaveAuthorized = false;
+    private Person? authorizedEmployee = null;
+
+    private List<Person> customers = new();
+    private List<Person> drivers = new();
+    private List<Person> employees = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Initialize values from transaction
+        note = Transaction.Note;
+
+        // Load people
+        try
+        {
+            var allPeople = await Http.GetFromJsonAsync<List<Person>>("api/people") ?? new();
+            customers = allPeople.Where(p => p.Role == "Customer").OrderBy(p => p.Name).ToList();
+            drivers = allPeople.Where(p => p.Role == "Driver").OrderBy(p => p.Name).ToList();
+            employees = allPeople.Where(p => p.Role == "Employee" || p.Role == "System").OrderBy(p => p.Name).ToList();
+
+            // Pre-select current values
+            if (Transaction.PersonId.HasValue)
+            {
+                selectedCustomer = customers.FirstOrDefault(c => c.Id == Transaction.PersonId.Value);
+            }
+            if (Transaction.DriverId.HasValue)
+            {
+                selectedDriver = drivers.FirstOrDefault(d => d.Id == Transaction.DriverId.Value);
+            }
+            // Find employee by name
+            selectedEmployee = employees.FirstOrDefault(e => e.Name == Transaction.EmployeeName);
+        }
+        catch
+        {
+            // Silent fail - lists will be empty
+        }
+    }
+
+    private Task<IEnumerable<Person>> SearchCustomers(string? value, CancellationToken token)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            return Task.FromResult(customers.AsEnumerable());
+
+        return Task.FromResult(customers.Where(c => 
+            (c.Name?.Contains(value, StringComparison.OrdinalIgnoreCase) ?? false) ||
+            (c.PhoneNumber?.Contains(value, StringComparison.OrdinalIgnoreCase) ?? false)));
+    }
+
+    private Task<IEnumerable<Person>> SearchDrivers(string? value, CancellationToken token)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            return Task.FromResult(drivers.AsEnumerable());
+
+        return Task.FromResult(drivers.Where(d => 
+            (d.Name?.Contains(value, StringComparison.OrdinalIgnoreCase) ?? false) ||
+            (d.PhoneNumber?.Contains(value, StringComparison.OrdinalIgnoreCase) ?? false)));
+    }
+
+    private Task<IEnumerable<Person>> SearchEmployees(string? value, CancellationToken token)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            return Task.FromResult(employees.AsEnumerable());
+
+        return Task.FromResult(employees.Where(e => 
+            (e.Name?.Contains(value, StringComparison.OrdinalIgnoreCase) ?? false)));
+    }
+
+    private void OnAdminAuthorized(Person employee)
+    {
+        isAdminVerified = true;
+        showPatternAuth = false;
+        // When admin unlocks, also set as authorized for save
+        if (!isSaveAuthorized)
+        {
+            isSaveAuthorized = true;
+            authorizedEmployee = employee;
+        }
+        StateHasChanged();
+    }
+
+    private void OnSaveAuthorized(Person employee)
+    {
+        isSaveAuthorized = true;
+        authorizedEmployee = employee;
+        StateHasChanged();
+    }
+
+    private void Submit()
+    {
+        if (!isSaveAuthorized) return;
+        
+        var result = new EditTransactionResult
+        {
+            PersonId = selectedCustomer?.Id,
+            CustomerName = selectedCustomer?.Name,
+            Note = note,
+            DriverId = selectedDriver?.Id,
+            DriverName = selectedDriver?.Name,
+            EmployeeName = isAdminVerified ? selectedEmployee?.Name : null,
+            EmployeeChanged = isAdminVerified && selectedEmployee?.Name != Transaction.EmployeeName,
+            AuthorizedBy = authorizedEmployee?.Name
+        };
+
+        MudDialog.Close(DialogResult.Ok(result));
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+
+    public class EditTransactionResult
+    {
+        public int? PersonId { get; set; }
+        public string? CustomerName { get; set; }
+        public string? Note { get; set; }
+        public int? DriverId { get; set; }
+        public string? DriverName { get; set; }
+        public string? EmployeeName { get; set; }
+        public bool EmployeeChanged { get; set; }
+        public string? AuthorizedBy { get; set; }
+    }
+}
