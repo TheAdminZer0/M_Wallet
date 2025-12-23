@@ -55,7 +55,7 @@ namespace M_Wallet.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("AuditLogs");
+                    b.ToTable("AuditLogs", (string)null);
                 });
 
             modelBuilder.Entity("M_Wallet.Shared.Payment", b =>
@@ -91,7 +91,7 @@ namespace M_Wallet.Migrations
 
                     b.HasIndex("PersonId");
 
-                    b.ToTable("Payments");
+                    b.ToTable("Payments", (string)null);
                 });
 
             modelBuilder.Entity("M_Wallet.Shared.PaymentAllocation", b =>
@@ -117,7 +117,7 @@ namespace M_Wallet.Migrations
 
                     b.HasIndex("TransactionId");
 
-                    b.ToTable("PaymentAllocations");
+                    b.ToTable("PaymentAllocations", (string)null);
                 });
 
             modelBuilder.Entity("M_Wallet.Shared.Person", b =>
@@ -164,7 +164,7 @@ namespace M_Wallet.Migrations
 
                     b.HasIndex("Name");
 
-                    b.ToTable("People");
+                    b.ToTable("People", (string)null);
 
                     b.HasData(
                         new
@@ -238,7 +238,7 @@ namespace M_Wallet.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Products");
+                    b.ToTable("Products", (string)null);
                 });
 
             modelBuilder.Entity("M_Wallet.Shared.ProductBarcode", b =>
@@ -266,7 +266,7 @@ namespace M_Wallet.Migrations
 
                     b.HasIndex("ProductId");
 
-                    b.ToTable("ProductBarcodes");
+                    b.ToTable("ProductBarcodes", (string)null);
                 });
 
             modelBuilder.Entity("M_Wallet.Shared.Purchase", b =>
@@ -297,7 +297,7 @@ namespace M_Wallet.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Purchases");
+                    b.ToTable("Purchases", (string)null);
                 });
 
             modelBuilder.Entity("M_Wallet.Shared.PurchaseItem", b =>
@@ -327,7 +327,7 @@ namespace M_Wallet.Migrations
 
                     b.HasIndex("PurchaseId");
 
-                    b.ToTable("PurchaseItems");
+                    b.ToTable("PurchaseItems", (string)null);
                 });
 
             modelBuilder.Entity("M_Wallet.Shared.Transaction", b =>
@@ -376,7 +376,7 @@ namespace M_Wallet.Migrations
 
                     b.HasIndex("PersonId");
 
-                    b.ToTable("Transactions");
+                    b.ToTable("Transactions", (string)null);
                 });
 
             modelBuilder.Entity("M_Wallet.Shared.TransactionItem", b =>
@@ -413,7 +413,7 @@ namespace M_Wallet.Migrations
 
                     b.HasIndex("TransactionId");
 
-                    b.ToTable("TransactionItems");
+                    b.ToTable("TransactionItems", (string)null);
                 });
 
             modelBuilder.Entity("M_Wallet.Shared.Payment", b =>

@@ -76,7 +76,7 @@ public class TransactionsController : ControllerBase
     }
 
     [HttpPost]
-    public async Task<ActionResult<Transaction>> CreateTransaction(Transaction transaction)
+    public async Task<ActionResult<Transaction>> CreateTransaction(Transaction transaction, [FromQuery] decimal cashPayment = 0)
     {
         try
         {
@@ -243,7 +243,11 @@ public class TransactionsController : ControllerBase
             await _context.SaveChangesAsync();
 
             // AUTO-ALLOCATION: If customer has positive balance (credit), automatically apply it to this order
-            if (transaction.PersonId.HasValue && transaction.TotalAmount > 0)
+            // Only allocate the remaining amount after the user's cash payment
+            decimal autoAllocatedTotal = 0;
+            var remainingAfterCash = transaction.TotalAmount - cashPayment;
+            
+            if (transaction.PersonId.HasValue && remainingAfterCash > 0)
             {
                 // Get customer's payments and their unallocated amounts
                 var customerPayments = await _context.Payments
@@ -252,7 +256,7 @@ public class TransactionsController : ControllerBase
                     .OrderBy(p => p.PaymentDate) // FIFO: oldest first
                     .ToListAsync();
                 
-                var orderBalanceDue = transaction.TotalAmount;
+                var orderBalanceDue = remainingAfterCash;
                 var autoAllocations = new List<string>();
                 
                 foreach (var payment in customerPayments)
@@ -275,6 +279,7 @@ public class TransactionsController : ControllerBase
                         _context.PaymentAllocations.Add(newAllocation);
                         
                         orderBalanceDue -= allocationAmount;
+                        autoAllocatedTotal += allocationAmount;
                         autoAllocations.Add($"Auto-allocated {allocationAmount:F2} LD from payment #{payment.Id}");
                     }
                 }
@@ -310,8 +315,11 @@ public class TransactionsController : ControllerBase
             return Ok(new 
             { 
                 id = transaction.Id, 
+                personId = transaction.PersonId,
                 transactionDate = transaction.TransactionDate,
                 totalAmount = transaction.TotalAmount,
+                autoAllocatedFromBalance = autoAllocatedTotal,
+                isPaidFromBalance = autoAllocatedTotal >= transaction.TotalAmount,
                 message = "Transaction completed successfully"
             });
         }

@@ -49,7 +49,19 @@
                         }
                     </MudTd>
                     <MudTd><TruncatedText Text="@(context.Payment?.PaymentMethod ?? "-")" MaxLength="15" DialogTitle="Payment Method" /></MudTd>
-                    <MudTd><TruncatedText Text="@(context.Payment?.Reference ?? "-")" MaxLength="20" DialogTitle="Reference" /></MudTd>
+                    <MudTd>
+                        @if (IsFromBalance(context))
+                        {
+                            <MudChip T="string" Size="Size.Small" Variant="Variant.Filled" Color="Color.Info" Class="mr-1">
+                                <MudIcon Icon="@Icons.Material.Filled.AccountBalanceWallet" Size="Size.Small" Class="mr-1" />
+                                From Balance
+                            </MudChip>
+                        }
+                        else
+                        {
+                            <TruncatedText Text="@(context.Payment?.Reference ?? "-")" MaxLength="20" DialogTitle="Reference" />
+                        }
+                    </MudTd>
                     <MudTd Style="white-space: nowrap;">
                         <MudIconButton Icon="@Icons.Material.Filled.Delete" 
                                        Color="Color.Error" 
@@ -127,6 +139,15 @@
             return 0;
 
         return Transaction.PaymentAllocations.Sum(pa => GetAllocationRealizedProfit(pa));
+    }
+
+    // Check if payment was from customer's existing balance (payment existed before this transaction)
+    private bool IsFromBalance(PaymentAllocation allocation)
+    {
+        if (allocation.Payment == null) return false;
+        
+        // If the payment was made before the transaction, it's from existing balance
+        return allocation.Payment.PaymentDate < Transaction.TransactionDate;
     }
 
     // Determine if this allocation closes the balance (only for positive payments)

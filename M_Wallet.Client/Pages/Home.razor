@@ -72,6 +72,24 @@
             </div>
         </div>
 
+        @if (lastAutoAllocatedFromBalance > 0)
+        {
+            <MudDivider Class="w-100 my-2" />
+            <div class="d-flex justify-space-between w-100 px-4">
+                <MudText Typo="Typo.body2" Color="Color.Info">
+                    <MudIcon Icon="@Icons.Material.Filled.AccountBalanceWallet" Size="Size.Small" Class="mr-1" Style="vertical-align: middle;" />
+                    From Balance:
+                </MudText>
+                <MudText Typo="Typo.body2" Color="Color.Info"><b>LD @lastAutoAllocatedFromBalance.ToString("F2")</b></MudText>
+            </div>
+            @if (lastAutoAllocatedFromBalance >= (lastSuccessfulTransaction?.TotalAmount ?? 0))
+            {
+                <MudAlert Severity="Severity.Success" Dense="true" Class="mt-2">
+                    <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Size="Size.Small" Class="mr-1" />
+                    Fully paid from customer balance!
+                </MudAlert>
+            }
+        }
         @if (lastTransactionPaidAmount > (lastSuccessfulTransaction?.TotalAmount ?? 0))
         {
             <MudDivider Class="w-100 my-2" />
@@ -440,15 +458,7 @@
                     </MudButton>
                 }
 
-                <MudButton Variant="Variant.Text" 
-                           Color="Color.Error" 
-                           FullWidth="true"
-                           Class="mt-2"
-                           StartIcon="@Icons.Material.Filled.Clear"
-                           OnClick="async () => await ClearCartAsync()"
-                           Disabled="@isProcessing">
-                    Clear Cart
-                </MudButton>
+
             }
         </MudPaper>
     </MudItem>
@@ -475,6 +485,7 @@
     private bool showSuccessOverlay = false;
     private Transaction? lastSuccessfulTransaction;
     private decimal lastTransactionPaidAmount;
+    private decimal lastAutoAllocatedFromBalance;
     private string lastPaymentMethod = "";
 
     // =====================================================
@@ -1180,7 +1191,8 @@
                 }).ToList()
             };
 
-            var response = await Http.PostAsJsonAsync("api/transactions", transaction);
+            // Pass the cash payment amount so backend only auto-allocates the remaining
+            var response = await Http.PostAsJsonAsync($"api/transactions?cashPayment={amountPaid}", transaction);
 
             if (response.IsSuccessStatusCode)
             {
@@ -1188,6 +1200,20 @@
                 var transactionId = result.GetProperty("id").GetInt32();
                 var total = CalculateTotal();
                 var paidAmount = amountPaid;
+                
+                // Get auto-allocated amount from customer balance
+                decimal autoAllocatedFromBalance = 0;
+                if (result.TryGetProperty("autoAllocatedFromBalance", out var autoAllocProp))
+                {
+                    autoAllocatedFromBalance = autoAllocProp.GetDecimal();
+                }
+                
+                // Get personId from response for payment linking
+                int? personId = null;
+                if (result.TryGetProperty("personId", out var personIdProp) && personIdProp.ValueKind != JsonValueKind.Null)
+                {
+                    personId = personIdProp.GetInt32();
+                }
 
                 if (paidAmount > 0)
                 {
@@ -1196,6 +1222,7 @@
                         PaymentDate = transactionDate.AddSeconds(1), // Ensure payment comes after transaction
                         Amount = paidAmount,
                         PaymentMethod = paymentMethod,
+                        PersonId = personId,
                         CustomerName = customerName,
                         EmployeeName = transactionEmployee!.Name,
                         Allocations = new List<PaymentAllocation>
@@ -1259,8 +1286,11 @@
                     EmployeeName = transactionEmployee!.Name,
                     TransactionDate = transactionDate
                 };
-                lastTransactionPaidAmount = paidAmount;
-                lastPaymentMethod = paymentMethod;
+                lastTransactionPaidAmount = paidAmount + autoAllocatedFromBalance;
+                lastAutoAllocatedFromBalance = autoAllocatedFromBalance;
+                lastPaymentMethod = autoAllocatedFromBalance > 0 && paidAmount == 0 
+                    ? "Balance" 
+                    : (autoAllocatedFromBalance > 0 ? $"{paymentMethod} + Balance" : paymentMethod);
                 showSuccessOverlay = true;
                 StateHasChanged();
                 
