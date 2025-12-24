@@ -15,7 +15,7 @@
         @* Payment details form *@
         <MudGrid>
             <MudItem xs="12">
-                <MudNumericField @bind-Value="amount" Label="Payment Amount" Format="F2" Min="0.01m" Max="@BalanceDue" Adornment="Adornment.Start" AdornmentText="LD" Variant="Variant.Outlined" AutoFocus="true" />
+                <MudNumericField @bind-Value="amount" Label="Payment Amount" Format="F2" Min="0.01m" Max="@BalanceDue" Adornment="Adornment.Start" AdornmentText="LD" Variant="Variant.Outlined" AutoFocus="true" Clearable="true" Placeholder="Enter amount" />
             </MudItem>
             <MudItem xs="12">
                 <MudSelect @bind-Value="paymentMethod" Label="Payment Method" Variant="Variant.Outlined">
@@ -58,7 +58,7 @@
     [Parameter] public decimal BalanceDue { get; set; }
     [Parameter] public string? CustomerName { get; set; }
 
-    private decimal amount;
+    private decimal? amount;
     private string paymentMethod = "Cash";
     private string reference = "";
     private string employeeName = "";
@@ -68,7 +68,7 @@
     // Prefill amount and employee info on open
     protected override async Task OnInitializedAsync()
     {
-        amount = BalanceDue;
+        // amount starts empty (null) so user can type immediately
         currentEmployee = await AuthStateProvider.GetCurrentUserAsync();
         if (currentEmployee != null && !isSystemUser)
         {
@@ -87,7 +87,7 @@
     // Validate and post payment to API
     private async Task Submit()
     {
-        if (amount <= 0)
+        if (!amount.HasValue || amount <= 0)
         {
             Notify.Warning("Amount must be greater than 0");
             return;
@@ -108,7 +108,7 @@
         var payment = new Payment
         {
             PaymentDate = DateTime.UtcNow,
-            Amount = amount,
+            Amount = amount.Value,
             PaymentMethod = paymentMethod,
             Reference = reference,
             CustomerName = CustomerName,
@@ -118,7 +118,7 @@
                 new PaymentAllocation
                 {
                     TransactionId = TransactionId,
-                    Amount = amount
+                    Amount = amount.Value
                 }
             }
         };

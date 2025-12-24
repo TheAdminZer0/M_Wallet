@@ -127,6 +127,32 @@ public class PeopleController : ControllerBase
             return NotFound();
         }
 
+        // Calculate Balance
+        var totalTransactions = await _context.Transactions
+            .Where(t => t.PersonId == id && t.Status != TransactionStatus.Canceled)
+            .SumAsync(t => t.TotalAmount);
+
+        var totalPayments = await _context.Payments
+            .Where(p => p.PersonId == id)
+            .SumAsync(p => p.Amount);
+
+        person.Balance = totalPayments - totalTransactions;
+
+        // Calculate Stats
+        person.TotalSpent = totalTransactions;
+        person.TotalProfit = await _context.Transactions
+            .Where(t => t.PersonId == id && t.Status != TransactionStatus.Canceled)
+            .SelectMany(t => t.Items)
+            .SumAsync(i => (i.UnitPrice - i.UnitCost) * i.Quantity); // Note: This ignores transaction discount for simplicity, or we should sum (Profit - Discount) per transaction
+
+        // Correct Profit Calculation including discounts
+        var transactions = await _context.Transactions
+            .Where(t => t.PersonId == id && t.Status != TransactionStatus.Canceled)
+            .Include(t => t.Items)
+            .ToListAsync();
+            
+        person.TotalProfit = transactions.Sum(t => t.Items.Sum(i => (i.UnitPrice - i.UnitCost) * i.Quantity) - t.Discount);
+
         return person;
     }
 

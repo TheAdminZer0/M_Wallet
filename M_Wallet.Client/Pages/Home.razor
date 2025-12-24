@@ -320,6 +320,15 @@
                     </div>
                     @if (selectedCustomer != null)
                     {
+                        @* Show customer balance *@
+                        <MudTooltip Text="Customer Balance" Arrow="true">
+                            <MudChip T="string" 
+                                     Color="@(selectedCustomer.Balance > 0 ? Color.Success : (selectedCustomer.Balance < 0 ? Color.Error : Color.Default))" 
+                                     Size="Size.Medium"
+                                     Style="font-weight: 700; font-size: 14px; min-width: 50px; margin-right: -8px;">
+                                @selectedCustomer.Balance.ToString("F2") LD
+                            </MudChip>
+                        </MudTooltip>
                         @* Show unpaid order count for selected customer *@
                         @if (unpaidOrderCount > 0)
                         {
@@ -430,33 +439,94 @@
                     <MudNumericField Value="discountAmount" ValueChanged="@((decimal val) => OnDiscountChanged(val))" Label="Discount Amount" Variant="Variant.Outlined" Margin="Margin.Dense" Class="mb-2" Min="0" />
                 }
 
-                <div class="d-flex justify-space-between align-center mb-2 pa-2 px-3" 
-                     style="background-color: var(--mud-palette-background-grey); border-radius: 8px;">
-                    <MudText Typo="Typo.subtitle1" Class="font-weight-bold">Total:</MudText>
-                    <MudText Typo="Typo.h4" Color="Color.Primary" Class="font-weight-bold">
-                        <span style="font-weight: 800;">@CalculateTotal().ToString("F2")</span>
-                        <span style="font-size: 0.6em; opacity: 0.8;">LD</span>
-                    </MudText>
-                </div>
-
-                @if (currentEmployee?.Role == "System")
-                {
-                    <div class="d-flex justify-center mt-1 mb-2">
-                        <PatternAuthComponent OnAuthorized="CompleteCheckout" />
+                @* Payment Summary and Checkout Section *@
+                <div class="d-flex gap-3 align-stretch mb-2">
+                    @* Left side - Payment Breakdown *@
+                    <div class="flex-grow-1 pa-3" style="background-color: var(--mud-palette-background-grey); border-radius: 8px;">
+                        @* Subtotal - always shown *@
+                        <div class="d-flex justify-space-between align-center">
+                            <MudText Typo="Typo.body1">Subtotal</MudText>
+                            <MudText Typo="Typo.body1" Style="font-weight: 600;">@Breakdown.Subtotal.ToString("F2") LD</MudText>
+                        </div>
+                        
+                        @* Discount - only if applied *@
+                        @if (Breakdown.Discount > 0)
+                        {
+                            <div class="d-flex justify-space-between align-center">
+                                <div class="d-flex align-center">
+                                    <MudIcon Icon="@Icons.Material.Filled.Discount" Size="Size.Small" Class="mr-2" Color="Color.Secondary" />
+                                    <MudText Typo="Typo.body1" Color="Color.Secondary">Discount</MudText>
+                                </div>
+                                <MudText Typo="Typo.body1" Color="Color.Secondary" Style="font-weight: 600;">-@Breakdown.Discount.ToString("F2") LD</MudText>
+                            </div>
+                            
+                            @* Total - only show separately if there's a discount *@
+                            <div class="d-flex justify-space-between align-center mt-1 pt-1" style="border-top: 1px solid var(--mud-palette-lines-default);">
+                                <MudText Typo="Typo.h6" Class="font-weight-bold">Total</MudText>
+                                <MudText Typo="Typo.h5" Color="Color.Primary" Style="font-weight: 800;">@Breakdown.Total.ToString("F2") <span style="font-size: 0.7em;">LD</span></MudText>
+                            </div>
+                        }
+                        
+                        @* Payment details - only show if there's something to show *@
+                        @if (Breakdown.PaidNow > 0 || Breakdown.FromBalance > 0)
+                        {
+                            <MudDivider Class="my-2" />
+                            
+                            @if (Breakdown.PaidNow > 0)
+                            {
+                                <div class="d-flex justify-space-between align-center">
+                                    <div class="d-flex align-center">
+                                        <MudIcon Icon="@Icons.Material.Filled.Payments" Size="Size.Small" Class="mr-2" />
+                                        <MudText Typo="Typo.body2">Paid Now</MudText>
+                                    </div>
+                                    <MudText Typo="Typo.body2" Color="Color.Warning" Style="font-weight: 700;">@Breakdown.PaidNow.ToString("F2") LD</MudText>
+                                </div>
+                            }
+                            
+                            @if (Breakdown.FromBalance > 0)
+                            {
+                                <div class="d-flex justify-space-between align-center">
+                                    <div class="d-flex align-center">
+                                        <MudIcon Icon="@Icons.Material.Filled.AccountBalanceWallet" Size="Size.Small" Class="mr-2" />
+                                        <MudText Typo="Typo.body2">From Balance</MudText>
+                                    </div>
+                                    <MudText Typo="Typo.body2" Color="Color.Success" Style="font-weight: 700;">@Breakdown.FromBalance.ToString("F2") LD</MudText>
+                                </div>
+                            }
+                        }
+                        
+                        @* Remaining - Always at bottom *@
+                        <div class="d-flex justify-space-between align-center mt-2 pt-2" style="border-top: 1px dashed var(--mud-palette-lines-default);">
+                            <div class="d-flex align-center">
+                                <MudIcon Icon="@(Breakdown.Remaining > 0 ? Icons.Material.Filled.PriorityHigh : Icons.Material.Filled.CheckCircle)" 
+                                         Color="@(Breakdown.Remaining > 0 ? Color.Error : Color.Success)" 
+                                         Size="Size.Small" Class="mr-2" />
+                                <MudText Typo="Typo.body1" Class="font-weight-medium">@(Breakdown.Remaining > 0 ? "Due" : "Paid")</MudText>
+                            </div>
+                            <MudText Typo="Typo.h6" Color="@(Breakdown.Remaining > 0 ? Color.Error : Color.Success)" Style="font-weight: 800;">@Breakdown.Remaining.ToString("F2") LD</MudText>
+                        </div>
                     </div>
-                }
-                else
-                {
-                    <MudButton Variant="Variant.Filled" 
-                               Color="Color.Success" 
-                               FullWidth="true"
-                               Size="Size.Large"
-                               StartIcon="@Icons.Material.Filled.Payment"
-                               OnClick="@(() => CompleteCheckout(null))"
-                               Disabled="@(isProcessing)">
-                        @(isProcessing ? "Processing..." : "Complete Sale")
-                    </MudButton>
-                }
+
+                    @* Right side - Pattern or Button *@
+                    <div class="d-flex align-center">
+                        @if (currentEmployee?.Role == "System")
+                        {
+                            <PatternAuthComponent OnAuthorized="CompleteCheckout" />
+                        }
+                        else
+                        {
+                            <MudButton Variant="Variant.Filled" 
+                                       Color="Color.Success" 
+                                       Size="Size.Large"
+                                       StartIcon="@Icons.Material.Filled.Payment"
+                                       OnClick="@(() => CompleteCheckout(null))"
+                                       Disabled="@(isProcessing)"
+                                       Style="height: 100%;">
+                                @(isProcessing ? "Processing..." : "Complete")
+                            </MudButton>
+                        }
+                    </div>
+                </div>
 
 
             }
@@ -721,11 +791,13 @@
             selectedCustomer = match;
             customerPhone = match.PhoneNumber ?? "";
             await LoadUnpaidOrderCount();
+            UpdateAmountPaid();
         }
         else
         {
             selectedCustomer = null;
             unpaidOrderCount = 0;
+            UpdateAmountPaid();
         }
     }
 
@@ -788,11 +860,13 @@
             selectedCustomer = match;
             customerName = match.Name;
             await LoadUnpaidOrderCount();
+            UpdateAmountPaid();
         }
         else
         {
             selectedCustomer = null;
             unpaidOrderCount = 0;
+            UpdateAmountPaid();
         }
     }
 
@@ -803,6 +877,7 @@
         customerPhone = "";
         customerPhoneInvalid = false;
         unpaidOrderCount = 0;
+        UpdateAmountPaid();
         await Task.CompletedTask;
     }
 
@@ -1309,6 +1384,7 @@
                 await ProductService.RefreshDataAsync(); // Refresh product stock
                 await LoadProducts(); // Reload products
                 await TransactionService.RefreshDataAsync(); // Refresh transactions list
+                await LoadCustomers(); // Refresh customer balances
             }
         }
         finally
@@ -1317,11 +1393,37 @@
         }
     }
 
+    private (decimal Subtotal, decimal Discount, decimal Total, decimal PaidNow, decimal FromBalance, decimal Remaining) Breakdown => GetPaymentBreakdown();
+
+    private (decimal Subtotal, decimal Discount, decimal Total, decimal PaidNow, decimal FromBalance, decimal Remaining) GetPaymentBreakdown()
+    {
+        var subtotal = cartItems.Sum(i => i.Subtotal);
+        var discount = applyDiscount ? discountAmount : 0m;
+        var total = Math.Max(0, subtotal - discount);
+        var balanceToUse = (selectedCustomer != null && selectedCustomer.Balance > 0 && !isDelivery) 
+            ? Math.Min(selectedCustomer.Balance, total) 
+            : 0m;
+        var remaining = Math.Max(0, total - amountPaid - balanceToUse);
+        
+        return (subtotal, discount, total, amountPaid, balanceToUse, remaining);
+    }
+
     private void UpdateAmountPaid()
     {
         if (!isDelivery)
         {
-            amountPaid = CalculateTotal();
+            var total = CalculateTotal();
+            // If customer has positive balance, auto-calculate amount to pay
+            if (selectedCustomer != null && selectedCustomer.Balance > 0)
+            {
+                // Only need to pay what balance doesn't cover
+                var cashRequired = Math.Max(0, total - selectedCustomer.Balance);
+                amountPaid = cashRequired;
+            }
+            else
+            {
+                amountPaid = total;
+            }
         }
     }
 

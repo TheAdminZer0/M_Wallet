@@ -21,7 +21,7 @@
                 </MudToggleGroup>
             </MudItem>
             <MudItem xs="12">
-                <MudNumericField @bind-Value="amount" Label="Amount" Format="F2" Min="0.01m" Adornment="Adornment.Start" AdornmentText="LD" Variant="Variant.Outlined" AutoFocus="true" />
+                <MudNumericField @bind-Value="amount" Label="Amount" Format="F2" Min="0.01m" Adornment="Adornment.Start" AdornmentText="LD" Variant="Variant.Outlined" AutoFocus="true" Clearable="true" Placeholder="Enter amount" />
             </MudItem>
             <MudItem xs="12">
                 <MudSelect @bind-Value="paymentMethod" Label="Payment Method" Variant="Variant.Outlined">
@@ -62,7 +62,7 @@
 
     [Parameter] public Person Person { get; set; } = default!;
 
-    private decimal amount;
+    private decimal? amount;
     private string paymentType = "Deposit";
     private string paymentMethod = "Cash";
     private string reference = "";
@@ -89,13 +89,13 @@
     // Validate and post payment (positive for deposit, negative for withdraw)
     private async Task Submit()
     {
-        if (amount <= 0)
+        if (!amount.HasValue || amount <= 0)
         {
             Notify.Warning("Amount must be greater than zero");
             return;
         }
 
-        var finalAmount = paymentType == "Withdraw" ? -amount : amount;
+        var finalAmount = paymentType == "Withdraw" ? -amount.Value : amount.Value;
 
         var payment = new Payment
         {
