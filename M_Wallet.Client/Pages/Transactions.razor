@@ -162,7 +162,7 @@ else
             <div class="d-flex align-center justify-space-between flex-wrap gap-2">
                 <div class="d-flex align-center gap-2">
                     <MudIcon Icon="@Icons.Material.Filled.LocalShipping" Color="Color.Primary" Size="Size.Small" />
-                    <MudText Typo="Typo.subtitle1" Class="font-weight-bold">@(string.IsNullOrWhiteSpace(filterDriver) ? "All Deliveries" : filterDriver)</MudText>
+                    <MudText Typo="Typo.subtitle1"><b>@(string.IsNullOrWhiteSpace(filterDriver) ? "All Deliveries" : filterDriver)</b></MudText>
                     @if (!string.IsNullOrWhiteSpace(filterDriver))
                     {
                         <MudButton Variant="Variant.Text" Size="Size.Small" OnClick="@(() => { filterDriver = null; deliveriesOnly = true; })">Show All Drivers</MudButton>
@@ -174,23 +174,23 @@ else
                 </div>
                 <div class="d-flex gap-2 align-center">
                     <MudPaper @onclick="@(() => filterStatus = null)" Class="px-3 py-1 d-flex align-center gap-2 rounded cursor-pointer" Elevation="@(filterStatus == null ? 2 : 0)" Style="@(filterStatus == null ? "background: rgba(var(--mud-palette-primary-rgb), 0.25); outline: 2px solid var(--mud-palette-primary);" : "background: rgba(128,128,128,0.1);")">
-                        <MudText Typo="Typo.subtitle1" Class="font-weight-bold">@GetDeliveryTotalCount()</MudText>
+                        <MudText Typo="Typo.subtitle1" ><b>@GetDeliveryTotalCount()</b></MudText>
                         <MudText Typo="Typo.caption">All</MudText>
                     </MudPaper>
                     <MudPaper @onclick="@(() => filterStatus = TransactionStatus.Pending)" Class="px-3 py-1 d-flex align-center gap-2 rounded cursor-pointer" Elevation="@(filterStatus == TransactionStatus.Pending ? 2 : 0)" Style="@(filterStatus == TransactionStatus.Pending ? "background: rgba(var(--mud-palette-warning-rgb), 0.35); outline: 2px solid var(--mud-palette-warning);" : "background: rgba(var(--mud-palette-warning-rgb), 0.15);")">
-                        <MudText Typo="Typo.subtitle1" Style="color: var(--mud-palette-warning);" Class="font-weight-bold">@GetDriverPendingCount()</MudText>
+                        <MudText Typo="Typo.subtitle1" Style="color: var(--mud-palette-warning);"><b>@GetDriverPendingCount()</b></MudText>
                         <MudText Typo="Typo.caption">Pending</MudText>
                     </MudPaper>
                     <MudPaper @onclick="@(() => filterStatus = TransactionStatus.Completed)" Class="px-3 py-1 d-flex align-center gap-2 rounded cursor-pointer" Elevation="@(filterStatus == TransactionStatus.Completed ? 2 : 0)" Style="@(filterStatus == TransactionStatus.Completed ? "background: rgba(var(--mud-palette-success-rgb), 0.35); outline: 2px solid var(--mud-palette-success);" : "background: rgba(var(--mud-palette-success-rgb), 0.15);")">
-                        <MudText Typo="Typo.subtitle1" Style="color: var(--mud-palette-success);" Class="font-weight-bold">@GetDriverDeliveredCount()</MudText>
+                        <MudText Typo="Typo.subtitle1" Style="color: var(--mud-palette-success);"><b>@GetDriverDeliveredCount()</b></MudText>
                         <MudText Typo="Typo.caption">Delivered</MudText>
                     </MudPaper>
                     <MudPaper @onclick="@(() => filterStatus = TransactionStatus.Canceled)" Class="px-3 py-1 d-flex align-center gap-2 rounded cursor-pointer" Elevation="@(filterStatus == TransactionStatus.Canceled ? 2 : 0)" Style="@(filterStatus == TransactionStatus.Canceled ? "background: rgba(var(--mud-palette-error-rgb), 0.35); outline: 2px solid var(--mud-palette-error);" : "background: rgba(var(--mud-palette-error-rgb), 0.15);")">
-                        <MudText Typo="Typo.subtitle1" Style="color: var(--mud-palette-error);" Class="font-weight-bold">@GetDriverCanceledCount()</MudText>
+                        <MudText Typo="Typo.subtitle1" Style="color: var(--mud-palette-error);"><b>@GetDriverCanceledCount()</b></MudText>
                         <MudText Typo="Typo.caption">Canceled</MudText>
                     </MudPaper>
                     <MudPaper @onclick="@(() => filterStatus = TransactionStatus.Refunded)" Class="px-3 py-1 d-flex align-center gap-2 rounded cursor-pointer" Elevation="@(filterStatus == TransactionStatus.Refunded ? 2 : 0)" Style="@(filterStatus == TransactionStatus.Refunded ? "background: rgba(var(--mud-palette-secondary-rgb), 0.35); outline: 2px solid var(--mud-palette-secondary);" : "background: rgba(var(--mud-palette-secondary-rgb), 0.15);")">
-                        <MudText Typo="Typo.subtitle1" Style="color: var(--mud-palette-secondary);" Class="font-weight-bold">@GetRefundedCount()</MudText>
+                        <MudText Typo="Typo.subtitle1" Style="color: var(--mud-palette-secondary);"><b>@GetRefundedCount()</b></MudText>
                         <MudText Typo="Typo.caption">Refunded</MudText>
                     </MudPaper>
                 </div>
@@ -514,22 +514,22 @@ else
                             @if (_transactionColumns.IsVisible("Cost")) { <MudTh Style="font-weight: bold; background: var(--mud-palette-background-gray);">@GetFilteredCost().ToString("N2")</MudTh> }
                             @if (_transactionColumns.IsVisible("Profit")) { 
                                 <MudTh Style="font-weight: bold; background: var(--mud-palette-background-gray);">
-                                    <MudText Typo="Typo.body2" Class="font-weight-bold" Color="@(GetFilteredProfit() >= 0 ? Color.Success : Color.Error)">
-                                        @GetFilteredProfit().ToString("N2")
+                                    <MudText Typo="Typo.body2" Color="@(GetFilteredProfit() >= 0 ? Color.Success : Color.Error)">
+                                        <b>@GetFilteredProfit().ToString("N2")</b>
                                     </MudText>
                                 </MudTh> 
                             }
                             @if (_transactionColumns.IsVisible("Realized Profit")) { 
                                 <MudTh Style="font-weight: bold; background: var(--mud-palette-background-gray);">
-                                    <MudText Typo="Typo.body2" Class="font-weight-bold" Color="@(GetFilteredRealizedProfit() >= 0 ? Color.Success : Color.Error)">
-                                        @GetFilteredRealizedProfit().ToString("N2")
+                                    <MudText Typo="Typo.body2" Color="@(GetFilteredRealizedProfit() >= 0 ? Color.Success : Color.Error)">
+                                        <b>@GetFilteredRealizedProfit().ToString("N2")</b>
                                     </MudText>
                                 </MudTh> 
                             }
                             @if (_transactionColumns.IsVisible("Total")) { 
                                 <MudTh Style="font-weight: bold; background: var(--mud-palette-background-gray);">
-                                    <MudText Typo="Typo.body2" Class="font-weight-bold" Color="@(GetFilteredTotal() >= 0 ? Color.Success : Color.Error)">
-                                        @GetFilteredTotal().ToString("N2")
+                                    <MudText Typo="Typo.body2" Color="@(GetFilteredTotal() >= 0 ? Color.Success : Color.Error)">
+                                        <b>@GetFilteredTotal().ToString("N2")</b>
                                     </MudText>
                                 </MudTh> 
                             }
@@ -607,8 +607,8 @@ else
                         @if (_paymentColumns.IsVisible("Reference")) { <MudTd DataLabel="Reference" Class="d-none d-sm-table-cell"><TruncatedText Text="@context.Reference" MaxLength="20" DialogTitle="Reference" /></MudTd> }
                         @if (_paymentColumns.IsVisible("Amount")) {
                             <MudTd DataLabel="Amount">
-                                <MudText Color="@(context.Amount >= 0 ? Color.Success : Color.Error)" Class="font-weight-bold">
-                                    LD @context.Amount.ToString("F2")
+                                <MudText Color="@(context.Amount >= 0 ? Color.Success : Color.Error)">
+                                    <b>LD @context.Amount.ToString("F2")</b>
                                 </MudText>
                             </MudTd>
                         }
@@ -633,8 +633,8 @@ else
                         @if (_paymentColumns.IsVisible("Payment ID")) { <MudTh Style="font-weight: bold; background: var(--mud-palette-background-gray);">@FilteredPayments.Count() payments</MudTh> }
                         @if (_paymentColumns.IsVisible("Realized Profit")) { 
                             <MudTh Style="font-weight: bold; background: var(--mud-palette-background-gray);">
-                                <MudText Typo="Typo.body2" Class="font-weight-bold" Color="@(GetPaymentsTotalRealizedProfit() >= 0 ? Color.Success : Color.Error)">
-                                    @GetPaymentsTotalRealizedProfit().ToString("N2")
+                                <MudText Typo="Typo.body2" Color="@(GetPaymentsTotalRealizedProfit() >= 0 ? Color.Success : Color.Error)">
+                                    <b>@GetPaymentsTotalRealizedProfit().ToString("N2")</b>
                                 </MudText>
                             </MudTh> 
                         }
@@ -689,8 +689,8 @@ else
                         @if (_invoiceColumns.IsVisible("Paid")) { <MudTd DataLabel="Paid">LD @context.TotalPaid.ToString("F2")</MudTd> }
                         @if (_invoiceColumns.IsVisible("Balance")) {
                             <MudTd DataLabel="Balance">
-                                <MudText Color="Color.Error" Class="font-weight-bold">
-                                    LD @context.BalanceDue.ToString("F2")
+                                <MudText Color="Color.Error">
+                                    <b>LD @context.BalanceDue.ToString("F2")</b>
                                 </MudText>
                             </MudTd>
                         }

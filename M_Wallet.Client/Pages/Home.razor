@@ -14,23 +14,6 @@
 
 <PageTitle>POS - Point of Sale</PageTitle>
 
-<!-- Edit authentication dialog -->
-<MudDialog @bind-Visible="showEditAuthDialog" Options="@(new DialogOptions { CloseButton = true, MaxWidth = MaxWidth.Small })">
-    <TitleContent>
-        <MudText Typo="Typo.h6">
-            <MudIcon Icon="@Icons.Material.Filled.Lock" Class="mr-2" />
-            Authentication Required
-        </MudText>
-    </TitleContent>
-    <DialogContent>
-        <MudText Class="mb-4">Enter pattern to edit cart item</MudText>
-        <PatternAuthComponent OnAuthorized="OnEditAuthorized" />
-    </DialogContent>
-    <DialogActions>
-        <MudButton OnClick="CancelEditAuth" Color="Color.Default">Cancel</MudButton>
-    </DialogActions>
-</MudDialog>
-
 <!-- Success overlay after a completed sale -->
 <MudOverlay Visible="showSuccessOverlay" DarkBackground="true" Absolute="false" ZIndex="2000" OnClick="@(() => showSuccessOverlay = false)">
     <MudCard Class="pa-8 d-flex flex-column align-center justify-center gap-4" Style="width: 400px; max-width: 90vw; position: relative;">
@@ -150,7 +133,7 @@
                                          alt="@item.Product?.Name"
                                          class="cart-item-image"
                                          loading="lazy" />
-                                    <MudText Typo="Typo.body1" Class="font-weight-bold">
+                                    <MudText Typo="Typo.body1">
                                         @item.Product?.Name
                                     </MudText>
                                 </div>
@@ -250,7 +233,7 @@
                                                                OnClick="@(() => ResetItemPrice(item))" />
                                             }
                                         </div>
-                                        <MudText Typo="Typo.body2" Color="Color.Success" Class="font-weight-bold cart-item-subtotal">
+                                        <MudText Typo="Typo.body2" Color="Color.Success" Class="cart-item-subtotal">
                                             <span class="cart-amount">@item.Subtotal.ToString("F2")</span>
                                             <span class="cart-currency">LD</span>
                                         </MudText>
@@ -443,32 +426,14 @@
                 <div class="d-flex gap-3 align-stretch mb-2">
                     @* Left side - Payment Breakdown *@
                     <div class="flex-grow-1 pa-3" style="background-color: var(--mud-palette-background-grey); border-radius: 8px;">
-                        @* Subtotal - always shown *@
-                        <div class="d-flex justify-space-between align-center">
-                            <MudText Typo="Typo.body1">Subtotal</MudText>
-                            <MudText Typo="Typo.body1" Style="font-weight: 600;">@Breakdown.Subtotal.ToString("F2") LD</MudText>
+                        @* Total - always shown at top (full amount before discounts) *@
+                        <div class="d-flex justify-space-between align-center mb-2">
+                            <MudText Typo="Typo.h6"><b>Total</b></MudText>
+                            <MudText Typo="Typo.h5" Color="Color.Primary" Style="font-weight: 800;">@Breakdown.Subtotal.ToString("F2") <span style="font-size: 0.7em;">LD</span></MudText>
                         </div>
                         
-                        @* Discount - only if applied *@
-                        @if (Breakdown.Discount > 0)
-                        {
-                            <div class="d-flex justify-space-between align-center">
-                                <div class="d-flex align-center">
-                                    <MudIcon Icon="@Icons.Material.Filled.Discount" Size="Size.Small" Class="mr-2" Color="Color.Secondary" />
-                                    <MudText Typo="Typo.body1" Color="Color.Secondary">Discount</MudText>
-                                </div>
-                                <MudText Typo="Typo.body1" Color="Color.Secondary" Style="font-weight: 600;">-@Breakdown.Discount.ToString("F2") LD</MudText>
-                            </div>
-                            
-                            @* Total - only show separately if there's a discount *@
-                            <div class="d-flex justify-space-between align-center mt-1 pt-1" style="border-top: 1px solid var(--mud-palette-lines-default);">
-                                <MudText Typo="Typo.h6" Class="font-weight-bold">Total</MudText>
-                                <MudText Typo="Typo.h5" Color="Color.Primary" Style="font-weight: 800;">@Breakdown.Total.ToString("F2") <span style="font-size: 0.7em;">LD</span></MudText>
-                            </div>
-                        }
-                        
-                        @* Payment details - only show if there's something to show *@
-                        @if (Breakdown.PaidNow > 0 || Breakdown.FromBalance > 0)
+                        @* Payment details *@
+                        @if (Breakdown.PaidNow > 0 || Breakdown.FromBalance > 0 || Breakdown.Discount > 0)
                         {
                             <MudDivider Class="my-2" />
                             
@@ -476,10 +441,10 @@
                             {
                                 <div class="d-flex justify-space-between align-center">
                                     <div class="d-flex align-center">
-                                        <MudIcon Icon="@Icons.Material.Filled.Payments" Size="Size.Small" Class="mr-2" />
-                                        <MudText Typo="Typo.body2">Paid Now</MudText>
+                                        <MudIcon Icon="@Icons.Material.Filled.Payments" Size="Size.Small" Class="mr-2" Color="@(Breakdown.Remaining <= 0 ? Color.Info : Color.Warning)" />
+                                        <MudText Typo="Typo.body2"><b>Paid Now</b></MudText>
                                     </div>
-                                    <MudText Typo="Typo.body2" Color="Color.Warning" Style="font-weight: 700;">@Breakdown.PaidNow.ToString("F2") LD</MudText>
+                                    <MudText Typo="Typo.body2" Color="@(Breakdown.Remaining <= 0 ? Color.Info : Color.Warning)" Style="font-weight: 700;">@Breakdown.PaidNow.ToString("F2") LD</MudText>
                                 </div>
                             }
                             
@@ -487,23 +452,35 @@
                             {
                                 <div class="d-flex justify-space-between align-center">
                                     <div class="d-flex align-center">
-                                        <MudIcon Icon="@Icons.Material.Filled.AccountBalanceWallet" Size="Size.Small" Class="mr-2" />
-                                        <MudText Typo="Typo.body2">From Balance</MudText>
+                                        <MudIcon Icon="@Icons.Material.Filled.AccountBalanceWallet" Size="Size.Small" Color="Color.Success" Class="mr-2" />
+                                        <MudText Typo="Typo.body2"><b>From Balance</b></MudText>
                                     </div>
                                     <MudText Typo="Typo.body2" Color="Color.Success" Style="font-weight: 700;">@Breakdown.FromBalance.ToString("F2") LD</MudText>
                                 </div>
                             }
+                            
+                            @* Discount - show under paid now and balance *@
+                            @if (Breakdown.Discount > 0)
+                            {
+                                <div class="d-flex justify-space-between align-center">
+                                    <div class="d-flex align-center">
+                                        <MudIcon Icon="@Icons.Material.Filled.Discount" Size="Size.Small" Class="mr-2" Color="Color.Secondary" />
+                                        <MudText Typo="Typo.body2" Color="Color.Secondary">Discount</MudText>
+                                    </div>
+                                    <MudText Typo="Typo.body2" Color="Color.Secondary" Style="font-weight: 700;">-@Breakdown.Discount.ToString("F2") LD</MudText>
+                                </div>
+                            }
                         }
                         
-                        @* Remaining - Always at bottom *@
+                        @* Due - Always at bottom *@
                         <div class="d-flex justify-space-between align-center mt-2 pt-2" style="border-top: 1px dashed var(--mud-palette-lines-default);">
                             <div class="d-flex align-center">
                                 <MudIcon Icon="@(Breakdown.Remaining > 0 ? Icons.Material.Filled.PriorityHigh : Icons.Material.Filled.CheckCircle)" 
                                          Color="@(Breakdown.Remaining > 0 ? Color.Error : Color.Success)" 
                                          Size="Size.Small" Class="mr-2" />
-                                <MudText Typo="Typo.body1" Class="font-weight-medium">@(Breakdown.Remaining > 0 ? "Due" : "Paid")</MudText>
+                                <MudText Typo="Typo.body1"><b>Due</b></MudText>
                             </div>
-                            <MudText Typo="Typo.h6" Color="@(Breakdown.Remaining > 0 ? Color.Error : Color.Success)" Style="font-weight: 800;">@Breakdown.Remaining.ToString("F2") LD</MudText>
+                            <MudText Typo="Typo.h6" Color="@(Breakdown.Remaining > 0 ? Color.Error : Color.Default)" Style="font-weight: 800;">@Breakdown.Remaining.ToString("F2") LD</MudText>
                         </div>
                     </div>
 
@@ -590,11 +567,6 @@
     private string editingPriceValue = "";
     private string editingCostValue = "";
     private MudTextField<string>? priceInputRef;
-    
-    // Edit authentication - tracks who is authorized to edit
-    private bool showEditAuthDialog = false;
-    private TransactionItem? pendingEditItem = null;
-    private Person? editingEmployee = null;
 
     // =====================================================
     // STATE: Delivery Options
@@ -983,52 +955,11 @@
     // =====================================================
     // INLINE EDITING: Price & Cost
     // =====================================================
-    private async Task StartEditingAsync(TransactionItem item)
+    private void StartEditingAsync(TransactionItem item)
     {
-        // Require pattern authentication before allowing edits
-        pendingEditItem = item;
-        showEditAuthDialog = true;
-        await Task.CompletedTask;
-    }
-
-    private async Task OnEditAuthorized(Person employee)
-    {
-        showEditAuthDialog = false;
-        editingEmployee = employee;
-        
-        if (pendingEditItem != null)
-        {
-            editingItem = pendingEditItem;
-            editingPriceValue = pendingEditItem.UnitPrice.ToString("F2");
-            editingCostValue = pendingEditItem.UnitCost.ToString("F2");
-            pendingEditItem = null;
-            
-            // Wait a tick for the input to render, then select all text
-            await Task.Delay(50);
-            if (priceInputRef != null)
-            {
-                try
-                {
-                    await JSRuntime.InvokeVoidAsync("eval", 
-                        @"setTimeout(() => { 
-                            const input = document.activeElement; 
-                            if (input && input.tagName === 'INPUT') { 
-                                input.select(); 
-                            }
-                        }, 10);");
-                }
-                catch
-                {
-                    // Ignore if JS fails
-                }
-            }
-        }
-    }
-
-    private void CancelEditAuth()
-    {
-        showEditAuthDialog = false;
-        pendingEditItem = null;
+        editingItem = item;
+        editingPriceValue = item.UnitPrice.ToString("F2");
+        editingCostValue = item.UnitCost.ToString("F2");
     }
 
     private void HandleKeyDown(KeyboardEventArgs e)

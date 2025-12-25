@@ -26,7 +26,7 @@
                     <MudTd>
                         @if (context.Amount < 0)
                         {
-                            <MudText Color="Color.Error" Class="font-weight-bold">@context.Amount.ToString("F2") (Refund)</MudText>
+                            <MudText Color="Color.Error"><b>@context.Amount.ToString("F2") (Refund)</b></MudText>
                         }
                         else
                         {

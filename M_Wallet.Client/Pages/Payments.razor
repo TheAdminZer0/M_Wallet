@@ -51,8 +51,8 @@
                         @if (_invoiceColumns.IsVisible("Paid")) { <MudTd DataLabel="Paid">LD @GetPaidAmount(context).ToString("F2")</MudTd> }
                         @if (_invoiceColumns.IsVisible("Balance")) {
                             <MudTd DataLabel="Balance">
-                                <MudText Color="Color.Error" Class="font-weight-bold">
-                                    LD @GetBalanceDue(context).ToString("F2")
+                                <MudText Color="Color.Error">
+                                    <b>LD @GetBalanceDue(context).ToString("F2")</b>
                                 </MudText>
                             </MudTd>
                         }
@@ -98,8 +98,8 @@
                     @if (_paymentColumns.IsVisible("Reference")) { <MudTd>@context.Reference</MudTd> }
                     @if (_paymentColumns.IsVisible("Amount")) {
                         <MudTd>
-                            <MudText Color="@(context.Amount >= 0 ? Color.Success : Color.Error)" Class="font-weight-bold">
-                                LD @context.Amount.ToString("F2")
+                            <MudText Color="@(context.Amount >= 0 ? Color.Success : Color.Error)">
+                                <b>LD @context.Amount.ToString("F2")</b>
                             </MudText>
                         </MudTd>
                     }

@@ -113,9 +113,9 @@
             {
                 <MudPaper Elevation="0" Class="pa-3" Style="border: 2px solid var(--mud-palette-primary); border-radius: 4px; background-color: var(--mud-palette-background-grey);">
                     <MudStack Spacing="2" AlignItems="AlignItems.Center">
-                        <MudText Typo="Typo.body2" Color="Color.Primary" Class="font-weight-bold">
-                            <MudIcon Icon="@Icons.Material.Filled.Security" Size="Size.Small" Class="mr-1 mb-n1" />
-                            Enter pattern to save changes
+                        <MudText Typo="Typo.body2" Color="Color.Primary">
+                            <b><MudIcon Icon="@Icons.Material.Filled.Security" Size="Size.Small" Class="mr-1 mb-n1" />
+                            Enter pattern to save changes</b>
                         </MudText>
                         <PatternAuthComponent OnAuthorized="OnSaveAuthorized" />
                     </MudStack>

@@ -30,7 +30,7 @@ else
                     <div class="d-flex justify-space-between align-center">
                         <div>
                             <MudText Typo="Typo.body2" Color="Color.Secondary">Total Sales</MudText>
-                            <MudText Typo="Typo.h5" Class="font-weight-bold">LD @TotalSales.ToString("N2")</MudText>
+                            <MudText Typo="Typo.h5"><b>LD @TotalSales.ToString("N2")</b></MudText>
                         </div>
                         <MudIcon Icon="@Icons.Material.Filled.AttachMoney" Size="Size.Large" Color="Color.Success" />
                     </div>
@@ -44,7 +44,7 @@ else
                     <div class="d-flex justify-space-between align-center">
                         <div>
                             <MudText Typo="Typo.body2" Color="Color.Secondary">Total Profit</MudText>
-                            <MudText Typo="Typo.h5" Class="font-weight-bold" Color="Color.Success">LD @TotalProfit.ToString("N2")</MudText>
+                            <MudText Typo="Typo.h5" Color="Color.Success"><b>LD @TotalProfit.ToString("N2")</b></MudText>
                         </div>
                         <MudIcon Icon="@Icons.Material.Filled.TrendingUp" Size="Size.Large" Color="Color.Success" />
                     </div>
@@ -58,7 +58,7 @@ else
                     <div class="d-flex justify-space-between align-center">
                         <div>
                             <MudText Typo="Typo.body2" Color="Color.Secondary">Total Orders</MudText>
-                            <MudText Typo="Typo.h5" Class="font-weight-bold">@transactions.Count</MudText>
+                            <MudText Typo="Typo.h5"><b>@transactions.Count</b></MudText>
                         </div>
                         <MudIcon Icon="@Icons.Material.Filled.Receipt" Size="Size.Large" Color="Color.Info" />
                     </div>
@@ -72,7 +72,7 @@ else
                     <div class="d-flex justify-space-between align-center">
                         <div>
                             <MudText Typo="Typo.body2" Color="Color.Secondary">Items Sold</MudText>
-                            <MudText Typo="Typo.h5" Class="font-weight-bold">@TotalItemsSold</MudText>
+                            <MudText Typo="Typo.h5"><b>@TotalItemsSold</b></MudText>
                         </div>
                         <MudIcon Icon="@Icons.Material.Filled.Inventory" Size="Size.Large" Color="Color.Warning" />
                     </div>
@@ -86,7 +86,7 @@ else
                     <div class="d-flex justify-space-between align-center">
                         <div>
                             <MudText Typo="Typo.body2" Color="Color.Secondary">Avg Order Value</MudText>
-                            <MudText Typo="Typo.h5" Class="font-weight-bold">LD @AverageOrderValue.ToString("N2")</MudText>
+                            <MudText Typo="Typo.h5"><b>LD @AverageOrderValue.ToString("N2")</b></MudText>
                         </div>
                         <MudIcon Icon="@Icons.Material.Filled.ShoppingCart" Size="Size.Large" Color="Color.Primary" />
                     </div>
@@ -100,7 +100,7 @@ else
                     <div class="d-flex justify-space-between align-center">
                         <div>
                             <MudText Typo="Typo.body2" Color="Color.Secondary">Profit Margin</MudText>
-                            <MudText Typo="Typo.h5" Class="font-weight-bold">@ProfitMargin.ToString("F1")%</MudText>
+                            <MudText Typo="Typo.h5"><b>@ProfitMargin.ToString("F1")%</b></MudText>
                         </div>
                         <MudIcon Icon="@Icons.Material.Filled.Percent" Size="Size.Large" Color="Color.Success" />
                     </div>
@@ -114,7 +114,7 @@ else
                     <div class="d-flex justify-space-between align-center">
                         <div>
                             <MudText Typo="Typo.body2" Color="Color.Secondary">Today's Sales</MudText>
-                            <MudText Typo="Typo.h5" Class="font-weight-bold">LD @TodaySales.ToString("N2")</MudText>
+                            <MudText Typo="Typo.h5"><b>LD @TodaySales.ToString("N2")</b></MudText>
                         </div>
                         <MudIcon Icon="@Icons.Material.Filled.CalendarToday" Size="Size.Large" Color="Color.Info" />
                     </div>
@@ -128,7 +128,7 @@ else
                     <div class="d-flex justify-space-between align-center">
                         <div>
                             <MudText Typo="Typo.body2" Color="Color.Secondary">Today's Profit</MudText>
-                            <MudText Typo="Typo.h5" Class="font-weight-bold" Color="Color.Success">LD @TodayProfit.ToString("N2")</MudText>
+                            <MudText Typo="Typo.h5" Color="Color.Success"><b>LD @TodayProfit.ToString("N2")</b></MudText>
                         </div>
                         <MudIcon Icon="@Icons.Material.Filled.CalendarToday" Size="Size.Large" Color="Color.Success" />
                     </div>
@@ -159,22 +159,22 @@ else
                 <MudStack Spacing="3">
                     <div>
                         <MudText Typo="Typo.body2" Color="Color.Secondary">Sales</MudText>
-                        <MudText Typo="Typo.h6" Class="font-weight-bold">LD @ThisMonthSales.ToString("N2")</MudText>
+                        <MudText Typo="Typo.h6"><b>LD @ThisMonthSales.ToString("N2")</b></MudText>
                     </div>
                     <MudDivider />
                     <div>
                         <MudText Typo="Typo.body2" Color="Color.Secondary">Profit</MudText>
-                        <MudText Typo="Typo.h6" Class="font-weight-bold" Color="Color.Success">LD @ThisMonthProfit.ToString("N2")</MudText>
+                        <MudText Typo="Typo.h6" Color="Color.Success"><b>LD @ThisMonthProfit.ToString("N2")</b></MudText>
                     </div>
                     <MudDivider />
                     <div>
                         <MudText Typo="Typo.body2" Color="Color.Secondary">Orders</MudText>
-                        <MudText Typo="Typo.h6" Class="font-weight-bold">@ThisMonthOrders</MudText>
+                        <MudText Typo="Typo.h6"><b>@ThisMonthOrders</b></MudText>
                     </div>
                     <MudDivider />
                     <div>
                         <MudText Typo="Typo.body2" Color="Color.Secondary">Profit Margin</MudText>
-                        <MudText Typo="Typo.h6" Class="font-weight-bold">@ThisMonthMargin.ToString("F1")%</MudText>
+                        <MudText Typo="Typo.h6"><b>@ThisMonthMargin.ToString("F1")%</b></MudText>
                     </div>
                 </MudStack>
             </MudPaper>
@@ -203,11 +203,11 @@ else
                         <MudListItem T="string">
                             <div class="d-flex justify-space-between align-center" style="width: 100%;">
                                 <div>
-                                    <MudText Typo="Typo.body2" Class="font-weight-bold">@item.ProductName</MudText>
+                                    <MudText Typo="Typo.body2"><b>@item.ProductName</b></MudText>
                                     <MudText Typo="Typo.caption" Color="Color.Secondary">@item.Quantity sold  LD @item.Revenue.ToString("N2") sales</MudText>
                                 </div>
-                                <MudText Typo="Typo.body2" Color="Color.Success" Class="font-weight-bold">
-                                    LD @item.Profit.ToString("N2")
+                                <MudText Typo="Typo.body2" Color="Color.Success">
+                                    <b>LD @item.Profit.ToString("N2")</b>
                                 </MudText>
                             </div>
                         </MudListItem>
